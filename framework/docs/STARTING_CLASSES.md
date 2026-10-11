@@ -55,4 +55,4 @@ while retaining the existing manual character toggle.
 Offline class-policy tests cover invalid profiles, manual override, reload and
 recycled actor pointers. Real-adapter tests repeatedly create, animate, rotate
 and destroy preview instances before running ordinary movement/combat tests.
-Live verification and limitations are recorded in MODLOG.md after each test pass.
+Live verification and limitations are summarized in [Validation](VALIDATION.md).

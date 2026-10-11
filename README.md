@@ -1,4 +1,18 @@
-# Souls Character Framework
+# MarioSouls / Souls Character Framework
+
+> **Development source, not a ready-to-install public release.**
+> Supports Dark Souls: Prepare to Die Edition on Windows; Remastered is not
+> implemented. Mario requires the user's own supported Super Mario 64 ROM.
+> ROMs, extracted assets, generated collision, saves, binaries and private
+> checkpoint archives are excluded from this repository. A clone does not
+> include the local tools/assets needed to run the mod. Development helpers
+> still include machine-specific paths; a portable installer is planned.
+
+Recent framework work includes saved Mario-class presentation, area-transition
+ownership and native melee targeting, ordinary-slope traction, and filtering
+NPC-only barriers out of player terrain. See the
+[validation record](framework/docs/VALIDATION.md) for tested behavior and limits.
+This remains experimental; use a separate test save and keep backups.
 
 Reusable character integration for Dark Souls: Prepare to Die Edition, with Mario 64
 as its first adapter. Shared rendering, world collision, native interactions, input,
@@ -12,7 +26,7 @@ Start with [the framework guide](framework/README.md),
 [verification](framework/docs/VALIDATION.md). Future gameplay changes follow
 [AGENTS.md](AGENTS.md). The `work/` prototype remains historical source.
 
-Current local checkpoint: **framework 0.8.3 poise-aware kick knockback**, tagged
+Historical local checkpoint: **framework 0.8.3 poise-aware kick knockback**, tagged
 `checkpoint-2026-10-11-kick-knockback`. Mario's combo, jump and slide kicks push
 small enemies using native impacts, with poise resistance and large-body
 exclusion. With the game closed, run

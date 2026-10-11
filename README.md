@@ -12,7 +12,15 @@ Start with [the framework guide](framework/README.md),
 [verification](framework/docs/VALIDATION.md). Future gameplay changes follow
 [AGENTS.md](AGENTS.md). The `work/` prototype remains historical source.
 
-Current local checkpoint: **framework 0.4.2 visual diagnostics**, tagged
+Current local checkpoint: **framework 0.8.2 bouncing Fire Flower**, tagged
+`checkpoint-2026-10-11-bouncing-fireball`. Mario's ordinary Fireball casts faster
+and bounces on floors while native charges, enemy damage and rewards remain
+authoritative. With the game closed, run
+`outputs/Restore bouncing Fire Flower checkpoint.cmd` to return to this version.
+The private archive and installed host/adapter hashes were verified after testing
+on Mario QA. See the validation record for coverage and limitations.
+
+The **framework 0.4.2 visual diagnostics** checkpoint is also preserved, tagged
 `checkpoint-2026-10-11-framework-v0.4.2-debug`. F8 toggles the overlay, F9 selects
 Combat/Terrain/Objects/All, and F10 controls through-walls drawing. See
 [debug view meanings and limits](framework/docs/DEBUG_VIEW.md). With the game

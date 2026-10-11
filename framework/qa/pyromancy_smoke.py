@@ -17,6 +17,7 @@ def main():
  p.add_argument('--target',type=int,choices=[1810101,1810103],default=1810101)
  p.add_argument('--native',action='store_true',help='Compare the unmodified host cast with character control disabled')
  p.add_argument('--distance',type=float,default=3.0)
+ p.add_argument('--yaw',type=float,default=0,help='Courtyard throw heading, radians; enemy fixture overrides this')
  a=p.parse_args();out=Path(a.output);out.mkdir(parents=True,exist_ok=False)
  h=Host(a.pid,write=True);rows=[];rec=None;logstart=(GAME/'mariosouls.log').stat().st_size
  def send(**kw):command(a.pid,host=h,**kw)
@@ -29,7 +30,9 @@ def main():
   if a.enemy:
    assert 1 <= a.distance <= 4
    x,y,z=s['target']['position'];h.warp([x,y+.05,z+(-a.distance if a.target==1810103 else a.distance)],math.pi if a.target==1810103 else 0,a.target)
-  else:h.warp([3.1,196.1,5.7],0)
+  else:
+   assert math.isfinite(a.yaw)
+   h.warp([3.1,196.1,5.7],a.yaw)
   time.sleep(.3)
   if not a.native:send(mode=1)
   time.sleep(.7)
@@ -45,7 +48,9 @@ def main():
   else:send(frames=5,buttons=2 if a.hand=='right' else 16)
   start=time.monotonic()
   while time.monotonic()-start<5:
-   s=h.snapshot(a.target);rows.append(s)
+   s=h.snapshot(a.target)
+   s['animation_rate']=h.f(h.chain(int(s['player']['reference'],16)+0x28,0,0x14)+0x64)
+   rows.append(s)
    if not s['focus'] or s['menu'] or s['player']['hp']<500:break
    time.sleep(.04)
   shot(str(out/'after.png'),exe='DARKSOULS.exe',scale=.5)

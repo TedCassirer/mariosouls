@@ -243,3 +243,6 @@ static uint32_t attachments(int32_t id,SC_Attachments*out){
 static SC_CharacterAPI api={sizeof(SC_CharacterAPI),SC_ABI_VERSION,describe,initialize,shutdown,create,destroy,step,pose,resume,position,command,damage,surfaces,floorHeight,probe,contact,audio,resolveMotion,equipment,attachments};
 extern "C" __declspec(dllexport) const SC_CharacterAPI* SoulsCharacterGetAPI(uint32_t abi,uint32_t size){return abi==SC_ABI_VERSION&&size==sizeof(api)?&api:nullptr;}
 extern "C" __declspec(dllexport) const SC_CameraProfile* SoulsCharacterGetCameraProfile(uint32_t version,uint32_t size){return version==SC_CAMERA_PROFILE_VERSION&&size==sizeof(SC_CameraProfile)?&characterCameraProfile:nullptr;}
+// SMB-inspired low, bouncing fireball. Native host retains casting and damage.
+static const SC_ProjectileProfile flowerProjectile={sizeof(SC_ProjectileProfile),SC_PROJECTILE_PROFILE_VERSION,SC_PROJECTILE_FIREBALL,3.5f,1200,2400,600,3,75};
+extern "C" __declspec(dllexport) const SC_ProjectileProfile* SoulsCharacterGetProjectileProfile(uint32_t version,uint32_t size){return version==SC_PROJECTILE_PROFILE_VERSION&&size==sizeof(SC_ProjectileProfile)?&flowerProjectile:nullptr;}

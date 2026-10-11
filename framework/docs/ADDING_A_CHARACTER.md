@@ -159,3 +159,16 @@ Omitting this export preserves the native camera. Acceptable scale is 1..2.
 The host owns native parameter validation, collision and restoration. Verify
 normal/character/normal transitions and confined-space behavior in the game;
 an offline profile check alone does not prove the camera moved correctly.
+
+### Optional bouncing projectile
+
+Export `SoulsCharacterGetProjectileProfile(uint32_t version, uint32_t size)` only
+for the exact version and size in the SDK; return a static SC_ProjectileProfile.
+See Mario's adapter for a concrete declaration. Use the pyromancy and native
+combat capabilities. This optional profile currently describes ordinary native
+Fireball only; it does not imply that another game's magic system is implemented.
+The host owns native projectile identity, collision and damage. Validate both
+hands, floor seams, walls, enemy damage, charges, recovery and native fallback.
+`pyromancy_smoke.py --yaw -1.5707963` provides a courtyard flight fixture, while
+`--enemy --target 1810103 --distance 3` uses the guarded hollow. Evidence is not
+success until the trace and recording are checked.

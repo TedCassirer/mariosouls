@@ -419,3 +419,34 @@ because the stock table contains duplicate ID 200. Replaced tables are not writt
 through stale references. External edits revoke ownership of the affected value.
 `[Camera.<character-id>] DistanceScale` in mariosouls.ini overrides the default;
 1 restores native distance. Invalid overrides select 1. No param file is edited.
+
+## Optional projectile profile (framework 0.8.2)
+
+`SoulsCharacterGetProjectileProfile(version, size)` returns a validated
+`SC_ProjectileProfile`, version 1. The main ABI4 layout remains unchanged.
+Omitting the export retains native spell behavior. Currently the DS1 PTDE host
+supports `SC_PROJECTILE_FIREBALL`: the ordinary attuned Fireball cast through a
+Pyromancy Flame in either hand. Other spells and other casters remain native.
+
+The adapter declares cast-speed multiplier, horizontal projectile speed, gravity,
+upward bounce speed, lifetime and initial height above feet. Distances use cm;
+timing uses seconds. Adapters supply policy only and cannot access game memory.
+Mario requests 3.5x casting, 1200 cm/s flight, 2400 cm/s² gravity, 600 cm/s bounce,
+a three-second lifetime and 75 cm initial height. Native aim supplies horizontal
+direction; the custom projectile does not home vertically onto locked targets.
+
+The host identifies the caster through the native entity-handle table. Only a
+new native Fireball belonging to the current character cast is enrolled. Native
+pool slots are revalidated and cleared on reuse. The same native projectile
+bounces using real map contacts; there is no replacement damage engine, duplicate
+projectile spawn or spell-charge refund. Wall, ceiling and character impacts,
+explosions, fire damage, flame upgrades, resistance and rewards remain native.
+Adjacent floor-triangle reports are merged for 75 ms within a 12 cm height band;
+vertical walls are never included. Flight ends through native expiry or impact.
+
+Casting accelerates only the observed Fireball windup/release animations, with
+a compare-and-restore lease on the current actor's animation rate. Completion,
+interruption, death, interaction and mode handback release the lease. Source
+pointers and actor identity are checked before restoration; external rate edits
+revoke ownership. `[Projectiles] Enabled=0` in mariosouls.ini disables enrollment
+and cast acceleration; already-launched shots finish their bounded flight.

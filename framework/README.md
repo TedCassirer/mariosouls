@@ -1,4 +1,13 @@
-# Souls Character Framework 0.8.1
+# Souls Character Framework 0.8.2
+
+Mario's Fire Flower now launches a fast, bouncing Fireball. Casting takes about
+0.9 seconds instead of the measured native 2.7 seconds. Floor contacts bounce the
+same native projectile; walls and enemies retain native impacts, damage and
+rewards. Each shot still consumes one attuned Fireball use. This applies to the
+ordinary Fireball spell with a selected Pyromancy Flame in either hand.
+The optional SDK projectile profile separates character tuning from host hooks.
+Set `[Projectiles] Enabled=0` in mariosouls.ini to disable this extension.
+See [validation](docs/VALIDATION.md) for measured coverage and limitations.
 
 Mario's camera is now 50% farther away while his mode is active. The shared host
 preserves native camera collision and restores native distance on handback.
@@ -9,7 +18,8 @@ and lets future adapters opt in without host character switches.
 Fire Flower follow-up: selecting a Pyromancy Flame in either hand gives Mario
 a procedural flower, white hat/shirt and red overalls. With Fireball attuned,
 B/RB/left-click casts from the right hand; RT/Tab casts from the left. The native
-game owns spell charges, projectile collision, damage and rewards. The optional
+game owns spell charges, hit detection, damage and rewards; the optional bouncing
+profile extends floor-contact behavior. The optional
 SDK pyromancy capability keeps host casting separate from adapter props/poses.
 Fireball is verified on Mario QA; other spells need additional coverage.
 

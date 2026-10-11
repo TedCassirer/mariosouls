@@ -137,6 +137,7 @@ static DamageFn nativeDamage=nullptr;
 static Vec cameraEye(){return read<Vec>(cam+0x40);}
 static Vec cameraForward(){return read<Vec>(cam+0x30);}
 #include "camera.h"
+#include "projectile.h"
 
 static int currentMap(){uintptr_t p=read<uint32_t>(mapSlot);if(!p)return -1;int world=read<uint8_t>(p+0xa13),area=read<uint8_t>(p+0xa12);return world>=10&&world<=18&&area<=3?world*100+area:-1;}
 #include "arena_floor.h"
@@ -154,6 +155,7 @@ static void rebuildSurfaces(){
 }
 #include "loader.h"
 static void releaseControl(bool preserveRequest=false){
+ projectileRateRelease();
  cameraRelease();
  nativeReaction=false;nativeReactionIncomingUntil=0;equipmentActionOwned=false;
  characterSession.request(preserveRequest&&characterSession.requested());
@@ -226,6 +228,7 @@ static void update(){
  if(characterSession.death()&&read<int>(player+0x2d4)>0){logf("Death presentation complete: native respawn");releaseControl(true);acc=0;}
  if((focus&&pressed(VK_F6))||padToggle){if(characterOwned()||characterSession.requested()){characterSession.request(false);releaseControl();}else{characterSession.request(true);if(!activate())characterSession.failed(inputTime);}}
  cameraTick();
+ if(!equipmentActionOwned||characterSession.death())projectileRateRelease();
  if(characterSession.death()){deathTick(acc,pad.slot);return;}
  if(!characterOwned()&&characterSession.requested()){
   bool safe=focus&&identity.valid()&&cam&&read<int>(player+0x2d4)>0;
@@ -356,7 +359,7 @@ static DWORD WINAPI start(void*){
  mapSlot=scan("8B 48 04 8B 11 50 8B 42 34 FF D0 C7 46 2C 00 00 00 00 C3 8B 0D ? ? ? ? 8B 89 50 0B 00 00 32 C0 83 79 28 00",0x15);if(!mapSlot)return 0;eventFlagsSlot=scan("56 8B F1 8B 46 1C 50 A1 ? ? ? ? 32 C9",8);ready=initCharacter();if(!ready){logf("initialization failed");return 0;}
  logf("initializing graphics probe");WNDCLASSA wc={};wc.lpfnWndProc=DefWindowProcA;wc.hInstance=selfModule;wc.lpszClassName="SoulsCharacterProbe";RegisterClassA(&wc);HWND win=CreateWindowA(wc.lpszClassName,"",WS_OVERLAPPED,0,0,64,64,NULL,NULL,selfModule,NULL);logf("probe window=%08x",(unsigned)(uintptr_t)win);
  IDirect3D9*d3d=Direct3DCreate9(D3D_SDK_VERSION);if(!d3d)return 0;D3DPRESENT_PARAMETERS pp={};pp.Windowed=TRUE;pp.SwapEffect=D3DSWAPEFFECT_DISCARD;pp.hDeviceWindow=win;IDirect3DDevice9*d=nullptr;HRESULT hr=d3d->CreateDevice(0,D3DDEVTYPE_HAL,win,D3DCREATE_SOFTWARE_VERTEXPROCESSING,&pp,&d);
- if(SUCCEEDED(hr)){void**table=*(void***)d;MH_Initialize();installVisibility();if(nativeDamage)characterInstallDamage();worldInstall();installControllerHooks();installActionInput();installActionEffects();installStartupHooks(table);MH_STATUS s=MH_CreateHook(table[42],(void*)endScene,(void**)&originalEnd);logf("hook create=%d",s);if(s==MH_OK)MH_EnableHook(table[42]);s=MH_CreateHook(table[16],(void*)reset,(void**)&originalReset);if(s==MH_OK)MH_EnableHook(table[16]);s=MH_CreateHook(table[17],(void*)present,(void**)&originalPresent);if(s==MH_OK)MH_EnableHook(table[17]);s=MH_CreateHook(table[37],(void*)setRenderTarget,(void**)&originalRenderTarget);if(s==MH_OK)MH_EnableHook(table[37]);logf("scene hooks ready");d->Release();}else logf("D3D probe failed %08lx",hr);d3d->Release();DestroyWindow(win);return 0;
+ if(SUCCEEDED(hr)){void**table=*(void***)d;MH_Initialize();installVisibility();if(nativeDamage)characterInstallDamage();worldInstall();projectileInstall();installControllerHooks();installActionInput();installActionEffects();installStartupHooks(table);MH_STATUS s=MH_CreateHook(table[42],(void*)endScene,(void**)&originalEnd);logf("hook create=%d",s);if(s==MH_OK)MH_EnableHook(table[42]);s=MH_CreateHook(table[16],(void*)reset,(void**)&originalReset);if(s==MH_OK)MH_EnableHook(table[16]);s=MH_CreateHook(table[17],(void*)present,(void**)&originalPresent);if(s==MH_OK)MH_EnableHook(table[17]);s=MH_CreateHook(table[37],(void*)setRenderTarget,(void**)&originalRenderTarget);if(s==MH_OK)MH_EnableHook(table[37]);logf("scene hooks ready");d->Release();}else logf("D3D probe failed %08lx",hr);d3d->Release();DestroyWindow(win);return 0;
 }
 extern "C" __declspec(dllexport) HRESULT WINAPI DirectInput8Create(HINSTANCE h,DWORD v,REFIID r,LPVOID*out,LPUNKNOWN unk){
  static HMODULE real=nullptr;if(!real){char p[MAX_PATH];GetSystemDirectoryA(p,MAX_PATH);strcat(p,"\\dinput8.dll");real=LoadLibraryA(p);}using Fn=HRESULT(WINAPI*)(HINSTANCE,DWORD,REFIID,LPVOID*,LPUNKNOWN);auto fn=(Fn)GetProcAddress(real,"DirectInput8Create");HRESULT hr=fn?fn(h,v,r,out,unk):E_FAIL;logf("DirectInput forward real=%08x version=%x hr=%08lx",(unsigned)(uintptr_t)real,(unsigned)v,hr);return hr;

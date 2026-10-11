@@ -1,3 +1,65 @@
+# Bouncing Fire Flower (2026-10-11)
+
+Framework 0.8.2 extends ABI4 with an independently versioned optional projectile
+profile. Mario supplies tuning; the DS1 PTDE host owns native animation-rate
+leases, projectile identification and map contacts. Core validates profiles and
+contact policies. No shared spell parameters, charges or enemy HP are patched.
+
+Owned Steam executable SHA256:
+`67bcab513c8f0ed6164279d85f302e06b1d8a53abff5df7f3d10e1d4dfd81459`.
+Native BulletFlyState update at 0x1018dc0 and map-hit dispatch at 0x10258b0
+are signature-checked as a pair. The map wrapper, rather than its inner impact
+helper, must be bypassed for a bounce because the wrapper also retires the shot.
+FlyState elapsed time resets on pool reuse; its initialized byte does not.
+The final implementation clears reused entries on elapsed-time reset, including
+when the new occupant is an unrelated projectile. Earlier prototypes that retired
+on adjacent floor triangles or missed reused bullets are not counted as passes.
+
+Live checks used only Mario QA, level 13, Northern Undead Asylum, with the user's
+current control handoff. Final installed build: 20261011-154042-263847.
+
+- Right-hand cast: windup/release completed in about 0.91 seconds. Three floor
+  bounces at 0.167, 0.667 and 1.033 seconds preceded a vertical wall impact at
+  1.067 seconds. Positions show ascent and descent between contacts.
+- Next shot reused the native pool and bounced before hitting hollow 1810103:
+  target HP 69 to 0, displayed damage 134, native reward +24 souls (144 to 168).
+  Player HP stayed 594 and stamina 93. The shot consumed exactly one Fireball use.
+- Left-hand Flame with a right-hand Claymore: accelerated native 6204/6404 cast,
+  two floor bounces followed by impact on a steeper obstacle. One use consumed.
+- With Mario disabled, left-hand native casting took about 2.73 seconds;
+  animation rate remained 1 and the native Fireball received no bounce handling.
+- Four consecutive left-hand casts at roughly 1.74-second intervals produced
+  four projectiles and exhausted the four remaining uses. The fifth attempt
+  played native empty-cast 6299 at rate 1, with no projectile. Rate returned from
+  3.5 to 1 between successful casts. HP and stamina stayed unchanged.
+- Right-hand Flame and left-hand Plank Shield restored through native menus;
+  charges restored through bonfire rest. The level-65 character was not loaded.
+- Three more right-hand casts recorded in the courtyard; final clip contact
+  sheet inspected. Mario QA was rested back to eight uses, saved and quit through
+  native menus. Exact tested host/adapter hashes match the installed files.
+  Verified 92-file runtime archive: checkpoints/framework-bouncing-fireball.json.
+  Prior checkpoint archives and tags remain unchanged.
+
+Private evidence: work/bouncing-fireball-qa/final-flight, final-enemy, final-left,
+final-native and final-exhaust (recordings, native state traces and logs).
+Short game-audio demonstration: outputs/Mario bouncing Fire Flower.mp4.
+The final enemy recording confirms the hit but has poor framing from the fixture
+warp; it is diagnostic evidence, not a clean showcase. Native camera collision
+is unchanged by this feature.
+
+The full framework build/test passed, including real adapter DLL export checks.
+Doctor verified pinned dependencies and architecture boundaries. New offline
+coverage includes version/size/bounds, floor versus wall/ceiling contacts, adjacent
+triangle merging, bounce limits and animation-rate restoration/conflicts.
+
+Scope: ordinary Fireball 4000 / bullet 6000 only. Other pyromancies, all-map slope
+coverage, shielded targets, bosses, flame reinforcement scaling, mid-cast death
+and free-flight three-second expiry were not revalidated live. These retain
+native paths or are bounded in code; they are not claimed as observed passes.
+Horizontal aim comes from the native cast; the bouncing projectile deliberately
+does not home vertically onto elevated lock-on targets. Fireball keeps native
+visual effects and explosions, rather than reproducing SMB sprites exactly.
+
 # Wider character camera (2026-10-11)
 
 Framework0.8.1 adds an optional camera-profile export without changing ABI4.

@@ -25,7 +25,7 @@ static bool initCharacter(){
  if(!guest->initialize(&init,&atlas)){logf("Character initialization failed");guest->shutdown();FreeLibrary(adapterModule);adapterModule=nullptr;guest=nullptr;profile=nullptr;return false;}
  const unsigned char prefix[]={0xd9,0x44,0x24,0x18,0x8b,0x44,0x24,0x0c,0x8b,0x4c,0x24,0x04};unsigned char actual[sizeof(prefix)]={};
  if(get(uintptr_t(0xd65dc0),actual)&&memcmp(actual,prefix,sizeof(prefix))==0)nativeDamage=(DamageFn)0xd65dc0;
- characterBody=profile->body;combatSettings();cameraConfigure();
+ characterBody=profile->body;combatSettings();cameraConfigure();projectileConfigure();
  if(profile->capabilities&SC_CAP_AUDIO){
   WAVEFORMATEX format={};format.wFormatTag=WAVE_FORMAT_PCM;format.nChannels=2;format.nSamplesPerSec=profile->audioRate;format.wBitsPerSample=16;format.nBlockAlign=4;format.nAvgBytesPerSec=format.nSamplesPerSec*4;
   if(waveOutOpen(&audioOut,WAVE_MAPPER,&format,0,0,CALLBACK_NULL)==MMSYSERR_NOERROR){waveOutSetVolume(audioOut,0x60006000);for(int i=0;i<4;i++){audioHeaders[i].lpData=(LPSTR)audioBuffers[i];audioHeaders[i].dwBufferLength=sizeof(audioBuffers[i]);waveOutPrepareHeader(audioOut,&audioHeaders[i],sizeof(WAVEHDR));}}else audioOut=nullptr;

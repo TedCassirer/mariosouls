@@ -80,13 +80,15 @@ static bool equipmentActionsInput(SC_Input& input,bool parry,bool focus,int slot
 static bool equipmentActionsTick(double& acc,bool focus){
  if(!equipmentActionOwned)return false;
  Vec host=read<Vec>(posData+0x10);auto o=nativeInteractionState();auto track=equipmentActionTrack();
+ int castAnimation=track.id%10000;
+ projectileCastRate(track.kind>=SC_EQUIPMENT_CAST_RIGHT&&(castAnimation==6204||castAnimation==6304||castAnimation==6404||castAnimation==6504));
  auto gear=equipmentRead();
  if(!o.valid||!gear.valid||player!=lastPlayer||currentMap()!=equipmentActionMap||!isfinite(host.y)||
     dot(host-equipmentActionPrevious,host-equipmentActionPrevious)>64||read<int>(player+0x2d4)<=0){
   logf("Native equipment ownership invalid; native handback");releaseControl(true);acc=0;return true;
  }
  if(!focus)actionCancelPulse();
- if(o.menu||o.event||o.ladder){equipmentActionOwned=false;beginInteraction(-1,false);return true;}
+ if(o.menu||o.event||o.ladder){projectileRateRelease();equipmentActionOwned=false;beginInteraction(-1,false);return true;}
  // Never continue displaying an old weapon after a native gear change.
  equipmentActionGear=gear;equipmentCurrent=gear;equipmentActionPrevious=host;
  InterlockedExchange(&actionRoute,LONG(ActionRoute::Locked));actionFlags(true);
@@ -110,6 +112,7 @@ static bool equipmentActionsTick(double& acc,bool focus){
  }
  lastHP=read<int>(player+0x2d4);
  if(equipmentActionCompletion.update(track.busy,o.idle,focus,GetTickCount())){
+  projectileRateRelease();
   actionCancelPulse();equipmentActionOwned=false;equipmentReset();
   guest->resume(character,local.x,local.y,local.z,pose.yaw);
   state.position[0]=local.x;state.position[1]=local.y;state.position[2]=local.z;

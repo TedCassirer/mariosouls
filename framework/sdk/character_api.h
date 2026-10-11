@@ -23,6 +23,15 @@ extern "C" {
 #define SC_CAP_MELEE_FAMILIES 64u
 #define SC_CAP_NATIVE_COMBAT 128u
 #define SC_CAP_PYROMANCY 256u
+/* Optional export, independent of the main ABI. Values use cm and seconds.
+ * A host may support only selected projectile kinds; missing export is native. */
+#define SC_PROJECTILE_PROFILE_VERSION 1u
+#define SC_PROJECTILE_FIREBALL 1u
+typedef struct SC_ProjectileProfile {
+    uint32_t size, version, kind;
+    float castSpeed, speed, gravity, bounceSpeed, lifetime, spawnHeight;
+} SC_ProjectileProfile;
+typedef const SC_ProjectileProfile* (*SC_GetProjectileProfile)(uint32_t version,uint32_t size);
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u

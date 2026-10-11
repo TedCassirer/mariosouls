@@ -2,10 +2,19 @@
 #include "../core/combat.h"
 #include "../core/validation.h"
 #include "../core/camera.h"
+#include "../core/projectile.h"
 #include <cassert>
 #include <cstdio>
 #include <limits>
 int main(){
+ SC_ProjectileProfile projectile={sizeof(projectile),SC_PROJECTILE_PROFILE_VERSION,SC_PROJECTILE_FIREBALL,3.5f,1200,2400,600,3,75};assert(SCProjectile::valid(&projectile));
+ auto badProjectile=projectile;badProjectile.gravity=NAN;assert(!SCProjectile::valid(&badProjectile));badProjectile=projectile;badProjectile.lifetime=100;assert(!SCProjectile::valid(&badProjectile));badProjectile=projectile;badProjectile.castSpeed=0;assert(!SCProjectile::valid(&badProjectile));
+ assert(SCProjectile::floorBounce(1,1,-5,0));assert(!SCProjectile::floorBounce(0,1,-5,0));assert(!SCProjectile::floorBounce(-1,1,-5,0));assert(!SCProjectile::floorBounce(1,1,5,0));assert(!SCProjectile::floorBounce(1,1,-5,12));
+ assert(SCProjectile::sameFloorContact(.49f,1,.01f,.033f,5));assert(!SCProjectile::sameFloorContact(0,1,0,.033f,5));assert(!SCProjectile::sameFloorContact(.49f,1,.5f,.033f,5));assert(!SCProjectile::sameFloorContact(.49f,1,0,.2f,5));
+ SCProjectile::Rate rate;float speed=0;assert(rate.acquire(1,3.5f,speed)&&speed==3.5f);rate.last=speed;
+ for(int i=0;i<100;i++){assert(rate.acquire(3.5f,3.5f,speed)&&speed==3.5f);rate.last=speed;}assert(rate.restore(3.5f,speed)&&speed==1);
+ rate={};assert(rate.acquire(1,3.5f,speed));rate.last=speed;assert(!rate.acquire(2,3.5f,speed));assert(!rate.restore(2,speed));
+ puts("PASS projectile: bounded profiles, floor/wall/ceiling classification, duplicate triangle suppression, bounded bounces, noncompounding cast rate and conflict-aware restoration");
  SC_CameraProfile camera={sizeof(camera),SC_CAMERA_PROFILE_VERSION,1.5f};assert(SCCamera::valid(&camera));
  camera.distanceScale=NAN;assert(!SCCamera::valid(&camera));camera.distanceScale=3;assert(!SCCamera::valid(&camera));
  SCCamera::Distance distance(4);float target=0;assert(distance.next(4,1.5f,target)&&target==6);distance.written(target);

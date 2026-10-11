@@ -28,18 +28,20 @@ static UILayout uiBoundary(IDirect3DDevice9*d,UINT stride){
  auto layout=uiLayout(d,stride);if(layout==UILayout::Other)return layout;
  DWORD z=0,blend=0;d->GetRenderState(D3DRS_ZENABLE,&z);d->GetRenderState(D3DRS_ALPHABLENDENABLE,&blend);
  if(z||(layout==UILayout::SceneCopy?blend!=FALSE:blend!=TRUE))return UILayout::Other;
- IDirect3DSurface9*rt=nullptr,*back=nullptr;D3DSURFACE_DESC r={},b={};
- d->GetRenderTarget(0,&rt);d->GetBackBuffer(0,0,D3DBACKBUFFER_TYPE_MONO,&back);
- if(rt)rt->GetDesc(&r);if(back)back->GetDesc(&b);if(rt)rt->Release();if(back)back->Release();
+ IDirect3DSurface9*rt=nullptr;D3DSURFACE_DESC r={};
+ d->GetRenderTarget(0,&rt);if(rt){rt->GetDesc(&r);rt->Release();}
  D3DVIEWPORT9 vp={};d->GetViewport(&vp);
- if(!r.Width||r.Width!=b.Width||r.Height!=b.Height||vp.X||vp.Y||vp.Width!=r.Width||vp.Height!=r.Height)return UILayout::Other;
- if(r.Format!=D3DFMT_A8R8G8B8)return UILayout::Other;
+ // PTDE draws its UI into an intermediate target, then scales it to the
+ // window. Its dimensions need not equal the swap-chain backbuffer.
+ if(!SCRender::uiTarget(r,vp))return UILayout::Other;
  return layout;
 }
 static void uiComposite(IDirect3DDevice9*d,UILayout layout){
  if(uiComposited||uiInside||layout==UILayout::Other)return;
- uiInside=true;uiComposited=true;drawComposite(d);uiInside=false;
- static bool logged=false;if(!logged||uiTraceFrames==1){logf("Character before UI: boundary=%s",layout==UILayout::SceneCopy?"scene-copy":layout==UILayout::Sprite?"sprite":"text");logged=true;}
+ uiInside=true;uiComposited=drawComposite(d);uiInside=false;
+ if(!uiComposited)return;
+ static UINT lastW=0,lastH=0;D3DVIEWPORT9 vp={};d->GetViewport(&vp);
+ if(lastW!=vp.Width||lastH!=vp.Height||uiTraceFrames==1){D3DSURFACE_DESC z={};sceneDepth->GetDesc(&z);logf("Character before UI: boundary=%s scene=%ux%u UI=%ux%u",layout==UILayout::SceneCopy?"scene-copy":layout==UILayout::Sprite?"sprite":"text",z.Width,z.Height,vp.Width,vp.Height);lastW=vp.Width;lastH=vp.Height;}
 }
 using UIPrimitiveFn=HRESULT(WINAPI*)(IDirect3DDevice9*,D3DPRIMITIVETYPE,UINT,const void*,UINT);
 using UIIndexedFn=HRESULT(WINAPI*)(IDirect3DDevice9*,D3DPRIMITIVETYPE,UINT,UINT,UINT,const void*,D3DFORMAT,const void*,UINT);
@@ -58,7 +60,8 @@ static HRESULT WINAPI uiIndexed(IDirect3DDevice9*d,D3DPRIMITIVETYPE type,UINT mi
  auto layout=uiBoundary(d,stride);if(layout==UILayout::Text||layout==UILayout::Sprite)uiComposite(d,layout);
  auto nativePreview=uiLayout(d,stride)==UILayout::Sprite?classPreviewBind(d,count,v,stride,num):nullptr;
  HRESULT hr=uiOriginalIndexed(d,type,min,num,count,indices,format,v,stride);
- if(nativePreview){d->SetTexture(0,nativePreview);nativePreview->Release();}return hr;
+ if(nativePreview){d->SetTexture(0,nativePreview);nativePreview->Release();}
+ if(SUCCEEDED(hr)&&layout==UILayout::SceneCopy&&(type==D3DPT_TRIANGLESTRIP||type==D3DPT_TRIANGLELIST)&&count==2)uiComposite(d,layout);return hr;
 }
 static void installUIHooks(void**table){
  auto a=MH_CreateHook(table[83],(void*)uiPrimitive,(void**)&uiOriginalPrimitive);

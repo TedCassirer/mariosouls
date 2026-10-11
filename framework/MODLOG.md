@@ -239,3 +239,36 @@ passes read-only check-only verification and refuses an open game. Includes
 prepare-only and will test personally. Live scene composition/pivot, controller
 feel and terrain trajectories remain unverified for this revision. No new
 checkpoint tag replaces the earlier verified Mario-class checkpoint.
+
+
+## 2026-10-11: resolution-independent scene composition (prepared)
+
+The host required the UI render target to equal the swap-chain backbuffer.
+Stock PTDE renders UI into an intermediate target; this rejected the boundary
+at other output resolutions and skipped character drawing. The character layer
+and depth selection also embedded 1024x720 dimensions.
+
+Host composition now accepts the verified UI vertex layouts on full-target
+ARGB/XRGB viewports independently of backbuffer size. It selects the largest
+rectangular, matching color/depth pass within each frame (later equal-size
+passes refresh it), excluding PTDE's square shadows/portraits and smaller
+postprocess depths. The transparent layer follows the retained depth surface,
+recreates on size changes, and releases before device reset. Missing depth is
+never reused across frames. A failed composite does not consume the UI boundary.
+Indexed scene-copy draws now receive the same after-copy handling as UP draws.
+Cannon prompt/reticle coordinates scale with the current viewport.
+
+Real D3D9 tests in a hidden synthetic window exercise the production compositor
+and UI detector with independently sized backbuffers, scene depths and UI
+surfaces: 720p, 1080p, 1440p, 4K and 800x600 UI, including XRGB. Pixel readback
+checks depth occlusion, visible character geometry, subsequent UI priority,
+failed-draw retry, size changes, frame reference clearing and device Reset.
+These are offline graphics checks, not footage or verification inside PTDE.
+The target-selection policy is for stock PTDE's observed render graph; square
+scene targets, MSAA and third-party render-graph replacements are not certified.
+
+Prepared only per user preference. No game input, installation, save mutation
+or new verified-checkpoint tag. Installer also includes the earlier prepared
+Mario load and cannon aim changes; prior immutable checkpoint remains intact.
+
+Validation: full framework build, offline tests (including real D3D9 pixel readback and device reset), and doctor all passed for this revision.

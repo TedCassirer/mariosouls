@@ -21,7 +21,8 @@ static void launcherDrawPart(IDirect3DDevice9*d,unsigned part,Vec at,float yaw,f
 static void launcherPrompt(IDirect3DDevice9*d,const char*message){
  if(!message||!message[0]||!debugFontCreate(d))return;
  struct V{float x,y,z,w;DWORD color;float u,v;};std::vector<V> v;
- auto quad=[&](float x,float y,float w,float h,DWORD color,float u,float t,float du,float dt){V a={x,y,0,1,color,u,t},b={x+w,y,0,1,color,u+du,t},c={x,y+h,0,1,color,u,t+dt},e={x+w,y+h,0,1,color,u+du,t+dt};v.insert(v.end(),{a,b,c,b,e,c});};
+ D3DVIEWPORT9 vp={};d->GetViewport(&vp);
+ auto quad=[&](float x,float y,float w,float h,DWORD color,float u,float t,float du,float dt){x=vp.X+x*vp.Width/1024.f;y=vp.Y+y*vp.Height/720.f;w*=vp.Width/1024.f;h*=vp.Height/720.f;V a={x,y,0,1,color,u,t},b={x+w,y,0,1,color,u+du,t},c={x,y+h,0,1,color,u,t+dt},e={x+w,y+h,0,1,color,u+du,t+dt};v.insert(v.end(),{a,b,c,b,e,c});};
  float w=float(strlen(message))*9.f+32,x=(1024-w)/2;
  d->SetFVF(D3DFVF_XYZRHW|D3DFVF_DIFFUSE|D3DFVF_TEX1);d->SetTexture(0,nullptr);d->SetRenderState(D3DRS_ZENABLE,FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_DIFFUSE);
  quad(x,585,w,38,0xff17191d,0,0,0,0);d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,2,v.data(),sizeof(V));v.clear();
@@ -40,6 +41,7 @@ static void launcherReticle(IDirect3DDevice9*d){
   float a=i*1.5707963f,c=cosf(a),s=sinf(a);
   for(auto p:{Vec{23,0,0},Vec{43,-13,0},Vec{43,13,0}})v.push_back({512+(p.x*c-p.y*s)*.8f,360+p.x*s+p.y*c,0,1,0xb4323232});
  }
+ D3DVIEWPORT9 vp={};d->GetViewport(&vp);for(auto& p:v){p.x=vp.X+p.x*vp.Width/1024.f;p.y=vp.Y+p.y*vp.Height/720.f;}
  d->SetTexture(0,nullptr);d->SetFVF(D3DFVF_XYZRHW|D3DFVF_DIFFUSE);d->SetRenderState(D3DRS_ZENABLE,FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);
  d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_DIFFUSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_DISABLE);
  d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,v.size()/3,v.data(),sizeof(V));

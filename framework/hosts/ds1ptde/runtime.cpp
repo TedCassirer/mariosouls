@@ -118,8 +118,7 @@ static SC_Mesh geo{};
 static std::vector<uint8_t> texture;
 static std::vector<Vec> mapVertices;
 static IDirect3DTexture9* tex=nullptr;
-static IDirect3DSurface9* sceneDepth=nullptr;
-static IDirect3DTexture9* characterLayer=nullptr;
+#include "render_surfaces.h"
 static HWAVEOUT audioOut=nullptr;
 static WAVEHDR audioHeaders[4]={};
 static int16_t audioBuffers[4][2176]={};
@@ -325,11 +324,11 @@ static D3DMATRIX identity(){D3DMATRIX m={};m._11=m._22=m._33=m._44=1;return m;}
 static D3DMATRIX viewMatrix(Vec eye,Vec at){Vec z=unit(at-eye),x=unit(cross({0,1,0},z)),y=cross(z,x);D3DMATRIX m={};m._11=x.x;m._12=y.x;m._13=z.x;m._21=x.y;m._22=y.y;m._23=z.y;m._31=x.z;m._32=y.z;m._33=z.z;m._41=-dot(x,eye);m._42=-dot(y,eye);m._43=-dot(z,eye);m._44=1;return m;}
 struct Vertex{float x,y,z;DWORD color,shade;float u,v;};
 #include "launcher_render.h"
-static void draw(IDirect3DDevice9* d,bool preview=false){
- if(preview?!classPreviewActive:!renderWanted())return;
+static bool draw(IDirect3DDevice9* d,bool preview=false){
+ if(preview?!classPreviewActive:!renderWanted())return false;
  bool drawCharacter=(preview||characterOwned()||nativeActionOwned())&&geo.numTrianglesUsed;
- if(!tex){if(FAILED(d->CreateTexture(profile->textureWidth,profile->textureHeight,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&tex,NULL)))return;D3DLOCKED_RECT lr;if(SUCCEEDED(tex->LockRect(0,&lr,NULL,0))){for(int y=0;y<profile->textureHeight;y++){auto row=(uint32_t*)((BYTE*)lr.pBits+y*lr.Pitch);for(int x=0;x<profile->textureWidth;x++){auto p=&texture[(y*profile->textureWidth+x)*4];row[x]=(p[3]<<24)|(p[0]<<16)|(p[1]<<8)|p[2];}}tex->UnlockRect(0);}}
- IDirect3DStateBlock9* saved=nullptr;if(FAILED(d->CreateStateBlock(D3DSBT_ALL,&saved)))return;
+ if(!tex){if(FAILED(d->CreateTexture(profile->textureWidth,profile->textureHeight,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&tex,NULL)))return false;D3DLOCKED_RECT lr;if(SUCCEEDED(tex->LockRect(0,&lr,NULL,0))){for(int y=0;y<profile->textureHeight;y++){auto row=(uint32_t*)((BYTE*)lr.pBits+y*lr.Pitch);for(int x=0;x<profile->textureWidth;x++){auto p=&texture[(y*profile->textureWidth+x)*4];row[x]=(p[3]<<24)|(p[0]<<16)|(p[1]<<8)|p[2];}}tex->UnlockRect(0);}}
+ IDirect3DStateBlock9* saved=nullptr;if(FAILED(d->CreateStateBlock(D3DSBT_ALL,&saved)))return false;
  D3DVIEWPORT9 vp;d->GetViewport(&vp);Vec eye=cameraEye();Vec at=eye+cameraForward();
  if(preview){float height=classProfile.previewHeightCm*.01f;eye={0,height*.55f,-height*2.f};at={0,height*.5f,0};}
  D3DMATRIX world=identity(),view=viewMatrix(eye,at),proj={};float fov=read<float>(cam+0x50),aspect=read<float>(cam+0x54),zn=read<float>(cam+0x58),zf=read<float>(cam+0x5c);if(fov<.1f||fov>2.8f)fov=.75049f;if(aspect<.5f||aspect>5)aspect=float(vp.Width)/vp.Height;if(zn<.001f||zn>2)zn=.05f;if(zf<50||zf>10000)zf=3000;if(preview){fov=.65f;aspect=classPreviewAspect;zn=.01f;zf=100;}float ys=1/tanf(fov/2);proj._11=ys/aspect;proj._22=ys;proj._33=zf/(zf-zn);proj._34=1;proj._43=-zn*proj._33;
@@ -338,38 +337,28 @@ static void draw(IDirect3DDevice9* d,bool preview=false){
  d->SetVertexShader(NULL);d->SetPixelShader(NULL);d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_SPECULAR|D3DFVF_TEX1);d->SetTransform(D3DTS_WORLD,&world);d->SetTransform(D3DTS_VIEW,&view);d->SetTransform(D3DTS_PROJECTION,&proj);
  d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_ZENABLE,(preview||depthTest)?TRUE:FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,TRUE);d->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,(profile->capabilities&SC_CAP_ALPHA_TEST)?TRUE:FALSE);d->SetRenderState(D3DRS_ALPHAREF,127);d->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);d->SetRenderState(D3DRS_FOGENABLE,FALSE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_COLORWRITEENABLE,15);d->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);d->SetRenderState(D3DRS_CLIPPLANEENABLE,0);d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE);d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
  d->SetTexture(0,tex);d->SetTextureStageState(0,D3DTSS_COLOROP,(profile->capabilities&SC_CAP_TEXTURE_MODULATE)?D3DTOP_MODULATE:D3DTOP_BLENDTEXTUREALPHA);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,(profile->capabilities&SC_CAP_ALPHA_TEST)?D3DTA_TEXTURE:D3DTA_DIFFUSE);d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(1,D3DTSS_COLORARG1,D3DTA_CURRENT);d->SetTextureStageState(1,D3DTSS_COLORARG2,D3DTA_SPECULAR);d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(1,D3DTSS_ALPHAARG1,D3DTA_CURRENT);d->SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_CLAMP);d->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_CLAMP);
- HRESULT hr=drawCharacter?d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex)):S_OK;static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}if(!preview){if(drawCharacter){equipmentDraw(d,renderOrigin);feedbackDraw(d);}debugDraw(d);launcherDraw(d);}saved->Apply();saved->Release();
+ HRESULT hr=drawCharacter?d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex)):S_OK;static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}if(!preview){if(drawCharacter){equipmentDraw(d,renderOrigin);feedbackDraw(d);}debugDraw(d);launcherDraw(d);}saved->Apply();saved->Release();return SUCCEEDED(hr);
 }
 typedef HRESULT (WINAPI *EndSceneFn)(IDirect3DDevice9*);
 static EndSceneFn originalEnd;
-static void drawComposite(IDirect3DDevice9*d){
- if(!renderWanted()||!sceneDepth)return;
- if(!characterLayer&&FAILED(d->CreateTexture(1024,720,1,D3DUSAGE_RENDERTARGET,D3DFMT_A8R8G8B8,D3DPOOL_DEFAULT,&characterLayer,nullptr)))return;
- IDirect3DSurface9*target=nullptr,*depth=nullptr,*layer=nullptr;IDirect3DStateBlock9*saved=nullptr;d->GetRenderTarget(0,&target);d->GetDepthStencilSurface(&depth);characterLayer->GetSurfaceLevel(0,&layer);if(!target||!layer||FAILED(d->CreateStateBlock(D3DSBT_ALL,&saved))){if(target)target->Release();if(depth)depth->Release();if(layer)layer->Release();return;}
- IDirect3DVertexDeclaration9* uiDeclaration=nullptr;d->GetVertexDeclaration(&uiDeclaration);D3DMATRIX uiWorld,uiView,uiProjection;d->GetTransform(D3DTS_WORLD,&uiWorld);d->GetTransform(D3DTS_VIEW,&uiView);d->GetTransform(D3DTS_PROJECTION,&uiProjection);saved->Capture();D3DVIEWPORT9 output;d->GetViewport(&output);d->SetDepthStencilSurface(nullptr);d->SetRenderTarget(0,layer);d->SetDepthStencilSurface(sceneDepth);D3DVIEWPORT9 vp={0,0,1024,720,0,1};d->SetViewport(&vp);d->Clear(0,nullptr,D3DCLEAR_TARGET,0,1,0);draw(d);
- d->SetDepthStencilSurface(nullptr);d->SetRenderTarget(0,target);d->SetDepthStencilSurface(depth);d->SetViewport(&output);
- struct Quad{float x,y,z,w,u,v;};float x=float(output.X)-.5f,y=float(output.Y)-.5f,w=float(output.Width),h=float(output.Height);Quad q[]={{x,y,0,1,0,0},{x+w,y,0,1,1,0},{x,y+h,0,1,0,1},{x+w,y+h,0,1,1,1}};
- d->SetVertexShader(nullptr);d->SetPixelShader(nullptr);d->SetFVF(D3DFVF_XYZRHW|D3DFVF_TEX1);d->SetTexture(0,characterLayer);d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_DISABLE);
- d->SetRenderState(D3DRS_ZENABLE,FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);d->SetRenderState(D3DRS_ALPHABLENDENABLE,TRUE);d->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCALPHA);d->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA);d->SetRenderState(D3DRS_BLENDOP,D3DBLENDOP_ADD);d->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_FOGENABLE,FALSE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_COLORWRITEENABLE,15);d->SetRenderState(D3DRS_SRGBWRITEENABLE,FALSE);d->SetSamplerState(0,D3DSAMP_SRGBTEXTURE,FALSE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);d->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP,2,q,sizeof(Quad));
- saved->Apply();d->SetTransform(D3DTS_WORLD,&uiWorld);d->SetTransform(D3DTS_VIEW,&uiView);d->SetTransform(D3DTS_PROJECTION,&uiProjection);if(uiDeclaration){d->SetVertexDeclaration(uiDeclaration);uiDeclaration->Release();}saved->Release();target->Release();if(depth)depth->Release();layer->Release();
-}
+#include "render_composite.h"
 #include "class_preview.h"
 #include "ui_order.h"
 static bool updatedForPresent=false;
 static HRESULT WINAPI endScene(IDirect3DDevice9* d){static bool realHooks=false;if(!realHooks){realHooks=true;installUIHooks(*(void***)d);}if(!updatedForPresent){updatedForPresent=true;update();}uiFrameEnd();if(renderMode==0)draw(d);return originalEnd(d);}
 using ResetFn=HRESULT(WINAPI*)(IDirect3DDevice9*,D3DPRESENT_PARAMETERS*);
 static ResetFn originalReset;
-static HRESULT WINAPI reset(IDirect3DDevice9*d,D3DPRESENT_PARAMETERS*p){updatedForPresent=false;uiComposited=false;classPreviewReset();if(sceneDepth){sceneDepth->Release();sceneDepth=nullptr;}if(characterLayer){characterLayer->Release();characterLayer=nullptr;}return originalReset(d,p);}
+static HRESULT WINAPI reset(IDirect3DDevice9*d,D3DPRESENT_PARAMETERS*p){updatedForPresent=false;uiComposited=false;classPreviewReset();renderSurfacesReset();return originalReset(d,p);}
 using PresentFn=HRESULT(WINAPI*)(IDirect3DDevice9*,const RECT*,const RECT*,HWND,const RGNDATA*);
 using RenderTargetFn=HRESULT(WINAPI*)(IDirect3DDevice9*,DWORD,IDirect3DSurface9*);
 static PresentFn originalPresent;
 static RenderTargetFn originalRenderTarget;
 #include "startup.h"
 static unsigned rtCount=0,mainUses=0;static IDirect3DSurface9* mainTarget=nullptr;static bool sceneDrawn=false;
-static HRESULT WINAPI present(IDirect3DDevice9*d,const RECT*a,const RECT*b,HWND c,const RGNDATA*e){updatedForPresent=false;rtCount=mainUses=0;mainTarget=nullptr;sceneDrawn=false;if(graphFrames>0)--graphFrames;if(skipIntroPresent()){uiPresent();return S_OK;}HRESULT hr=originalPresent(d,a,b,c,e);uiPresent();return hr;}
+static HRESULT WINAPI present(IDirect3DDevice9*d,const RECT*a,const RECT*b,HWND c,const RGNDATA*e){renderDepthEndFrame();updatedForPresent=false;rtCount=mainUses=0;mainTarget=nullptr;sceneDrawn=false;if(graphFrames>0)--graphFrames;if(skipIntroPresent()){uiPresent();return S_OK;}HRESULT hr=originalPresent(d,a,b,c,e);uiPresent();return hr;}
 static HRESULT WINAPI setRenderTarget(IDirect3DDevice9*d,DWORD index,IDirect3DSurface9*target){
  if(index==0){++rtCount;if(rtCount==1)mainTarget=target;if(target==mainTarget)++mainUses;
-  if(player){IDirect3DSurface9*old=nullptr,*depth=nullptr;d->GetRenderTarget(0,&old);d->GetDepthStencilSurface(&depth);D3DSURFACE_DESC desc={},dd={};if(old)old->GetDesc(&desc);if(depth)depth->GetDesc(&dd);if(depth&&desc.Width==1024&&desc.Height==720&&dd.Width==1024&&dd.Height==720){if(sceneDepth)sceneDepth->Release();sceneDepth=depth;depth=nullptr;}if(old)old->Release();if(depth)depth->Release();}
+  if(player&&!uiInside)renderDepthObserve(d);
   if(graphFrames==1){IDirect3DSurface9*old=nullptr,*depth=nullptr;d->GetRenderTarget(0,&old);d->GetDepthStencilSurface(&depth);D3DSURFACE_DESC desc={},dd={};if(old)old->GetDesc(&desc);if(depth)depth->GetDesc(&dd);logf("graph pass=%u mainuses=%u old=%08x new=%08x size=%ux%u format=%u depth=%08x depthsize=%ux%u",rtCount,mainUses,(unsigned)(uintptr_t)old,(unsigned)(uintptr_t)target,desc.Width,desc.Height,desc.Format,(unsigned)(uintptr_t)depth,dd.Width,dd.Height);using SaveFn=HRESULT(WINAPI*)(const char*,int,IDirect3DSurface9*,const void*,const RECT*);auto save=(SaveFn)GetProcAddress(GetModuleHandleA("d3dx9_43.dll"),"D3DXSaveSurfaceToFileA");if(save&&old){char path[MAX_PATH];snprintf(path,sizeof(path),"%s\\charactersouls-pass-%02u.bmp",root,rtCount);save(path,0,old,nullptr,nullptr);}if(old)old->Release();if(depth)depth->Release();}
   if(renderWanted()&&renderMode>=100&&rtCount==unsigned(renderMode-100)){draw(d);sceneDrawn=true;}
   if(renderWanted()&&!sceneDrawn&&renderMode==1&&mainUses==2&&mainTarget){IDirect3DSurface9*old=nullptr;d->GetRenderTarget(0,&old);if(old==mainTarget&&target!=old){draw(d);sceneDrawn=true;}if(old)old->Release();}

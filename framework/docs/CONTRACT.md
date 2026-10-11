@@ -515,3 +515,16 @@ The host destroys it before entering gameplay. The native saved class requests
 the character once per loaded actor, preserving manual overrides during that
 actor lifetime. No retroactive inventory is granted to existing saves.
 See STARTING_CLASSES.md for PTDE mapping, activation and validation.
+
+
+### Host render dimensions
+
+Adapters submit world-space mesh data, not a resolution-specific framebuffer.
+The DS1 PTDE host captures a current-frame scene depth and sizes its transparent
+character target to that surface. It composites into the native UI target
+before text/sprites; that intermediate target need not match the backbuffer.
+Display-size changes recreate the layer; device reset releases default-pool
+resources. There is no after-UI fallback that would cover prompts with characters.
+The stock render-graph selector excludes square shadow/portrait passes, keeps
+the largest rectangular matching color/depth pair, and ignores downsampled
+passes. Multisampled and replacement render graphs require separate validation.

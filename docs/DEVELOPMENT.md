@@ -15,29 +15,38 @@ Exact dependency revisions, compiler hashes and optional Python packages are in
 `work/tools/zig-windows-x86_64-0.13.0/zig.exe`. Python extras used for asset
 preparation and QA are currently expected under `work/python-deps/`.
 
-The tooling still has local path assumptions. In particular, the default game
-directory is defined in `tools/framework.py`; live QA helpers have their own
-paths. Review these before using the tools on another computer. A portable setup
-and installer remain planned work.
+Set a nonstandard game directory in PowerShell before running the supported tools:
+
+```powershell
+$env:MARIOSOULS_GAME_DIR = "D:\SteamLibrary\steamapps\common\Dark Souls Prepare to Die Edition\DATA"
+```
+
+Live QA helpers still have their own paths. Review those separately. A standalone
+player installer remains planned work. For the shared tests, install the small
+Python dependency set with `python -m pip install -r requirements-ci.txt`.
 
 ## Dependencies and build
 
 From the repository root:
 
 ```powershell
-python tools/dependencies.py --setup
+python tools/dependencies.py --setup --download-toolchain
 python tools/framework.py doctor
 python tools/framework.py build --with-runtime
 ```
 
 Dependency setup clones pinned upstream repositories and applies our patches. It
-does not download the compiler or game assets and stops if existing dependency
+downloads and verifies the compiler only when requested; never downloads game assets and stops if existing dependency
 edits differ. Runtime preparation operates on a staged copy of the dependency.
 
 Build output is in `work/framework-build/`. Later builds without `--with-runtime`
 rebuild the host and adapter, reusing the existing runtime.
 
 ## Tests
+
+ROM-free checks: `python tools/framework.py test --shared-only`. See
+[testing and CI](TESTING.md) for the distinction between shared, full and live tests.
+
 
 ```powershell
 python tools/framework.py test --asset "C:\path\Super Mario 64 (USA).z64" --runtime "work/framework-build/characters/mario64/sm64.dll"
@@ -79,6 +88,10 @@ After reviewing the check, repeat without `--check-only`. The installer checks
 the executable, test receipt and assets; backs up replaced files; and rolls back
 failed copies. Keep a separate save backup as well. This command is a development
 tool, not the planned public installer.
+
+For verified restoration of a current install transaction, see
+[uninstall and troubleshooting](TROUBLESHOOTING.md). Unknown existing loaders are
+refused; review [compatibility](COMPATIBILITY.md) before overriding this.
 
 ## Making changes
 

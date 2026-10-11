@@ -93,7 +93,7 @@ def equipment_files(directory):
     return sources
 
 
-def install(character,asset,runtime,check_only=False,collision=None,equipment=None):
+def install(character,asset,runtime,check_only=False,collision=None,equipment=None,replace_loader=False):
     folder,p=f.load_profile(character)
     if p['status']!='implemented':raise RuntimeError('Scaffolds cannot be installed as completed characters')
     build=f.BUILD/'characters'/character;receipt=json.loads((build/'build.json').read_text())
@@ -106,6 +106,13 @@ def install(character,asset,runtime,check_only=False,collision=None,equipment=No
     checkpoint=json.loads((f.ROOT/'checkpoints/mariosouls-v0.7.json').read_text())
     if f.sha(f.GAME/'DARKSOULS.exe')!=checkpoint['game_exe_sha256']:raise RuntimeError('Unsupported Dark Souls executable')
     cfg=configparser.ConfigParser();cfg.optionxform=str;cfg.read(f.GAME/'mariosouls.ini')
+    proxy=f.GAME/'dinput8.dll'
+    known=set()
+    for record in [f.GAME/'MarioSouls/install.json',f.GAME/'SoulsCharacterFramework/install.json']:
+        if record.is_file():
+            data=json.loads(record.read_text());known.add(data.get('proxy_sha256'));known.add(data.get('files',{}).get('dinput8.dll'))
+    if proxy.is_file() and f.sha(proxy) not in known and not replace_loader:
+        raise RuntimeError('Unrecognized dinput8.dll loader. Review compatibility; use --replace-loader only to explicitly back it up and replace it.')
     section='Character.'+character
     asset=asset or cfg.get(section,'Asset',fallback=cfg.get('MarioSouls','ROM',fallback=''))
     runtime=runtime or cfg.get(section,'Runtime',fallback=cfg.get('MarioSouls','Library',fallback=''))
@@ -155,7 +162,8 @@ def install(character,asset,runtime,check_only=False,collision=None,equipment=No
             harness['Harness'].update(Armed='0',Heartbeat='0',Mode='0',Frames='0',Buttons='0')
             with (temp/'harness.ini').open('w') as out:harness.write(out)
             sources[harness_path]=temp/'harness.ini'
-        legacy=json.loads((f.GAME/'MarioSouls/install.json').read_text());legacy['version']='framework-'+receipt['framework_version'];legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
+        legacy_path=f.GAME/'MarioSouls/install.json'
+        legacy=json.loads(legacy_path.read_text()) if legacy_path.is_file() else {};legacy['version']='framework-'+receipt['framework_version'];legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
         (temp/'legacy.json').write_text(json.dumps(legacy,indent=2));sources[f.GAME/'MarioSouls/install.json']=temp/'legacy.json'
         target_manifest=f.GAME/'SoulsCharacterFramework/install.json'
         installed={'framework_version':receipt['framework_version'],'character':character,'abi':4,'build':receipt,'backup':str(backup),'files':{str(dst.relative_to(f.GAME)).replace('\\','/'):f.sha(src) for dst,src in sources.items()}}
@@ -172,6 +180,7 @@ def install(character,asset,runtime,check_only=False,collision=None,equipment=No
             if dst.exists():
                 copy=backup/name;copy.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(dst,copy)
         (backup/'manifest.json').write_text(json.dumps(previous,indent=2))
+        (backup/'hashes.json').write_text(json.dumps({name:f.sha(backup/name) if exists else None for name,exists in previous.items()},indent=2))
         written=[]
         require_closed()
         try:

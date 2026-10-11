@@ -35,7 +35,8 @@
     "path": "work/tools/zig-windows-x86_64-0.13.0/zig.exe",
     "sha256": "2e44af5bbf7a72ef8cbdae370284687c95d65a19affa469d2ad0364d905b8e84",
     "local_archive": "work/tools/zig-0.13.0.zip",
-    "archive_sha256": "d859994725ef9402381e557c60bb57497215682e355204d754ee3df75ee3c158"
+    "archive_sha256": "d859994725ef9402381e557c60bb57497215682e355204d754ee3df75ee3c158",
+    "url": "https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip"
   },
   "testing": {
     "python": "3.12",

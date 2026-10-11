@@ -107,3 +107,20 @@
 !/outputs/Combat harness/*.cmd
 !/outputs/Combat harness/Example punch sequence.json
 !/outputs/Combat harness/fixture-baseline.json
+
+!/LICENSE
+!/THIRD_PARTY.md
+!/CHANGELOG.md
+!/SECURITY.md
+!/requirements-ci.txt
+!/licenses/
+/licenses/*
+!/licenses/*.txt
+!/release/
+/release/*
+!/release/*.json
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/*.yml
+!/.github/PULL_REQUEST_TEMPLATE.md
+!/.github/dependabot.yml

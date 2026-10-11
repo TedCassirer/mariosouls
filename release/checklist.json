@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "checks": [
+    {
+      "id": "clean-install",
+      "status": "pending",
+      "description": "Install and remove on a clean PTDE copy on another PC without developer assets.",
+      "evidence": null
+    },
+    {
+      "id": "portable-player-setup",
+      "status": "pending",
+      "description": "Finish and test a standalone player installer and local asset preparation.",
+      "evidence": null
+    },
+    {
+      "id": "full-game-regression",
+      "status": "pending",
+      "description": "Validate loads, death, transitions, scripted floors, lifts, doors, NPCs and combat across supported areas.",
+      "evidence": null
+    },
+    {
+      "id": "input-display-matrix",
+      "status": "pending",
+      "description": "Physical controller and keyboard checks at supported resolutions on another PC.",
+      "evidence": null
+    },
+    {
+      "id": "save-safety",
+      "status": "pending",
+      "description": "Verify existing saves, class identity and uninstall/rollback on disposable save copies.",
+      "evidence": null
+    },
+    {
+      "id": "compatibility",
+      "status": "pending",
+      "description": "Measure DSfix/other loader conflicts and document supported combinations; offline gameplay only until verified.",
+      "evidence": null
+    },
+    {
+      "id": "distribution-review",
+      "status": "pending",
+      "description": "Review all dependency notices, game-derived content and source distribution for the exact package.",
+      "evidence": null
+    },
+    {
+      "id": "candidate-signoff",
+      "status": "pending",
+      "description": "Review exact candidate hashes, changelog, known issues and live QA evidence before public publication.",
+      "evidence": null
+    }
+  ]
+}

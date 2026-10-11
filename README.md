@@ -32,6 +32,8 @@ compatibility. See the [validation record](framework/docs/VALIDATION.md).
 | Understand the framework | [Architecture and documentation](framework/README.md) |
 | Add another character | [Adapter guide](framework/docs/ADDING_A_CHARACTER.md) |
 | Report a problem or contribute | [Contributing](CONTRIBUTING.md) |
+| Understand tests and CI | [Testing](docs/TESTING.md) |
+| Prepare a future release | [Release process](docs/RELEASING.md) |
 | Recover an earlier version | [Checkpoints and local backups](docs/CHECKPOINTS.md) |
 
 Mario requires a user-supplied US Super Mario 64 ROM. ROMs, saves, extracted assets,
@@ -61,3 +63,6 @@ Built using [libsm64](https://github.com/libsm64/libsm64),
 [Soulstruct tooling](https://github.com/Grimrukh/soulstruct).
 Development has been assisted by OpenAI Codex. Dependencies retain their own
 licenses; third-party game assets are not included.
+
+Original project code is [GPL-3.0-only](LICENSE). See [third-party notices](THIRD_PARTY.md)
+and the [unreleased changelog](CHANGELOG.md).

@@ -14,7 +14,7 @@ class Installation(unittest.TestCase):
   for p in [self.game/'MarioSouls',self.build/'characters/fixture',self.folder,self.root/'checkpoints']:p.mkdir(parents=True)
   self.runtime=self.game/'SoulsCharacterFramework/characters/fixture/runtime.dll';self.runtime.parent.mkdir(parents=True);self.runtime.write_bytes(b'runtime')
   (self.game/'DARKSOULS.exe').write_bytes(b'fake-executable');(self.game/'dinput8.dll').write_bytes(b'old-host')
-  (self.game/'mariosouls.ini').write_text('[MarioSouls]\nLibrary='+str(self.runtime)+'\n[Combat]\nBasePower=105\n');(self.game/'MarioSouls/install.json').write_text('{}')
+  (self.game/'mariosouls.ini').write_text('[MarioSouls]\nLibrary='+str(self.runtime)+'\n[Combat]\nBasePower=105\n');(self.game/'MarioSouls/install.json').write_text(json.dumps({'proxy_sha256':f.sha(self.game/'dinput8.dll')}))
   (self.game/'MarioSouls/harness.ini').write_text('[Harness]\nArmed=1\nHeartbeat=123\n')
   (self.build/'dinput8.dll').write_bytes(b'new-host');(self.build/'characters/fixture/character.dll').write_bytes(b'adapter')
   self.profile={'status':'implemented','assets':{'required':False,'runtime':'runtime.dll'}};(self.folder/'character.json').write_text(json.dumps(self.profile))
@@ -31,6 +31,16 @@ class Installation(unittest.TestCase):
  def test_check_does_not_mutate(self):
   before={str(p):f.sha(p) for p in self.root.rglob('*') if p.is_file()};self.call(True)
   self.assertEqual(before,{str(p):f.sha(p) for p in self.root.rglob('*') if p.is_file()})
+ def test_unknown_loader_requires_explicit_override(self):
+  (self.game/'dinput8.dll').write_bytes(b'other-loader')
+  with self.assertRaisesRegex(RuntimeError,'loader'):self.call(True)
+  installer.install('fixture',None,str(self.runtime),replace_loader=True)
+  backup=Path(json.loads((self.game/'SoulsCharacterFramework/install.json').read_text())['backup'])
+  self.assertEqual((backup/'dinput8.dll').read_bytes(),b'other-loader')
+ def test_fresh_install_without_legacy_manifest(self):
+  (self.game/'dinput8.dll').unlink();(self.game/'MarioSouls/install.json').unlink()
+  self.call()
+  self.assertEqual((self.game/'dinput8.dll').read_bytes(),b'new-host')
  def test_reinstall_runtime_at_destination(self):
   self.call();self.assertEqual((self.game/'dinput8.dll').read_bytes(),b'new-host');self.assertEqual(self.runtime.read_bytes(),b'runtime')
   self.assertEqual(json.loads((self.game/'SoulsCharacterFramework/install.json').read_text())['framework_version'],'0.9.0')

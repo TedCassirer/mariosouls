@@ -160,3 +160,33 @@ Offline checks pass: class profile rejection, activation/manual override/reload,
 real preview mesh animation/rotation/repeated teardown, subsequent gameplay
 instance and the existing framework/adapter regressions. Final preview-facing,
 name-modal and restart checks are recorded below when completed.
+
+User correction after the initial pass: retain the native starting inventory and
+obtain the Flame through the original tutorial pickup. Removed the entire native
+initializer hook instead of compensating with later inventory edits. Earlier QA
+save inventory evidence above describes the superseded build; existing saves
+are not stripped of previously acquired items. Original row 2007 remains intact.
+The creation appearance menus also select different native preview textures;
+expanded preview coverage is undergoing a separate live pass.
+
+Final portrait diagnosis: both panes use the original UP sprite path; the actual
+difference is the quad inset. Clothed panel bounds are 6600,1216,9568,4984;
+appearance panel bounds are 6720,1720,9576,5056. The earlier exact-rectangle
+filter excluded the latter. Removed unsuccessful buffered-draw hooks. Final
+matching requires a large right-pane quad and native 512-square ARGB render
+target, with aspect correction per quad. Native face-editor +B0 state keeps
+the guest alive in advanced customization.
+
+Live verification: face, hair and color dropdowns and advanced customization
+all retain animated Mario. Physique list/selection also retains Mario. His
+standard outfit is unchanged by human appearance sliders. Native initializer
+D1FA40 retains its original bytes in the running build after removal of the
+equipment override. Class-7 tutorial routing remains native.
+
+Final installed-build pass: corrected per-pane aspect and native viewer rotation;
+Mario remains visible in name entry/dismissal and face/hair panes. Sorcerer
+selection restores the native human, switching back restores Mario. Full build,
+offline regression suite and doctor passed. No new combat claims are made by
+this menu test. Final captures are outputs/Mario class.png and
+outputs/Mario appearance preview.png. The earlier Mario ClassQA save predates
+the requested inventory correction and intentionally keeps its acquired gear.

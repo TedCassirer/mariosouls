@@ -206,7 +206,8 @@ Export SoulsCharacterGetClassProfile using the exact SDK version and size.
 Provide static UTF-8 name (1..31 bytes), description (1..191 bytes), a supported
 SC_ClassArchetype and finite previewHeightCm (20..500) / previewYaw (-2pi..2pi).
 The host currently maps SC_CLASS_FIRECASTER to the native Pyromancer slot with
-its stats, Flame, shield and attuned Fireball. Other archetypes are not implemented.
+its original stats, starting inventory and tutorial pickups. The Flame is not
+granted at creation. Other archetypes are not implemented.
 
 The adapter must support repeated pose-only create/animate/destroy before its
 world instance is created. Keep meshes and default facing in the adapter.

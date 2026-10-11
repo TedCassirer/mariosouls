@@ -18,7 +18,7 @@ def observe(host):
         raise StateError("Starting class/stats do not match the unmodified firecaster fixture")
     state["native_class"]=slot
     state["starting_equipment_matches"]=all(state["equipment"][key]==value for key,value in
-        dict(right1=1330000,right2=900000,left1=1406000,left2=900000).items())
+        dict(right1=212000,right2=900000,left1=900000,left2=900000).items())
     return state
 
 def main():

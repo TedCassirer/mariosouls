@@ -275,5 +275,5 @@ static const SC_LauncherAPI launcherAPI={sizeof(SC_LauncherAPI),SC_LAUNCHER_VERS
 extern "C" __declspec(dllexport) const SC_LauncherAPI* SoulsCharacterGetLauncherAPI(uint32_t version,uint32_t size){return version==SC_LAUNCHER_VERSION&&size==sizeof(SC_LauncherAPI)?&launcherAPI:nullptr;}
 
 #include "../../sdk/class_api.h"
-static const SC_ClassProfile startingClass={sizeof(SC_ClassProfile),SC_CLASS_FIRECASTER,"Mario","Hero from another world.\nJumps, punches and kicks.\nStarts with a Fire Flower.",160.f,3.14159265f};
+static const SC_ClassProfile startingClass={sizeof(SC_ClassProfile),SC_CLASS_FIRECASTER,"Mario","Hero from another world.\nJumps, punches and kicks.\nFind a Fire Flower ahead.",160.f,3.14159265f};
 extern "C" __declspec(dllexport) const SC_ClassProfile* SoulsCharacterGetClassProfile(uint32_t version,uint32_t size){return version==SC_CLASS_PROFILE_VERSION&&size==sizeof(startingClass)?&startingClass:nullptr;}

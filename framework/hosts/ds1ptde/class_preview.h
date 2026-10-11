@@ -31,13 +31,20 @@ static bool classPreviewRender(IDirect3DDevice9*d){
 static IDirect3DBaseTexture9* classPreviewBind(IDirect3DDevice9*d,UINT count,const void*v,UINT stride,UINT vertices){
  if(!classPreviewActive||classPreviewDrawing||!classCreationMenu()||!classSelected()||stride!=12||count!=2||vertices!=4||!v)return nullptr;
  // Verified SHORT2 panel quad, in eighths of a logical UI pixel. Do not replace
- // the face portrait, icons or any unrelated texture with the same dimensions.
+ // icons or unrelated textures; creation portraits may use different insets.
  int left=32767,top=32767,right=-32768,bottom=-32768;
  for(int i=0;i<4;i++){auto p=(const short*)((const char*)v+i*stride);left=std::min(left,int(p[0]));right=std::max(right,int(p[0]));top=std::min(top,int(p[1]));bottom=std::max(bottom,int(p[1]));}
- if(left!=6600||right!=9568||top!=1216||bottom!=4984)return nullptr;
  IDirect3DBaseTexture9* native=nullptr;d->GetTexture(0,&native);if(!native)return nullptr;
  D3DSURFACE_DESC desc={};if(native->GetType()==D3DRTYPE_TEXTURE)((IDirect3DTexture9*)native)->GetLevelDesc(0,&desc);
- if(desc.Width!=512||desc.Height!=512||desc.Format!=D3DFMT_A8R8G8B8||!classPreviewRender(d)){native->Release();return nullptr;}
+ if(desc.Width!=512||desc.Height!=512||desc.Format!=D3DFMT_A8R8G8B8||!(desc.Usage&D3DUSAGE_RENDERTARGET)){native->Release();return nullptr;}
+ static std::vector<std::vector<int>> seen;
+ std::vector<int> key={left,top,right,bottom};
+ if(seen.size()<16&&std::find(seen.begin(),seen.end(),key)==seen.end()){seen.push_back(key);logf("CLASS portrait bounds=%d,%d,%d,%d",left,top,right,bottom);}
+ // Native clothed, physique and face views use different large quads inside
+ // the right portrait pane. Texture type/usage and pane bounds exclude icons.
+ if(left<6400||right>9800||top<1000||bottom>5200||right-left<2000||bottom-top<2500){native->Release();return nullptr;}
+ classPreviewAspect=float(right-left)/float(bottom-top);classPreviewFace=top>=1600;
+ if(!classPreviewRender(d)){native->Release();return nullptr;}
  d->SetTexture(0,classPreviewTexture);
  static bool logged=false;if(!logged){logf("CLASS animated preview substituted in native model panel");logged=true;}
  return native;

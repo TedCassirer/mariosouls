@@ -40,6 +40,9 @@ def install(character,asset,runtime,check_only=False):
     cfg[section]={'Asset':str(Path(asset).resolve()) if asset else '', 'Runtime':str(destination/p['assets']['runtime']) if p['assets'].get('runtime') else ''}
     combat='Combat.'+character
     if combat not in cfg:cfg[combat]=dict(cfg['Combat']) if old_character==character and 'Combat' in cfg else {}
+    if 'Feedback' not in cfg:cfg['Feedback']={}
+    for key,value in dict(Enabled='1',HitStop='1',Sound='1',Flash='1',Rumble='1',Volume='65',RumbleStrength='75').items():
+        if key not in cfg['Feedback']:cfg['Feedback'][key]=value
     for section_name,values in [('Test',{'Mode':'0','Frames':'0','Buttons':'0','X':'0','Y':'0'}),('Harness',{'Armed':'0','Session':'0'})]:
         if section_name not in cfg:cfg[section_name]={}
         cfg[section_name].update(values)

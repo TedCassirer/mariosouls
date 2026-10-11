@@ -36,6 +36,7 @@ static std::unordered_map<int,DWORD> characterLastStagger;
 static char combatConfigSection[96]={};
 static float combatFloat(const char* key,float fallback,float lo,float hi){char d[40],v[40];snprintf(d,sizeof(d),"%.4f",fallback);GetPrivateProfileStringA(combatConfigSection,key,d,v,sizeof(v),ini);float f=strtof(v,nullptr);return isfinite(f)?std::clamp(f,lo,hi):fallback;}
 static void combatSettings(){
+ feedbackSettings();
  snprintf(combatConfigSection,sizeof(combatConfigSection),"Combat.%s",profile->id);
  characterBalance.base=combatFloat("BasePower",profile->basePower,1,1000);characterBalance.upgradeStep=combatFloat("UpgradePower",profile->upgradePower,0,50);characterBalance.dexterityWeight=profile->dexterityWeight;
  characterBalance.fixedPower=combatFloat("FixedPower",0,0,1200);characterBalance.upgrade=std::clamp<int>(GetPrivateProfileIntA(combatConfigSection,"UpgradeLevel",0,ini),0,15);
@@ -44,7 +45,7 @@ static void combatSettings(){
 
  for(unsigned i=0;i<profile->attackCount;i++){char key[80];snprintf(key,sizeof(key),"%s_multiplier",attackName(i));characterBalance.multiplier[i]=combatFloat(key,profile->attacks[i].multiplier,0,3);snprintf(key,sizeof(key),"%s_cost",attackName(i));characterBalance.poise[i]=profile->attacks[i].poise;characterBalance.cost[i]=std::clamp<int>(GetPrivateProfileIntA(combatConfigSection,key,profile->attacks[i].staminaCost,ini),0,100);}
 }
-static void combatReset(){characterWindow.reset();characterRecoveryUntil=0;characterStaminaCeiling=0;characterLandingRecovery=0;characterLastStagger.clear();characterFalling=false;}
+static void combatReset(){feedbackReset();characterWindow.reset();characterRecoveryUntil=0;characterStaminaCeiling=0;characterLandingRecovery=0;characterLastStagger.clear();characterFalling=false;}
 static bool combatTestDrop(int height){
  if(!harness.armed||!harnessIdentity()||!enabled||interacting||height<1||height>25||state.position[1]>state.floorHeight+5)return false;
  state.position[1]+=height*100;guest->setPosition(character,state.position[0],state.position[1],state.position[2]);guest->command(character,SC_COMMAND_FALL);state.flags=0;
@@ -118,6 +119,7 @@ static void combat(){
   DWORD now=GetTickCount();float poise=characterBalance.poise[move];auto last=characterLastStagger.find(id);if(last!=characterLastStagger.end()&&DWORD(now-last->second)<1000)poise=0;else characterLastStagger[id]=now;
   harnessHitAttempt(id,hp,990050+move,0,"hit_attempt");int result=characterNativeHit(move,characterWindow.attackPower,poise,id,pos);harnessHitAttempt(id,hp,990050+move,result,"native_call_return");
   if(!characterPacketBuilt){if(harness.armed)harnessStop("native_damage_pipeline_unavailable");return;}
+  feedbackTrack(npc,id,hp,characterWindow.serial,move,pos+Vec{0,1.05f,0}+unit(p-pos)*.32f);
   // Commit the guest contact reaction once, after eligibility/stamina checks. The
   // read-only probe never bounces an exhausted Character or resets an attack window.
   if(first&&characterPacketBuilt)guest->commitContact(character,local.x,local.y,local.z,160);

@@ -15,6 +15,8 @@ def test(character,asset,runtime):
     f.BUILD.mkdir(parents=True,exist_ok=True)
     f.compile_cpp(f.FRAMEWORK/'tests/core_test.cpp',f.BUILD/'core-test.exe')
     f.run([f.BUILD/'core-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/feedback_test.cpp',f.BUILD/'feedback-test.exe')
+    f.run([f.BUILD/'feedback-test.exe'])
     for name in ['controller','action_input']:
         f.compile_cpp(f.FRAMEWORK/f'tests/{name}_test.cpp',f.BUILD/f'{name}-test.exe',extra=['-luser32','-ldxguid'])
         f.run([f.BUILD/f'{name}-test.exe'])

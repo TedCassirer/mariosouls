@@ -9,7 +9,7 @@ importer for arbitrary game models or ROMs.
 | Directory | Responsibility |
 | --- | --- |
 | `sdk/` | Versioned C interface between the host and each character |
-| `core/` | Attack windows, progression, exhaustion and validation |
+| `core/` | Attack windows, progression, exhaustion, confirmed-hit feedback and validation |
 | `hosts/ds1ptde/` | Native collision, rendering before UI, input, interactions, health, stamina and damage |
 | `characters/mario64/` | Mario's engine, action IDs, animations, sounds and procedural flask |
 | `templates/` | Compilable starting adapter for a future character |
@@ -47,6 +47,13 @@ Balance overrides use `[Combat.<id>]`, including `BasePower`, `UpgradePower`,
 Installation migrates the existing Mario `[Combat]` values once. Another character
 starts with its manifest defaults. Upgrades remain configurable test values;
 this refactor does not add an inventory/titanite upgrade shop.
+
+Shared impact feedback now adds a short attacker pause, procedural contact sound,
+depth-tested contact burst and controller vibration after native target HP falls.
+Attack manifest multipliers determine the weight of the response, so other
+characters inherit it without host branches or SDK changes. Misses and contacts
+that do not lower HP do not trigger this damage feedback. Native guard reactions
+are left to the host. See [impact feedback](docs/FEEDBACK.md) for settings and limits.
 
 See [the ABI contract](docs/CONTRACT.md), [adding a character](docs/ADDING_A_CHARACTER.md)
 and [verification](docs/VALIDATION.md). New gameplay work follows the root

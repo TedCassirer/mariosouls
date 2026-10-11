@@ -1,5 +1,54 @@
 # Framework 0.1 verification — 2026-10-11
 
+## Impact feedback addition — 2026-10-11
+
+Final installed build was tested directly in PID 41044, on Mario QA level 6,
+Asylum only. Native HP was 594 throughout. The level-65 character was not loaded.
+
+- New feedback executable tests pass: native HP confirmation, lethal/unchanged/
+  healed/missing/recycled/expired targets, clock wrap, one envelope per attack
+  serial, weighted bounded durations, buffered inputs, cancellation, motor mixing
+  and stereo PCM amplitude/tail bounds. Existing installer, shared combat, input,
+  actual Mario adapter and independent SDK fixture tests also pass.
+- Punch test with temporary FixedPower=35: native hollow 1810101 HP 44 -> 29;
+  one sound, one impact receipt, confirmation after 16 ms, requested pause 34 ms.
+  Native attack power was 22.75; stamina cost 9 with the existing equipment cost.
+  The subsequent out-of-range punch did not generate an impact.
+- Ground pound against stationary hollow 1810108: native HP 22 -> 0; one sound,
+  one receipt after 31 ms, requested pause 67 ms, stamina cost 31. Native power
+  172.425 at STR/DEX 11, upgrade 0. The native death yielded 24 souls later.
+  That confined-cell camera was too close for useful presentation footage;
+  the light-hit recording is the visual evidence, and heavy routing is log evidence.
+- Visually inspected frame sequences from the final light hit: the gold/white
+  burst appears at contact, the short held pose is visible and the native prompt
+  stays above Mario. The first, smaller burst was too hidden and was revised.
+- Game-process audio was captured separately and muxed into the 7.73-second
+  1280x720 proof clip. Raw recording peak 0.3763, RMS 0.0365; no clipped samples.
+  This confirms output/capture, not a user's subjective audio preference.
+- Bonfire rest/leave still works; afterward, a missed punch produced no feedback,
+  and a navigation jump rose 2.47 m with stamina staying at 93. Saved at the
+  bonfire through the native quit menu and closed the game normally.
+- FixedPower restored to 0, test controls disarmed. No HP, inventory, AI or save
+  values were written to manufacture hits. Guarded native repositions used
+  living test actors and floors observed in the game.
+
+Test setup limits: two early ground-pound attempts used the slow external test
+bridge; the crouch request arrived after landing. Physical keyboard timing fixed
+that. The mobile hollow then left the attack radius, so heavy validation moved
+to a stationary hollow fixture. HP changes outside our submitted attack receipts
+were not counted as feedback successes. No block, boss, object-break or incoming
+damage regression is claimed for this addition. Controller absent during the
+session: motor mixing/expiry is implemented and unit checked, physical rumble
+remains unverified. Full-area grouping is policy-tested, not a fresh live crowd test.
+
+Evidence: `work/impact-feedback/{punch,cell,whiff}.log`, snapshots and captures;
+user clip `outputs/MarioSouls impact feedback.mp4`. Final pre-install backup:
+`work/checkpoints/before-framework-20261011-060723-523810`; original 0.1 binaries
+before any feedback changes: `work/checkpoints/before-framework-20261011-060249-196817`.
+Fresh save backup: `work/um-state/backups/dark-souls-before-impact-feedback/20261011-060237.zip`.
+
+The sections below describe the earlier framework extraction pass.
+
 ## Automated checks
 
 - Shared combat policy: ABI/profile bounds, finite values, distinct combo windows,

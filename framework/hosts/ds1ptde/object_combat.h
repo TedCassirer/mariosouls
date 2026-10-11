@@ -24,6 +24,7 @@ static void combatObjects(){
    alignas(16) float point[4]={at.x,at.y,at.z,1};int before=read<int16_t>(obj+0x2a);
    int result=worldDamageObject(990050+move,player,obj,point);characterPacketMove=-1;
    if(!characterPacketBuilt){characterDamageReady=false;if(harness.armed)harnessStop("native_object_damage_pipeline_unavailable");return;}
+   feedbackTrack(obj,handle,before,serial,move,at,true);
    logf("WORLD Character object hit object=%08x index=%d hp_before=%d result=%d packet=%d move=%d serial=%d",(unsigned)obj,j,before,result,characterPacketBuilt,move,serial);
   }
  }

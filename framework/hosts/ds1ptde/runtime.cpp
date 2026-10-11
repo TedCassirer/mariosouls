@@ -18,7 +18,10 @@
 #include "controller.h"
 #include "interaction.h"
 #include "../../core/combat.h"
+#include "../../core/feedback.h"
 static void combatReset();
+static void feedbackReset();
+static void feedbackSettings();
 static void actionReset();
 static void combatSettings();
 static bool combatTestDrop(int height);
@@ -62,6 +65,7 @@ static int interactionMap=-1;
 static SCController::Reader controllerReader;
 #include "action_input.h"
 static volatile LONG controllerOwnedSlot=-1,controllerNativePolls=0;
+#include "feedback_rumble.h"
 static thread_local bool controllerReadRaw=false;
 static SCController::Sample pollController(DWORD now){controllerReadRaw=true;auto result=controllerReader.poll(now);controllerReadRaw=false;return result;}
 using ControllerGetState=DWORD(WINAPI*)(DWORD,XINPUT_STATE*);
@@ -87,6 +91,7 @@ static void installControllerHooks(){
  HMODULE module=nullptr;GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,(LPCSTR)target,&module);
  auto status=MH_CreateHook(target,(void*)controllerState,(void**)&originalControllerState);if(status==MH_OK){controllerReader.setFunction((void*)originalControllerState);status=MH_EnableHook(target);}logf("controller input hook status=%d",status);
  void* extra=module?(void*)GetProcAddress(module,(LPCSTR)100):nullptr;if(extra&&extra!=target){status=MH_CreateHook(extra,(void*)controllerStateEx,(void**)&originalControllerStateEx);if(status==MH_OK)status=MH_EnableHook(extra);logf("controller extended input hook status=%d",status);}
+ feedbackInstallRumble(module);
 }
 static int character=-1;
 static Vec origin;
@@ -172,12 +177,14 @@ static bool lineClear(Vec a,Vec b){
  Vec direction=b-a;for(size_t i=0;i<mapVertices.size();i+=3){Vec v0=mapVertices[i],e1=mapVertices[i+1]-v0,e2=mapVertices[i+2]-v0;Vec h=cross(direction,e2);float determinant=dot(e1,h);if(fabsf(determinant)<1e-7f)continue;float inv=1/determinant;Vec s=a-v0;float u=inv*dot(s,h);if(u<0||u>1)continue;Vec q=cross(s,e1);float v=inv*dot(direction,q);if(v<0||u+v>1)continue;float t=inv*dot(e2,q);if(t>.02f&&t<.98f)return false;}return true;
 }
 #include "harness.h"
+#include "feedback.h"
 #include "combat.h"
 #include "object_combat.h"
 static void update(){
  static LARGE_INTEGER freq={},prev={};if(!freq.QuadPart)QueryPerformanceFrequency(&freq);LARGE_INTEGER now;QueryPerformanceCounter(&now);double dt=prev.QuadPart?double(now.QuadPart-prev.QuadPart)/freq.QuadPart:0;prev=now;static double acc=0;acc+=std::min(dt,.1);
  player=chain(playerSlot,{0,4,0});cam=chain(cameraSlot,{0,0x3c,0x60});uintptr_t mp=read<uint32_t>(player+0x28);posData=read<uint32_t>(mp+0x1c);
  DWORD fg=0;GetWindowThreadProcessId(GetForegroundWindow(),&fg);bool focus=fg==GetCurrentProcessId();
+ feedbackFocused=focus;if(!focus)feedbackReset();
  static SCController::Toggle controllerToggle;DWORD inputTime=GetTickCount();auto pad=pollController(inputTime);auto controller=pad.connected&&focus?SCController::map(pad.pad):SCController::Input{};
  static int lastController=-2;if(pad.slot!=lastController){logf("controller %s slot=%d",pad.connected?"connected":"disconnected",pad.slot);lastController=pad.slot;}
  harnessTick(focus,pad.connected);
@@ -211,11 +218,15 @@ static void update(){
  worldReconcile();
  if(fabsf(state.position[0])>4000||fabsf(state.position[2])>4000||fabsf(state.position[1])>5000){Vec shift={state.position[0],state.position[1],state.position[2]};origin=origin+shift*.01f;rebuildSurfaces();guest->setPosition(character,0,0,0);for(size_t i=0;i<geo.numTrianglesUsed*3;i++){gpos[i*3]-=shift.x;gpos[i*3+1]-=shift.y;gpos[i*3+2]-=shift.z;}state.position[0]=state.position[1]=state.position[2]=0;logf("collision origin rebased");}
  worldHostSurfaces();
- int hp=read<int>(player+0x2d4);if(hp<lastHP&&hp>0){int lost=lastHP-hp;guest->nativeDamage(character,lost>=read<int>(player+0x2d8)/5?2:1);logf("native damage %d -> %d; host-confirmed hurt, no extra i-frames",lastHP,hp);}else guest->nativeDamage(character,0);lastHP=hp;
+ feedbackPoll();
+ int hp=read<int>(player+0x2d4);if(hp<lastHP&&hp>0){feedbackPause.clear();int lost=lastHP-hp;guest->nativeDamage(character,lost>=read<int>(player+0x2d8)/5?2:1);logf("native damage %d -> %d; host-confirmed hurt, no extra i-frames",lastHP,hp);}else guest->nativeDamage(character,0);lastHP=hp;
  SC_Input input={};Vec look=cameraForward();input.camLookX=look.x;input.camLookZ=look.z;
  if(focus){input.moveX=((GetAsyncKeyState('D')&0x8000)?1.f:0)-((GetAsyncKeyState('A')&0x8000)?1.f:0);input.moveY=((GetAsyncKeyState('W')&0x8000)?1.f:0)-((GetAsyncKeyState('S')&0x8000)?1.f:0);if(input.moveX==0&&input.moveY==0){input.moveX=controller.x;input.moveY=controller.y;}float n=sqrtf(input.moveX*input.moveX+input.moveY*input.moveY);if(n>1){input.moveX/=n;input.moveY/=n;}input.jump=controller.jump||!!(GetAsyncKeyState(VK_SPACE)&0x8000);input.attack=controller.attack||!!(GetAsyncKeyState(VK_LBUTTON)&0x8000);input.crouch=controller.crouch||!!(GetAsyncKeyState(VK_CONTROL)&0x8000);}
  static int lastPadInput=-1;static DWORD padLogTime=0;int padInput=(fabsf(controller.x)+fabsf(controller.y)>.01f?8:0)|(controller.jump?1:0)|(controller.attack?2:0)|(controller.crouch?4:0);if(padInput!=lastPadInput&&DWORD(inputTime-padLogTime)>=100){logf("controller input stick=%.2f %.2f buttons=%d%d%d",controller.x,controller.y,controller.jump,controller.attack,controller.crouch);lastPadInput=padInput;padLogTime=inputTime;}
- for(int step=0;acc>=1./SC_FIXED_HZ&&step<3;step++,acc-=1./SC_FIXED_HZ){if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);--testFrames;}harnessInput(input);combatInput(input);uint32_t old=state.rawAction;if(!guestStep(character,&input,&state,&geo)){logf("Adapter frame rejected; restoring native controls");releaseControl();return;}harnessAfterStep(old,input);pumpAudio();if(!combatEnvironment())return;combat();combatObjects();if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);}
+ // Capture short taps even on render frames without a simulation tick. Consume
+ // paused time instead of accumulating a catch-up burst. The host keeps running.
+ if(SCFeedback::pending(feedbackPause.until,GetTickCount())){feedbackPause.filter(input,GetTickCount());acc=0;pumpAudio();}
+ for(int step=0;acc>=1./SC_FIXED_HZ&&step<3;step++,acc-=1./SC_FIXED_HZ){if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);--testFrames;}harnessInput(input);if(feedbackPause.filter(input,GetTickCount())){pumpAudio();continue;}combatInput(input);uint32_t old=state.rawAction;if(!guestStep(character,&input,&state,&geo)){logf("Adapter frame rejected; restoring native controls");releaseControl();return;}harnessAfterStep(old,input);pumpAudio();if(!combatEnvironment())return;combat();combatObjects();feedbackPoll();if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);}
  Vec p=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;
  if(!isfinite(p.x)||!isfinite(p.y)||!isfinite(p.z)||p.y<origin.y-30){logf("invalid/outside test area; disabled");releaseControl();return;}
  actionFlags(false);
@@ -237,7 +248,7 @@ static void draw(IDirect3DDevice9* d){
  d->SetVertexShader(NULL);d->SetPixelShader(NULL);d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_SPECULAR|D3DFVF_TEX1);d->SetTransform(D3DTS_WORLD,&world);d->SetTransform(D3DTS_VIEW,&view);d->SetTransform(D3DTS_PROJECTION,&proj);
  d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_ZENABLE,depthTest?TRUE:FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,TRUE);d->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);d->SetRenderState(D3DRS_ALPHAREF,1);d->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);d->SetRenderState(D3DRS_FOGENABLE,FALSE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_COLORWRITEENABLE,15);d->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);d->SetRenderState(D3DRS_CLIPPLANEENABLE,0);d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE);d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
  d->SetTexture(0,tex);d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_BLENDTEXTUREALPHA);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_DIFFUSE);d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(1,D3DTSS_COLORARG1,D3DTA_CURRENT);d->SetTextureStageState(1,D3DTSS_COLORARG2,D3DTA_SPECULAR);d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(1,D3DTSS_ALPHAARG1,D3DTA_CURRENT);d->SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_CLAMP);d->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_CLAMP);
- HRESULT hr=d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex));static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}saved->Apply();saved->Release();
+ HRESULT hr=d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex));static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}feedbackDraw(d);saved->Apply();saved->Release();
 }
 typedef HRESULT (WINAPI *EndSceneFn)(IDirect3DDevice9*);
 static EndSceneFn originalEnd;

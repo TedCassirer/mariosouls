@@ -262,14 +262,27 @@ def doctor(character):
 
 def format_sources(check=False):
     """Apply the pinned project styles, or check them without modifying source."""
+    # The repository uses a Git allowlist for private workspaces. Style coverage
+    # comes from these two explicit source roots, independently of ignore rules.
     if check:
-        run([sys.executable, "-m", "ruff", "check", FRAMEWORK, ROOT / "tools"])
+        run(
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                "check",
+                "--no-respect-gitignore",
+                FRAMEWORK,
+                ROOT / "tools",
+            ]
+        )
     run(
         [
             sys.executable,
             "-m",
             "ruff",
             "format",
+            "--no-respect-gitignore",
             *(["--check"] if check else []),
             FRAMEWORK,
             ROOT / "tools",

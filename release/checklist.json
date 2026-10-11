@@ -40,7 +40,7 @@
     {
       "id": "distribution-review",
       "status": "pending",
-      "description": "Review all dependency notices, game-derived content and source distribution for the exact package.",
+      "description": "Review dependency notices, upstream model geometry compiled into the runtime, game-derived content and source distribution for the exact package.",
       "evidence": null
     },
     {

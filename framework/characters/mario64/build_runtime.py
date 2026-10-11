@@ -1,4 +1,4 @@
-"""Build this adapter's pinned guest runtime; no assets are embedded."""
+"""Build this adapter's pinned guest runtime; no ROM is downloaded."""
 from pathlib import Path
 import argparse
 import subprocess

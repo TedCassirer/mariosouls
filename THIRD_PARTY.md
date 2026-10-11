@@ -24,6 +24,11 @@ not bundled runtime libraries.
 
 ROMs, extracted models, textures, audio, collision caches, saves and original
 game binaries are not included. Players must supply their own game data locally.
+The guest runtime compiles upstream model geometry. Its geometry inputs are
+separately pinned in the lock file; the older revision used by libsm64 does not
+include its own LICENSE.md. The supplied notices identify the dependency
+checkouts, and do not clear that compiled content for distribution.
+
 A future distribution still needs review of its exact source and binary contents;
 these notices are not a conclusion that every distribution is permissible.
 

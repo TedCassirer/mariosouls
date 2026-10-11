@@ -94,7 +94,7 @@ static void classPreviewRelease() {
         guest->destroy(classPreview);
         classPreview = -1;
         guest->surfaces(nullptr, 0, 0);
-        geo.numTrianglesUsed = 0;
+        characterMesh.view.numTrianglesUsed = 0;
         logf("CLASS preview released");
     }
     classPreviewActive = false;
@@ -127,7 +127,7 @@ static void classTick() {
             SC_Pose pose = {};
             pose.phase = -1;
             pose.yaw = classPreviewYaw;
-            classPreviewActive = guestPose(classPreview, &pose, &state, &geo);
+            classPreviewActive = guestPose(classPreview, &pose, &state, &characterMesh.view);
             if (!classPreviewActive)
                 classPreviewRelease();
         }
@@ -137,10 +137,10 @@ static void classTick() {
     auto decision = classSelection.observe(player, known, classEnabled && matches, currentMap(),
                                            player && read<int>(player + 0x2d4) > 0);
     if (decision == SCClass::Decision::Enable) {
-        if (!characterSession.requested())
+        if (!characterControl.session.requested())
             logf("CLASS saved identity restored character=%s", profile->id);
-        characterSession.request(true);
+        characterControl.session.request(true);
     } else if (decision == SCClass::Decision::Disable) {
-        characterSession.request(false);
+        characterControl.session.request(false);
     }
 }

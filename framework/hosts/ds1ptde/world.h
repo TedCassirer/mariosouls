@@ -268,7 +268,8 @@ static bool worldReconcile(bool &resolvedTick) {
             }
         }
     }
-    if (!guest->resolveMotion(character, &r, &state, &geo) || !SC::frame(state, geo, *profile))
+    if (!guest->resolveMotion(character, &r, &state, &characterMesh.view) ||
+        !SC::frame(state, characterMesh.view, *profile))
         return false;
     resolvedTick = resolved;
     static DWORD lastLog = 0;

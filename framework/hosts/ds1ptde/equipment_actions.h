@@ -124,8 +124,8 @@ static bool equipmentActionsInput(SC_Input &input, bool parry, bool focus, int s
     combatReset();
     actionReset();
     worldRelease();
-    characterClock.clear();
-    characterInput.clear();
+    characterControl.clock.clear();
+    characterControl.input.clear();
     equipmentActionOwned = true;
     equipmentActionCast = cast;
     equipmentActionGear = gear;
@@ -222,7 +222,8 @@ static bool equipmentActionsTick(double &acc, bool focus) {
         e.swing = 0;
     }
     for (int step = 0; acc >= 1. / SC_FIXED_HZ && step < 3; step++, acc -= 1. / SC_FIXED_HZ) {
-        if (!guest->equipment(character, &e) || !guestPose(character, &pose, &state, &geo)) {
+        if (!guest->equipment(character, &e) ||
+            !guestPose(character, &pose, &state, &characterMesh.view)) {
             releaseControl(true);
             acc = 0;
             return true;
@@ -247,8 +248,8 @@ static bool equipmentActionsTick(double &acc, bool focus) {
         pendingNativeHurt = 0;
         nativeReactionIncomingUntil = 0;
         worldActivate();
-        characterClock.clear();
-        characterInput.clear();
+        characterControl.clock.clear();
+        characterControl.input.clear();
         actionFlags(false);
         InterlockedExchange(&actionRoute, LONG(ActionRoute::Character));
         acc = 0;

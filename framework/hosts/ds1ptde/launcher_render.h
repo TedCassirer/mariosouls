@@ -2,7 +2,7 @@
 
 static bool launcherVisible() {
     return launcherAvailable && launcherApi && characterOwned() && !nativeActionOwned() &&
-           !characterSession.death();
+           !characterControl.session.death();
 }
 
 static void launcherDrawPart(IDirect3DDevice9 *d, unsigned part, Vec at, float yaw, float pitch) {

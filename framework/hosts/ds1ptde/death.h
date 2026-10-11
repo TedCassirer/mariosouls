@@ -10,15 +10,15 @@ static bool deathBegin(double &acc) {
     float yaw = 0;
     if (!profile || !(profile->capabilities & SC_CAP_DEATH_POSE) || character < 0 ||
         !get(posData + 0x10, host) || !isfinite(dot(host, host)) || !get(posData + 4, yaw) ||
-        !isfinite(yaw) || !characterSession.die())
+        !isfinite(yaw) || !characterControl.session.die())
         return false;
     deathStarted = GetTickCount();
     deathPrevious = host;
     deathYaw = yaw - 3.14159265f;
     worldRelease();
     bodyRelease();
-    characterClock.clear();
-    characterInput.clear();
+    characterControl.clock.clear();
+    characterControl.input.clear();
     nativeReaction = false;
     nativeReactionIncomingUntil = 0;
     pendingNativeHurt = 0;
@@ -62,7 +62,7 @@ static void deathTick(double &acc, int slot) {
     }
     SC_Pose pose = {SC_POSE_DEATH, {local.x, local.y, local.z}, deathYaw, -1, 0};
     for (int step = 0; acc >= 1. / SC_FIXED_HZ && step < 3; step++, acc -= 1. / SC_FIXED_HZ) {
-        if (!guestPose(character, &pose, &state, &geo)) {
+        if (!guestPose(character, &pose, &state, &characterMesh.view)) {
             logf("Death pose rejected; native handback");
             releaseControl(true);
             acc = 0;

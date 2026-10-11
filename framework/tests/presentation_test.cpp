@@ -8,6 +8,7 @@
 #include <vector>
 #include "../sdk/character_api.h"
 #include "../core/session.h"
+#include "../hosts/ds1ptde/character_state.h"
 #include "../core/starting_class.h"
 #include "../hosts/ds1ptde/interaction.h"
 using DWORD = uint32_t;
@@ -37,8 +38,8 @@ static float savedOpacity = 1;
 static DWORD timeNow = 1000;
 static Vec origin;
 static SC_State state;
-static SC_Mesh geo{};
-static SCSession::Session characterSession;
+static HostCharacter::MeshBuffers characterMesh;
+static HostCharacter::ControlState characterControl;
 static SCClass::Selection classSelection;
 static SC_Descriptor descriptor{};
 static const SC_Descriptor *profile = &descriptor;
@@ -95,7 +96,7 @@ static int currentMap() {
 }
 
 static bool characterOwned() {
-    return characterSession.visible();
+    return characterControl.session.visible();
 }
 
 static bool visibilityIdentity(uintptr_t actor) {
@@ -158,11 +159,11 @@ int main() {
     api.surfaces = [](const SC_Surface *, uint32_t, uint32_t) {};
     actor(0x10000, 500);
     classSelection.observe(player, true, true, area, true);
-    characterSession.request(true);
+    characterControl.session.request(true);
     frame();
     assert(presentationActive && !characterOwned());
     assert(created == 1 && captures == 1);
-    assert(read<float>(player + 0x258) == 0 && geo.numTrianglesUsed == 10);
+    assert(read<float>(player + 0x258) == 0 && characterMesh.view.numTrianglesUsed == 10);
     assert(state.flags == 0 && state.attackId == -1); // no combat authority during presentation
     seed(player + 0x2d4, 0);
     frame();
@@ -182,10 +183,10 @@ int main() {
     actor(0x50000, 500);
     frame();
     assert(presentationActive && created == 3);
-    characterSession.request(false);
+    characterControl.session.request(false);
     frame();
     assert(!presentationActive && read<float>(player + 0x258) == 1); // save switch/manual off
-    characterSession.request(true);
+    characterControl.session.request(true);
     poseWorks = false;
     frame();
     assert(!presentationActive &&
@@ -199,7 +200,7 @@ int main() {
     assert(presentationActive);
     presentationRelease();
     assert(read<float>(player + 0x258) == 1); // clean handoff to physics activation
-    characterSession.activate({player, posData, 0x40000, area});
+    characterControl.session.activate({player, posData, 0x40000, area});
     attempts = created;
     frame();
     assert(created == attempts && !presentationActive);

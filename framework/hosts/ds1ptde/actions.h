@@ -46,7 +46,7 @@ static void requestAction(int kind, bool fromPad = false) {
         logf("Action request rejected: kind=%d not eligible", kind);
         return;
     }
-    characterInput.clear();
+    characterControl.input.clear();
     actionRequested = GetTickCount();
     actionRequestKind = kind;
     actionFlags(false);
@@ -61,11 +61,11 @@ static void beginInteraction(int slot, bool pressAction = true) {
     }
     if (!characterOwned() || nativeActionOwned() || character < 0)
         return;
-    if (!characterSession.handoff())
+    if (!characterControl.session.handoff())
         return;
     worldRelease();
-    characterClock.clear();
-    characterInput.clear();
+    characterControl.clock.clear();
+    characterControl.input.clear();
     actionReturnGate.clear();
     interactionPrevious = read<Vec>(posData + 0x10);
     interactionMap = currentMap();
@@ -155,7 +155,7 @@ static void updateInteraction(double &acc, bool focus, int slot) {
         pose.position[1] = local.y;
         pose.position[2] = local.z;
         pose.yaw = read<float>(posData + 4) - 3.14159265f;
-        if (!guestPose(character, &pose, &state, &geo)) {
+        if (!guestPose(character, &pose, &state, &characterMesh.view)) {
             releaseControl();
             acc = 0;
             return;
@@ -175,12 +175,12 @@ static void updateInteraction(double &acc, bool focus, int slot) {
         state.faceAngle = read<float>(posData + 4) - 3.14159265f;
         state.flags = o.grounded ? (SC_GROUNDED | SC_CAN_INTERACT) : 0;
         state.attackId = state.interruptedAttackId = -1;
-        characterSession.resume();
+        characterControl.session.resume();
         actionRequestKind = 0;
         lastHP = read<int>(player + 0x2d4);
         worldActivate();
-        characterClock.clear();
-        characterInput.clear();
+        characterControl.clock.clear();
+        characterControl.input.clear();
         actionFlags(false);
         InterlockedExchange(&actionRoute, LONG(ActionRoute::Character));
         acc = 0;

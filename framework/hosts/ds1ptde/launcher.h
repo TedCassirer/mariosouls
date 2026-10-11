@@ -85,7 +85,7 @@ static void launcherObserve(bool focus) {
     launcherTarget = 0;
     launcherAvailable = false;
     if (!launcherApi || !aimCameraReady || !characterOwned() || nativeActionOwned() ||
-        characterSession.death()) {
+        characterControl.session.death()) {
         if (launcherState.phase)
             launcherCancel();
         return;
@@ -166,7 +166,7 @@ static bool launcherInteract() {
     if (launcherApi->begin(character, &local.x, launcherYaw)) {
         launcherStarted = GetTickCount();
         launcherApi->query(character, &launcherState);
-        characterInput.clear();
+        characterControl.input.clear();
         combatReset();
         equipmentReset();
         logf("WORLD launcher entered");

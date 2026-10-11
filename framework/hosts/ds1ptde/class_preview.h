@@ -20,7 +20,7 @@ static void classPreviewReset() {
 static bool classPreviewRender(IDirect3DDevice9 *d) {
     if (classPreviewRendered)
         return true;
-    if (!classPreviewActive || classPreviewDrawing || !geo.numTrianglesUsed)
+    if (!classPreviewActive || classPreviewDrawing || !characterMesh.view.numTrianglesUsed)
         return false;
     if (!classPreviewTexture &&
         FAILED(d->CreateTexture(512, 512, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8,

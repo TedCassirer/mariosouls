@@ -17,7 +17,7 @@ static void presentationRelease() {
         guest->destroy(character);
         character = -1;
     }
-    geo.numTrianglesUsed = 0;
+    characterMesh.view.numTrianglesUsed = 0;
 }
 
 static void presentationValidate() {
@@ -32,7 +32,7 @@ static void presentationTick() {
     SCSession::Identity next = {player, posData, read<uint32_t>(player + 0x28), currentMap()};
     Vec host{};
     float yaw = 0;
-    bool valid = ready && characterSession.requested() && next.valid() && cam &&
+    bool valid = ready && characterControl.session.requested() && next.valid() && cam &&
                  get(posData + 0x10, host) && isfinite(dot(host, host)) && get(posData + 4, yaw) &&
                  isfinite(yaw);
     if (!valid) {
@@ -68,7 +68,7 @@ static void presentationTick() {
              read<int>(player + 0x2d4));
     }
     Vec delta = host - presentationPrevious;
-    if (DWORD(now - presentationTime) < 33 && geo.numTrianglesUsed) {
+    if (DWORD(now - presentationTime) < 33 && characterMesh.view.numTrianglesUsed) {
         // Keep the mesh registered to the moving native actor between animation ticks.
         origin = origin + delta;
         presentationPrevious = host;
@@ -93,7 +93,8 @@ static void presentationTick() {
                                                                     : SC_POSE_NEUTRAL;
     if (pose.kind == SC_POSE_REST)
         pose.phase = 1;
-    if (!guestPose(character, &pose, &state, &geo) || !geo.numTrianglesUsed) {
+    if (!guestPose(character, &pose, &state, &characterMesh.view) ||
+        !characterMesh.view.numTrianglesUsed) {
         logf("PRESENTATION pose unavailable; retry pending");
         presentationRelease();
         presentationRetry = now + 1000;

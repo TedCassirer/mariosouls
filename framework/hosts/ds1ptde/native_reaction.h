@@ -94,8 +94,8 @@ static bool nativeReactionTick(double &acc, bool focus) {
         worldRelease();
         combatReset();
         actionReset();
-        characterClock.clear();
-        characterInput.clear();
+        characterControl.clock.clear();
+        characterControl.input.clear();
         pendingNativeHurt = 0;
         testFrames = testButtons = 0;
         // Emit the reaction pose immediately, then keep ordinary fixed-rate posing.
@@ -129,7 +129,7 @@ static bool nativeReactionTick(double &acc, bool focus) {
     pose.position[1] = local.y;
     pose.position[2] = local.z;
     for (int step = 0; acc >= 1. / SC_FIXED_HZ && step < 3; step++, acc -= 1. / SC_FIXED_HZ) {
-        if (!guestPose(character, &pose, &state, &geo)) {
+        if (!guestPose(character, &pose, &state, &characterMesh.view)) {
             logf("Native reaction pose rejected; native handback");
             releaseControl();
             acc = 0;
@@ -156,8 +156,8 @@ static bool nativeReactionTick(double &acc, bool focus) {
         nativeReactionIncomingUntil = 0;
         nativeReactionReturnGate.clear();
         worldActivate();
-        characterClock.clear();
-        characterInput.clear();
+        characterControl.clock.clear();
+        characterControl.input.clear();
         actionFlags(false);
         InterlockedExchange(&actionRoute, LONG(ActionRoute::Character));
         acc = 0;

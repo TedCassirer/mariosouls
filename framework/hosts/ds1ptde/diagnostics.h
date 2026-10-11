@@ -82,15 +82,15 @@ static void diagnosticsTick() {
     sampled = now;
     SCDiagnostics::Frame f{};
     f.time = now;
-    f.generation = characterSession.generation();
+    f.generation = characterControl.session.generation();
     f.map = currentMap();
     f.cachedMap = loadedMap;
-    f.owner = int(characterSession.owner());
+    f.owner = int(characterControl.session.owner());
     // Reject a cached actor replaced during loading. Read-only reporting is allowed
     // on any save; the guarded harness remains the only route for automated actions.
     f.actor = player && posData && chain(playerSlot, {0, 4, 0}) == player &&
               chain(player + 0x28, {0, 0x1c}) == posData;
-    f.requested = characterSession.requested();
+    f.requested = characterControl.session.requested();
     f.presented = characterPresented();
     f.rig = character >= 0 && guest && profile;
     f.focus = focus;

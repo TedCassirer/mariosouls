@@ -38,7 +38,8 @@ static bool debugVisible() {
 }
 
 static bool renderWanted() {
-    return (characterPresented() && geo.numTrianglesUsed) || debugVisible() || launcherVisible();
+    return (characterPresented() && characterMesh.view.numTrianglesUsed) || debugVisible() ||
+           launcherVisible();
 }
 
 static void debugContact(Vec at, bool confirmed) {

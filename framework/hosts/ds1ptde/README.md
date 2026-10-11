@@ -21,6 +21,13 @@ simulation for that frame. Presentation and diagnostics still run afterward in
 `update()`. This ordering is part of the lifecycle contract, rather than a set of
 interchangeable update calls.
 
+`character_state.h` groups the session, simulation clock and input latch in one
+control owner. Resets still name each policy explicitly because an activation
+request may need to survive a motion reset. Its mesh owner holds the CPU arrays
+and refreshes the SDK's borrowed view after allocation. It cannot be copied with
+pointers still referring to another owner's arrays. CPU storage survives device
+reset; Direct3D resources retain their separate device lifecycle.
+
 Many internal feature headers currently share its file-local state and must be
 included in dependency order. They are implementation fragments, not standalone
 SDK headers. The independent policy headers under `framework/core/` are tested

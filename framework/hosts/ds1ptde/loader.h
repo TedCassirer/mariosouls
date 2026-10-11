@@ -55,19 +55,15 @@ static bool initCharacter() {
         profile = nullptr;
         return false;
     }
-    gpos.resize(profile->maxTriangles * 9);
-    gnormal.resize(profile->maxTriangles * 9);
-    gcolor.resize(profile->maxTriangles * 9);
-    guv.resize(profile->maxTriangles * 6);
-    geo = {gpos.data(), gnormal.data(), gcolor.data(), guv.data(), profile->maxTriangles, 0};
-    texture.resize(profile->textureWidth * profile->textureHeight * 4);
+    characterMesh.allocate(*profile);
     snprintf(section, sizeof(section), "Character.%s", id);
     GetPrivateProfileStringA("MarioSouls", "ROM", "", defaultPath, sizeof(defaultPath), ini);
     GetPrivateProfileStringA(section, "Asset", defaultPath, asset, sizeof(asset), ini);
     GetPrivateProfileStringA("MarioSouls", "Library", "", defaultPath, sizeof(defaultPath), ini);
     GetPrivateProfileStringA(section, "Runtime", defaultPath, runtime, sizeof(runtime), ini);
     SC_Init init = {sizeof(SC_Init), asset, runtime, adapterLog};
-    SC_Texture atlas = {texture.data(), uint32_t(texture.size())};
+    SC_Texture atlas = {characterMesh.atlasPixels.data(),
+                        uint32_t(characterMesh.atlasPixels.size())};
     if (!guest->initialize(&init, &atlas)) {
         logf("Character initialization failed");
         guest->shutdown();

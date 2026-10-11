@@ -19,6 +19,7 @@
 #include "../../core/validation.h"
 #include "../../../work/minhook/include/MinHook.h"
 #include "memory.h"
+#include "character_state.h"
 #include "controller.h"
 #include "interaction.h"
 #include "../../core/combat.h"
@@ -157,13 +158,11 @@ static float testX = 0, testY = 0;
 static bool ready = false, showCharacter = true, nativeReaction = false,
             equipmentActionOwned = false;
 static DWORD nativeReactionIncomingUntil = 0;
-static SCSession::Session characterSession;
-static SCMotion::Clock characterClock;
-static SCMotion::InputLatch characterInput;
+static HostCharacter::ControlState characterControl;
 static bool presentationActive = false;
 
 static bool characterOwned() {
-    return characterSession.visible();
+    return characterControl.session.visible();
 }
 
 static bool characterPresented() {
@@ -171,7 +170,7 @@ static bool characterPresented() {
 }
 
 static bool nativeActionOwned() {
-    return characterSession.action() || characterSession.death();
+    return characterControl.session.action() || characterControl.session.death();
 }
 
 static Vec interactionPrevious;
@@ -262,9 +261,7 @@ static SC_State state{};
 static const SC_CharacterAPI *guest = nullptr;
 static const SC_Descriptor *profile = nullptr;
 static HMODULE adapterModule = nullptr;
-static std::vector<float> gpos, gnormal, gcolor, guv;
-static SC_Mesh geo{};
-static std::vector<uint8_t> texture;
+static HostCharacter::MeshBuffers characterMesh;
 static std::vector<Vec> mapVertices;
 static IDirect3DTexture9 *tex = nullptr;
 #include "render_surfaces.h"
@@ -445,12 +442,12 @@ static void releaseControl(bool preserveRequest = true) {
     nativeReaction = false;
     nativeReactionIncomingUntil = 0;
     equipmentActionOwned = false;
-    characterSession.request(preserveRequest && characterSession.requested());
+    characterControl.session.request(preserveRequest && characterControl.session.requested());
     visibilityRelease();
     bodyRelease();
     worldRelease();
-    characterClock.clear();
-    characterInput.clear();
+    characterControl.clock.clear();
+    characterControl.input.clear();
     pendingNativeHurt = 0;
     combatReset();
     actionReset();
@@ -472,15 +469,15 @@ static void releaseControl(bool preserveRequest = true) {
     }
     if (characterOwned() && lastPlayer && chain(playerSlot, {0, 4, 0}) == lastPlayer && hideNative)
         put(lastPlayer + 0x258, savedOpacity);
-    characterSession.release();
+    characterControl.session.release();
     if (audioOut)
         waveOutReset(audioOut);
     if (character >= 0) {
         guest->destroy(character);
         character = -1;
     }
-    geo.numTrianglesUsed = 0;
-    logf("native controls restored; character requested=%d", characterSession.requested());
+    characterMesh.view.numTrianglesUsed = 0;
+    logf("native controls restored; character requested=%d", characterControl.session.requested());
 }
 
 static bool activate() {
@@ -526,7 +523,7 @@ static bool activate() {
     disableMapHit = GetPrivateProfileIntA("MarioSouls", "DisableMapHit", 1, ini) != 0;
     logf("native opacity=%.3f mapflags=%08x", savedOpacity, savedMapFlags);
     lastHP = read<int>(player + 0x2d4);
-    characterSession.activate({player, posData, lastMap, loadedMap});
+    characterControl.session.activate({player, posData, lastMap, loadedMap});
     if (!bodyCapture()) {
         logf("BODY validation failed; native handback");
         releaseControl();
@@ -534,12 +531,12 @@ static bool activate() {
     }
     worldActivate();
     visibilityCapture();
-    characterClock.clear();
-    characterInput.clear();
+    characterControl.clock.clear();
+    characterControl.input.clear();
     SC_Pose initial = {};
     initial.yaw = read<float>(posData + 4) - 3.14159265f;
     initial.phase = -1;
-    if (!guestPose(character, &initial, &state, &geo)) {
+    if (!guestPose(character, &initial, &state, &characterMesh.view)) {
         releaseControl();
         return false;
     }
@@ -663,7 +660,7 @@ static GameplayFrame pollGameplayFrame() {
     posData = read<uint32_t>(mp + 0x1c);
     presentationValidate();
     classTick();
-    if (characterOwned() && !characterSession.requested())
+    if (characterOwned() && !characterControl.session.requested())
         releaseControl(false);
     DWORD fg = 0;
     GetWindowThreadProcessId(GetForegroundWindow(), &fg);
@@ -691,25 +688,26 @@ static GameplayFrame pollGameplayFrame() {
 
 // Resolve map/actor replacement and death before any input reaches an adapter.
 static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
-    if (characterSession.character() && !nativeReaction && !equipmentActionOwned && cam &&
-        !characterSession.matches(frame.identity) && characterSession.sameActor(frame.identity)) {
-        if (loadMap() && characterSession.changeMap(frame.identity)) {
+    if (characterControl.session.character() && !nativeReaction && !equipmentActionOwned && cam &&
+        !characterControl.session.matches(frame.identity) &&
+        characterControl.session.sameActor(frame.identity)) {
+        if (loadMap() && characterControl.session.changeMap(frame.identity)) {
             rebuildSurfaces();
             worldActivate();
             logf("SESSION seamless map=%d; character rig, movement and attack windows preserved",
                  frame.identity.map);
         }
     }
-    if (characterOwned() && (!characterSession.matches(frame.identity) || !cam)) {
+    if (characterOwned() && (!characterControl.session.matches(frame.identity) || !cam)) {
         logf("SESSION native actor changed; clearing pending work");
         releaseControl(true);
     }
-    if (characterOwned() && read<int>(player + 0x2d4) <= 0 && !characterSession.death()) {
+    if (characterOwned() && read<int>(player + 0x2d4) <= 0 && !characterControl.session.death()) {
         launcherCancel();
         if (!deathBegin(acc))
             releaseControl(true);
     }
-    if (characterSession.death() && read<int>(player + 0x2d4) > 0) {
+    if (characterControl.session.death() && read<int>(player + 0x2d4) > 0) {
         logf("Death presentation complete: native respawn");
         releaseControl(true);
         acc = 0;
@@ -719,33 +717,33 @@ static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
         // A pending load request is not a visible character. Pressing the toggle
         // while still human should enable the guest, not cancel automatic activation.
         if (characterPresented()) {
-            characterSession.request(false);
+            characterControl.session.request(false);
             releaseControl(false);
         } else {
-            characterSession.request(true);
+            characterControl.session.request(true);
             if (!activate())
-                characterSession.failed(frame.inputTime);
+                characterControl.session.failed(frame.inputTime);
         }
     }
     cameraTick();
-    if (!equipmentActionOwned || characterSession.death())
+    if (!equipmentActionOwned || characterControl.session.death())
         projectileRateRelease();
-    if (characterSession.death()) {
+    if (characterControl.session.death()) {
         deathTick(acc, frame.pad.slot);
         return false;
     }
-    if (!characterOwned() && characterSession.requested()) {
+    if (!characterOwned() && characterControl.session.requested()) {
         bool safe = frame.focus && frame.identity.valid() && cam && read<int>(player + 0x2d4) > 0;
         if (safe) {
             auto o = nativeInteractionState();
             safe = o.valid && !o.menu && !o.event && !o.ladder &&
                    nativeActiveAllowed(player, false) == 1;
         }
-        if (characterSession.canRetry(frame.identity, safe, frame.inputTime)) {
+        if (characterControl.session.canRetry(frame.identity, safe, frame.inputTime)) {
             if (activate())
                 logf("SESSION character resumed after stable native actor");
             else
-                characterSession.failed(frame.inputTime);
+                characterControl.session.failed(frame.inputTime);
         }
     }
     return true;
@@ -861,7 +859,7 @@ static void refreshGameplaySettings(const GameplayFrame &frame) {
         logf(
             "state active=%d focus=%d player=%08x cam=%08x xyz=%.3f %.3f %.3f eye=%.3f %.3f %.3f action=%08x tris=%u",
             characterOwned(), frame.focus, (unsigned)player, (unsigned)cam, p.x, p.y, p.z, c.x, c.y,
-            c.z, state.rawAction, geo.numTrianglesUsed);
+            c.z, state.rawAction, characterMesh.view.numTrianglesUsed);
     }
 }
 
@@ -919,10 +917,10 @@ static bool prepareCharacterSimulation(const GameplayFrame &frame, double &acc) 
         origin = origin + shift * .01f;
         rebuildSurfaces();
         guest->setPosition(character, 0, 0, 0);
-        for (size_t i = 0; i < geo.numTrianglesUsed * 3; i++) {
-            gpos[i * 3] -= shift.x;
-            gpos[i * 3 + 1] -= shift.y;
-            gpos[i * 3 + 2] -= shift.z;
+        for (size_t i = 0; i < characterMesh.view.numTrianglesUsed * 3; i++) {
+            characterMesh.positions[i * 3] -= shift.x;
+            characterMesh.positions[i * 3 + 1] -= shift.y;
+            characterMesh.positions[i * 3 + 2] -= shift.z;
         }
         state.position[0] = state.position[1] = state.position[2] = 0;
         logf("collision origin rebased");
@@ -1014,20 +1012,20 @@ static void simulateCharacter(const GameplayFrame &frame, double dt, double &acc
     }
     // Capture short taps even on render frames without a simulation tick. Consume
     // paused time instead of accumulating a catch-up burst. The host keeps running.
-    characterInput.sample(input, GetTickCount());
-    characterClock.advance(dt);
+    characterControl.input.sample(input, GetTickCount());
+    characterControl.clock.advance(dt);
     bool stepped = false;
     Vec stepFrom = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
     if (!frame.focus) {
-        characterInput.clear();
-        characterClock.clear();
+        characterControl.input.clear();
+        characterControl.clock.clear();
         testFrames = 0;
     } else if (SCFeedback::pending(feedbackPause.until, GetTickCount())) {
         feedbackPause.filter(input, GetTickCount());
-        characterClock.clear();
+        characterControl.clock.clear();
         pumpAudio();
-    } else if (characterClock.take(worldReady())) {
-        input = characterInput.take(GetTickCount());
+    } else if (characterControl.clock.take(worldReady())) {
+        input = characterControl.input.take(GetTickCount());
         if (testFrames > 0) {
             input.moveX = -testX;
             input.moveY = -testY;
@@ -1048,7 +1046,7 @@ static void simulateCharacter(const GameplayFrame &frame, double dt, double &acc
         uint32_t old = state.rawAction;
         guest->nativeDamage(character, pendingNativeHurt);
         pendingNativeHurt = 0;
-        if (!guestStep(character, &input, &state, &geo)) {
+        if (!guestStep(character, &input, &state, &characterMesh.view)) {
             diagnosticEvent(SCDiagnostics::Kind::FrameRejected);
             logf("Adapter frame rejected; restoring native controls");
             releaseControl();
@@ -1152,7 +1150,7 @@ struct Vertex {
 static bool draw(IDirect3DDevice9 *d, bool preview = false) {
     if (preview ? !classPreviewActive : !renderWanted())
         return false;
-    bool drawCharacter = (preview || characterPresented()) && geo.numTrianglesUsed;
+    bool drawCharacter = (preview || characterPresented()) && characterMesh.view.numTrianglesUsed;
     if (!tex) {
         if (FAILED(d->CreateTexture(profile->textureWidth, profile->textureHeight, 1, 0,
                                     D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL)))
@@ -1162,7 +1160,7 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false) {
             for (int y = 0; y < profile->textureHeight; y++) {
                 auto row = (uint32_t *)((BYTE *)lr.pBits + y * lr.Pitch);
                 for (int x = 0; x < profile->textureWidth; x++) {
-                    auto p = &texture[(y * profile->textureWidth + x) * 4];
+                    auto p = &characterMesh.atlasPixels[(y * profile->textureWidth + x) * 4];
                     row[x] = (p[3] << 24) | (p[0] << 16) | (p[1] << 8) | p[2];
                 }
             }
@@ -1212,24 +1210,28 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false) {
         if (isfinite(dot(offset, offset)) && dot(offset, offset) < 4)
             renderOrigin = renderOrigin + offset;
     }
-    std::vector<Vertex> verts(drawCharacter ? geo.numTrianglesUsed * 3 : 0);
+    std::vector<Vertex> verts(drawCharacter ? characterMesh.view.numTrianglesUsed * 3 : 0);
     for (size_t i = 0; i < verts.size(); i++) {
         auto &p = verts[i];
-        p.x = renderOrigin.x +
-              SCBody::modelCoordinate(gpos[i * 3], state.position[0], modelScale) * .01f;
-        p.y = renderOrigin.y +
-              SCBody::modelCoordinate(gpos[i * 3 + 1], state.position[1], modelScale) * .01f;
-        p.z = renderOrigin.z +
-              SCBody::modelCoordinate(gpos[i * 3 + 2], state.position[2], modelScale) * .01f;
-        int r = std::clamp(int(gcolor[i * 3] * 255), 0, 255),
-            g = std::clamp(int(gcolor[i * 3 + 1] * 255), 0, 255),
-            b = std::clamp(int(gcolor[i * 3 + 2] * 255), 0, 255);
+        p.x = renderOrigin.x + SCBody::modelCoordinate(characterMesh.positions[i * 3],
+                                                       state.position[0], modelScale) *
+                                   .01f;
+        p.y = renderOrigin.y + SCBody::modelCoordinate(characterMesh.positions[i * 3 + 1],
+                                                       state.position[1], modelScale) *
+                                   .01f;
+        p.z = renderOrigin.z + SCBody::modelCoordinate(characterMesh.positions[i * 3 + 2],
+                                                       state.position[2], modelScale) *
+                                   .01f;
+        int r = std::clamp(int(characterMesh.colors[i * 3] * 255), 0, 255),
+            g = std::clamp(int(characterMesh.colors[i * 3 + 1] * 255), 0, 255),
+            b = std::clamp(int(characterMesh.colors[i * 3 + 2] * 255), 0, 255);
         p.color = 0xff000000 | (r << 16) | (g << 8) | b;
-        Vec normal = unit({gnormal[i * 3], gnormal[i * 3 + 1], gnormal[i * 3 + 2]});
+        Vec normal = unit({characterMesh.normals[i * 3], characterMesh.normals[i * 3 + 1],
+                           characterMesh.normals[i * 3 + 2]});
         int light = int(255 * (.4f + .6f * std::max(0.f, dot(normal, unit({-.3f, .8f, -.5f})))));
         p.shade = 0xff000000 | (light << 16) | (light << 8) | light;
-        p.u = guv[i * 2];
-        p.v = guv[i * 2 + 1];
+        p.u = characterMesh.uvs[i * 2];
+        p.v = characterMesh.uvs[i * 2 + 1];
     }
     d->SetVertexShader(NULL);
     d->SetPixelShader(NULL);
@@ -1278,9 +1280,10 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false) {
     d->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
     d->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
     d->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-    HRESULT hr = drawCharacter ? d->DrawPrimitiveUP(D3DPT_TRIANGLELIST, geo.numTrianglesUsed,
-                                                    verts.data(), sizeof(Vertex))
-                               : S_OK;
+    HRESULT hr = drawCharacter
+                     ? d->DrawPrimitiveUP(D3DPT_TRIANGLELIST, characterMesh.view.numTrianglesUsed,
+                                          verts.data(), sizeof(Vertex))
+                     : S_OK;
     static bool logged = false;
     if (!logged) {
         logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f", hr, vp.Width,

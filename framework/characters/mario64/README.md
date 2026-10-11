@@ -51,6 +51,11 @@ Use the repository's [development workflow](../../../docs/DEVELOPMENT.md).
 runtime. The full test command requires a user-supplied US big-endian Mario 64
 ROM; no ROM is downloaded or included in source control.
 
+The runtime build recipe separates command construction from execution. Importing
+it or asking for help does not stage sources, check dependencies or start a
+compiler. An actual build stages a private source copy, applies the pinned
+extensions there and propagates compiler failures to the framework command.
+
 The full suite covers actual guest movement and mesh output, synthetic collision,
 traction, death presentation, equipment, runtime failure recovery and repeated
 initialization/shutdown. Native gameplay remains a separate verification layer;

@@ -136,8 +136,8 @@ static bool combatTestDrop(int height) {
     put(lastMap + 0xd0, p);
     put<uint8_t>(lastMap + 0xc8, 1);
     worldActivate();
-    characterClock.clear();
-    characterInput.clear();
+    characterControl.clock.clear();
+    characterControl.input.clear();
     characterFalling = true;
     characterPeakY = p.y;
     harnessEvent("test_drop");

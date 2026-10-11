@@ -6,9 +6,10 @@ evidence of full-game compatibility or a release-ready installation.
 
 ## Automated checks
 
-The latest repository-cleanup pass rebuilt the host and Mario adapter and passed
-the full offline suite with the real Mario runtime and an owned US ROM. It did
-not install the refactor or drive the game.
+The full offline suite rebuilds its fixtures and checks the real Mario adapter
+with a local runtime and owned US ROM. Receipts identify the exact tested files;
+a result for one build is not a pass for later source changes. Offline checks do
+not install the mod or drive the game.
 
 | Layer | Evidence | Limits |
 | --- | --- | --- |

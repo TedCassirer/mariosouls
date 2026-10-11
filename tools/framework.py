@@ -204,6 +204,18 @@ def scaffold(character, name):
     print("Created scaffold at " + str(dest))
 
 
+def asset_recipe(command, character, input_path, output_path):
+    """Dispatch an adapter-owned asset recipe without importing its dependencies."""
+    folder, _ = load_profile(character)
+    filename = {"prepare-assets": "prepare_assets.py", "preview-assets": "preview_assets.py"}[
+        command
+    ]
+    recipe = folder / filename
+    if not recipe.is_file():
+        raise ValueError("This character has no " + command + " recipe")
+    run([sys.executable, recipe, "--input", input_path, "--output", output_path])
+
+
 def architecture_check():
     errors = []
     for base in ["hosts", "core", "sdk"]:
@@ -337,10 +349,11 @@ def main():
     p = commands.add_parser("new-character")
     p.add_argument("id")
     p.add_argument("--name", required=True)
-    p = commands.add_parser("prepare-assets")
-    p.add_argument("--character", required=True)
-    p.add_argument("--input", required=True)
-    p.add_argument("--output", required=True)
+    for name in ["prepare-assets", "preview-assets"]:
+        p = commands.add_parser(name)
+        p.add_argument("--character", required=True)
+        p.add_argument("--input", required=True)
+        p.add_argument("--output", required=True)
     p = commands.add_parser("prepare-collision")
     p.add_argument("--map", required=True)
     p.add_argument("--output", required=True)
@@ -431,12 +444,8 @@ def main():
             + str(output)
             + " (offline visual QA, not live-game verification)"
         )
-    elif args.command == "prepare-assets":
-        folder, profile = load_profile(args.character)
-        recipe = folder / "prepare_assets.py"
-        if not recipe.is_file():
-            raise ValueError("This character has no offline asset recipe")
-        run([sys.executable, recipe, "--input", args.input, "--output", args.output])
+    elif args.command in ("prepare-assets", "preview-assets"):
+        asset_recipe(args.command, args.character, args.input, args.output)
     elif args.command == "build":
         build(args.character, args.adapter_only, args.with_runtime)
     elif args.command == "doctor":

@@ -21,6 +21,9 @@ build workflows. Character asset recipes stay with their adapters under
 `framework/characters/`. Host asset recipes stay under `framework/hosts/`.
 Live-game checks are separate from offline tests; see
 [the QA guide](../framework/qa/README.md).
+`prepare-assets` and `preview-assets` dispatch recipes owned by the selected
+adapter; unsupported recipes fail explicitly. Link's mesh contact sheet uses
+`preview-assets`, while Mario's authored equipment poses use `preview-equipment`.
 `python tools/framework.py qa` lists the maintained live scenarios without
 opening the game; append a scenario and `--help` to inspect its arguments.
 

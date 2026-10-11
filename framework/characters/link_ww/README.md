@@ -14,6 +14,7 @@ Tools live in the ignored `work/tools/`; Python extras are in `work/python-deps/
 
 ```powershell
 python tools/framework.py prepare-assets --character link_ww --input "C:\path\Wind Waker.rvz" --output work/link-ww/link.scmesh
+python tools/framework.py preview-assets --character link_ww --input work/link-ww/link.scmesh --output work/link-ww/preview.png
 python tools/framework.py doctor --character link_ww
 python tools/framework.py build --character link_ww
 python tools/framework.py test --character link_ww --asset work/link-ww/link.scmesh
@@ -24,6 +25,12 @@ Installation requires the game closed and backs up the previous active adapter.
 The recipe accepts only USA GZLE01. It does not emulate or launch the disc. Its
 extracted source, atlas, pack and provenance receipt are private assets, never Git
 content or release files. The framework references the pack at its local path.
+
+`preview_assets.py` renders four representative Link poses for private visual
+inspection. Its clip names and equipment groups belong to this adapter rather
+than the shared framework. Previewing needs numpy and Pillow; command help does
+not import them or open any assets. A contact sheet is an extraction check, not
+evidence of native gameplay behavior.
 
 ## Controls and mechanics
 

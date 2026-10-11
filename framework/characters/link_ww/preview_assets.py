@@ -1,31 +1,35 @@
-"""Render a private SCMESH01 pack offline to inspect extraction and skinning."""
+"""Preview the Wind Waker adapter's private mesh pack and representative clips."""
 
 import argparse
 import struct
 from pathlib import Path
-import numpy as np
-from PIL import Image, ImageDraw
 
-DT = np.dtype(
-    [
-        ("p", "<f4", 3),
-        ("n", "<f4", 3),
-        ("uv", "<f4", 2),
-        ("color", "<f4", 3),
-        ("bone", "<u2", 4),
-        ("weight", "<f4", 4),
-        ("group", "<u4"),
-    ]
-)
+
+def vertex_dtype():
+    import numpy as np
+
+    return np.dtype(
+        [
+            ("p", "<f4", 3),
+            ("n", "<f4", 3),
+            ("uv", "<f4", 2),
+            ("color", "<f4", 3),
+            ("bone", "<u2", 4),
+            ("weight", "<f4", 4),
+            ("group", "<u4"),
+        ]
+    )
 
 
 def load(path):
+    import numpy as np
+
     data = Path(path).read_bytes()
     magic, w, h, n, b, c = struct.unpack_from("<8s5I", data)
     assert magic == b"SCMESH01" and n % 3 == 0
     atlas = np.frombuffer(data, np.uint8, count=w * h * 4, offset=28).reshape(h, w, 4)
     at = 28 + w * h * 4
-    verts = np.frombuffer(data, DT, count=n, offset=at)
+    verts = np.frombuffer(data, vertex_dtype(), count=n, offset=at)
     at += n * 72
     clips = {}
     for _ in range(c):
@@ -40,6 +44,9 @@ def load(path):
 
 
 def render(atlas, vertices, matrices, groups=1 | 8 | 16 | 32 | 64, angle=0, size=640):
+    import numpy as np
+    from PIL import Image
+
     v = vertices[(vertices["group"] & groups) != 0]
     p = np.zeros((len(v), 3))
     n = p.copy()
@@ -90,12 +97,14 @@ def render(atlas, vertices, matrices, groups=1 | 8 | 16 | 32 | 64, angle=0, size
     return Image.fromarray(im)
 
 
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("pack")
-    ap.add_argument("output")
-    a = ap.parse_args()
-    atlas, v, c = load(a.pack)
+def main(arguments=None):
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--input", required=True, help="Locally prepared Link SCMESH01 pack")
+    ap.add_argument("--output", required=True, help="Private PNG contact sheet")
+    a = ap.parse_args(arguments)
+    from PIL import Image, ImageDraw
+
+    atlas, v, c = load(a.input)
     sheet = Image.new("RGB", (1280, 1280))
     draw = ImageDraw.Draw(sheet)
     for i, (name, frame, groups, angle) in enumerate(
@@ -110,3 +119,7 @@ if __name__ == "__main__":
         draw.text((i % 2 * 640 + 15, i // 2 * 640 + 15), f"{name} / frame {frame}", fill="white")
     Path(a.output).parent.mkdir(parents=True, exist_ok=True)
     sheet.save(a.output)
+
+
+if __name__ == "__main__":
+    main()

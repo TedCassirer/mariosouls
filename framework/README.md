@@ -200,3 +200,7 @@ contract and validation report for exact dimensions and measured coverage.
 Version 0.4.1 fixed large-enemy contact by querying the native capsule surface and
 removed event-controlled colliders from guest static caches. Native Havok still
 owns those barriers. Mario's reduced body and fall policy are retained.
+
+Firelink doorway fix: the DS1 host excludes NPC-only collision barriers
+(MSB filters 11 and 19) from guest terrain. Mario QA passed the reported
+entrance in both directions after installation. See validation for limits.

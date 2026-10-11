@@ -103,6 +103,10 @@ class Host:
  def warp_firelink_fixture(self,xyz,heading):
   if self.maps!=(1002,) or not all(math.isfinite(v) for v in [*xyz,heading]) or not(-62<xyz[1]<-58 and math.hypot(xyz[0]+48,xyz[2]-55)<8):raise StateError('Outside explicit Firelink QA fixture')
   return self._warp(xyz,heading,1810101,1002)
+ def warp_firelink_doorway(self,xyz,heading):
+  # Explicit reproduction fixture at the user's reported aqueduct doorway.
+  if self.maps!=(1002,) or not all(math.isfinite(v) for v in [*xyz,heading]) or not(-35<xyz[1]<-32 and math.hypot(xyz[0]+26.2,xyz[2]-7.86)<4):raise StateError('Outside explicit Firelink doorway fixture')
+  return self._warp(xyz,heading,1810101,self.snapshot()['map'])
  def _warp(self,xyz,heading,target_id,expected_map):
   s=self.snapshot(target_id)
   if s['map']!=expected_map:raise StateError('Warp map mismatch')

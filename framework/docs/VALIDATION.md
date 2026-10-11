@@ -858,3 +858,25 @@ terrain feel and contact-patch interactions remain unverified for this revision.
 This traction revision and the preceding area-transition revision were installed
 with user authorization after the game closed. Installed binary hashes match the
 tested build. In-game validation of both revisions remains pending.
+
+
+### 2026-10-11 Firelink doorway: NPC-only collision sheets (installed)
+
+Mario QA's native character passed the reported doorway while guest movement
+stopped at (-26.212, -33.697, 7.858), with no native contacts. Local collision
+inspection identified h7500B0_0000, MSB filter 11: an NPC-only barrier across the
+opening. The host now excludes NPC-only filters 11 and 19 from guest terrain.
+Ordinary collision and lethal filters remain; no capsule dimensions, movement
+rules or per-location exceptions changed.
+
+After installation and restart, Mario QA walked outside from
+(-25.139, -33.949, 6.443) to (-26.737, -33.699, 8.749), then back inside to
+(-24.847, -33.714, 6.055), with guest ownership active throughout. Further
+backward movement also crossed. A later running reversal redirected toward the
+cliff as the camera followed and is not counted as another clean crossing.
+QA was returned to the entrance using the bounded native warp fixture.
+HP remained 228 and stamina 93 during the confirmed crossings. Temporary
+no-death/no-damage/no-hit bytes are zero. The level-65 character was not tested.
+Offline checks and doctor passed; installed host/adapter/runtime hashes match
+the tested build. Other filter-11/19 barriers benefit from the same policy,
+but other locations have not been checked live.

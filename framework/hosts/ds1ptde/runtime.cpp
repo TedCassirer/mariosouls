@@ -171,7 +171,7 @@ static bool loadMap(){
   // Retain terminal surfaces for guest floor queries (some engines reject
   // movement without a floor below). Contact is fatal before combat/another step.
   // Camera-only trigger surfaces must not stop the fall above the kill plane.
-  if(!hazardTrigger(filter)||hazardLethal(filter))data.insert(data.end(),triangle,triangle+3);
+  if(guestTerrainFilter(filter))data.insert(data.end(),triangle,triangle+3);
  }
  if(ok&&fgetc(f)!=EOF)ok=false;fclose(f);if(!ok||data.empty())return false;
  mapVertices.swap(data);mapHazards.swap(hazards);hazardPreviousValid=false;

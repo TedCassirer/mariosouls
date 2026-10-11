@@ -1,5 +1,55 @@
 # Framework verification — 2026-10-11
 
+## Framework 0.4 — Wind Waker Link first playable slice
+
+The final host and Link adapter were tested directly in PID 45932, using Mario QA
+level 6 in the Asylum. Candidate PID 43724 evidence is kept separately. Both loads
+selected Mario QA from observed menu screens. The level-65 slot was not loaded.
+
+- Original GZLE01 body, sword/hilt, shield, hand variants, bottle and textures;
+  25 clips / 738 sampled skeletal frames in a private 6.6 MB asset pack. The
+  controller is authored, not an embedded TWW engine or exact physics port.
+- Shared SCMESH01 parser/skinning, neutral static collision queries, opt-in
+  texture multiplication and alpha cutouts. Host rendering has no character-ID
+  branch. Existing rendering-before-UI is retained and visible at the bonfire.
+- Final offline suite: installer transactions, common combat/feedback/motion/body/
+  input, actual Link and unrelated scaffold contracts, all real animation frames
+  bounded, corrupt asset rejection, buffered combo phases, radial spin, roll
+  interruption and small-body wall/ceiling tests. Mario's unchanged adapter also
+  passed its regression suite with the new host rendering source.
+- Final live run/jump/roll and combo/spin recording. Free jump about 0.78 m; roll
+  and jump traces have zero sampled protection flags. Sword combo costs 14,16,22
+  native stamina, separate serials, 93 -> 41. Spin spends 30. No implicit jump or
+  roll protection is added. Physical controller absent during this pass; mapping
+  is covered by executable tests, not claimed as a fresh live pad test.
+- Final closed main-door push stopped at Z=-3.604 m, no rejected motion requests.
+  Hollow1810101 HP44 -> 0 with one hit, one confirmed impact after31ms, 40ms
+  attacker pause, native24-soul reward (108 -> 132). Raw native return2 is not an
+  HP value. Attack power88.825 entered the native damage path. This is a small
+  unarmored enemy test, not a full sword/armor/boss balancing pass.
+- Final incoming melee while Link owned movement:464 -> 399 -> 265, native hurt
+  callbacks and no protection bits. Earlier damage during setup was not counted
+  as owned-state evidence. Returned safely; bonfire healed265 -> 594, Leave
+  resumed the same instance and a subsequent jump worked. Original crouch clip
+  presents the bonfire rest; the initial candidate's unsuitable standing clip
+  was replaced. Candidate repeated tiny landing animations near a contact seam
+  were addressed by requiring meaningful downward speed for the landing reaction.
+- Game saved at courtyard bonfire and closed normally; test transports disarmed.
+  Exact build/installed hashes and traces live under `work/link-ww/`; source and
+  local runtime checkpoint: `checkpoint-2026-10-11-framework-v0.4-link`.
+
+Scope limits: shield blocking, target lock/parry, projectiles, guest voices/SFX,
+automatic edge jumps and facial-animation playback are not implemented. Native
+interaction presentation includes ladder, door, talk and drink clips, but those
+four paths have only offline pose coverage in this Link pass. Mario QA has no
+Estus yet. No fresh destructible, other-area, boss, death/respawn, projectile,
+environmental-hazard or fall-damage testing is claimed for Link. Link retains
+native fall rules; Mario's existing reduced-fall profile is unchanged.
+
+Private originals/extracted assets/captures are excluded from Git. The local
+pack is required separately from the source checkpoint. Prior Mario checkpoint
+tags and archives are unchanged.
+
 ## Framework 0.3 body and landing policy
 
 Final installed DLLs were tested directly in PID 22660 on Mario QA, level 6,

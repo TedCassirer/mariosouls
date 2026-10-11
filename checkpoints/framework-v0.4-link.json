@@ -1,0 +1,57 @@
+{
+  "name": "Framework 0.4 Wind Waker Link first playable",
+  "tag": "checkpoint-2026-10-11-framework-v0.4-link",
+  "created": "2026-10-11T07:45:04.117790+02:00",
+  "archive": "work/checkpoints/framework-v0.4-link-runtime.zip",
+  "archive_sha256": "ec14849f79cb59f2d085f179f4305e6445854e45e6b41d479726502e16961115",
+  "requires_existing_collision_and_owned_assets": true,
+  "owned_asset": {
+    "path": "work/link-ww/v1/link.scmesh",
+    "sha256": "5ff3b80df6b4fe7e76ac7d36c39f32b439d1d418ad9ff32bba8c750ea9ac6c2c",
+    "bytes": 6640236
+  },
+  "game_directory": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Dark Souls Prepare to Die Edition\\DATA",
+  "game_exe_sha256": "67bcab513c8f0ed6164279d85f302e06b1d8a53abff5df7f3d10e1d4dfd81459",
+  "files": {
+    "dinput8.dll": {
+      "sha256": "09d091415362b9e7f4e54517b00d022df7e49d575f890d42ae00132d41b03715",
+      "bytes": 536576
+    },
+    "mariosouls.ini": {
+      "sha256": "25b0969d756ef7f915bc2d4dd7712333191918a8a8902af7219ff8120ca62ce5",
+      "bytes": 1661
+    },
+    "SoulsCharacterFramework/install.json": {
+      "sha256": "ecbebc2f177093141251660ba5dccff6c5aae81605d00da6f040e9895c6c266e",
+      "bytes": 10934
+    },
+    "SoulsCharacterFramework/characters/link_ww/character.dll": {
+      "sha256": "9fbe639bf470c029d51d0546f1500a705d49f019cf85f52bc627a05d5cbb27f4",
+      "bytes": 463360
+    },
+    "SoulsCharacterFramework/characters/link_ww/character.json": {
+      "sha256": "8de6bee5139ddf5e431d9a330ce9d9e4bf27d9920ad425f6700e94201be2b64b",
+      "bytes": 1973
+    },
+    "SoulsCharacterFramework/characters/mario64/character.dll": {
+      "sha256": "da5502e72504770f2f781625bc32f1efa6c2739cc5e0673ec1821f18c8298cde",
+      "bytes": 386048
+    },
+    "SoulsCharacterFramework/characters/mario64/character.json": {
+      "sha256": "04df785600bf5b1b2dc5e29b67224901a51c597c90170d6bccc717f7b686f225",
+      "bytes": 3140
+    },
+    "SoulsCharacterFramework/characters/mario64/sm64.dll": {
+      "sha256": "5efe43f5280827bac1abcedc6a523895c6c56bf777e09abf190a452654873fd3",
+      "bytes": 812032
+    },
+    "MarioSouls/install.json": {
+      "sha256": "392ec237c565a33b7df389dffb09c726ca7dd745ad74befecdba45791965e639",
+      "bytes": 8088
+    },
+    "MarioSouls/harness.ini": {
+      "sha256": "0273dc8baef37a66166fa72d8bc4e03b83e813f91a9a486625c765e131aba7f1",
+      "bytes": 179
+    }
+  }
+}

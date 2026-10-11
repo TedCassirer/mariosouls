@@ -21,6 +21,8 @@ def test(character,asset,runtime):
     f.run([f.BUILD/'motion-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/body_test.cpp',f.BUILD/'body-test.exe')
     f.run([f.BUILD/'body-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/kinematic_test.cpp',f.BUILD/'kinematic-test.exe')
+    f.run([f.BUILD/'kinematic-test.exe'])
     for name in ['controller','action_input']:
         f.compile_cpp(f.FRAMEWORK/f'tests/{name}_test.cpp',f.BUILD/f'{name}-test.exe',extra=['-luser32','-ldxguid'])
         f.run([f.BUILD/f'{name}-test.exe'])
@@ -29,6 +31,13 @@ def test(character,asset,runtime):
     if p['assets'].get('required') and not asset:raise ValueError('Supply --asset with your owned asset path for this adapter')
     if p['assets'].get('runtime') and not runtime:raise ValueError('Supply --runtime with this character runtime DLL')
     f.run([f.BUILD/'adapter-test.exe',f.BUILD/'characters'/character/'character.dll',asset or '',runtime or ''])
+    if p['assets'].get('format')=='SCMESH01':
+        f.compile_cpp(f.FRAMEWORK/'tests/mesh_test.cpp',f.BUILD/'mesh-test.exe')
+        f.run([f.BUILD/'mesh-test.exe',asset,f.BUILD/'invalid-mesh.scmesh'])
+    character_test=folder/'test.cpp'
+    if character_test.is_file():
+        f.compile_cpp(character_test,f.BUILD/(character+'-test.exe'))
+        f.run([f.BUILD/(character+'-test.exe'),f.BUILD/'characters'/character/'character.dll',asset or ''])
     # Generate a second, unrelated adapter in an isolated scaffold tree, then
     # load it through precisely the same SDK runner without compiling host edits.
     sandbox=f.BUILD/'scaffold-test';sandbox.mkdir(exist_ok=True)

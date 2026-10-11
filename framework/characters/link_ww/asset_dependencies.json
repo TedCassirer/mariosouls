@@ -1,0 +1,31 @@
+{
+  "dolphin": {
+    "version": "2609a",
+    "url": "https://dl.dolphin-emu.org/releases/2609a/dolphin-2609a-x64.7z",
+    "archive_sha256": "bbfd13bf9e6d2a4164a15c392b1f32a9b18150e5136746b388704608fbb60f76",
+    "exe": "work/tools/dolphin-2609a-x64/Dolphin-x64/DolphinTool.exe",
+    "exe_sha256": "63dd9bad68996f4c75302fde1a2374ebecfa767df6780619d658f41684f97e8a"
+  },
+  "superbmd": {
+    "version": "1.3.11",
+    "url": "https://github.com/LagoLunatic/SuperBMD/releases/download/v1.3.11/SuperBMD-1.3.11-PlayerModels.zip",
+    "archive_sha256": "e2b5fb7f6ff170671e8cd61e4c636253290a9ff03492949296c59533c34dc738",
+    "exe": "work/tools/SuperBMD-1/SuperBMD.exe",
+    "exe_sha256": "c643e3f7cc05e98be36e61dc0e22aef3953593c182c18c618fc8e2432c3f166d"
+  },
+  "gclib": {
+    "url": "https://github.com/LagoLunatic/gclib",
+    "commit": "4e06db0004df411f1c806ad39b0e9a18ac4a1de5",
+    "path": "work/tools/gclib",
+    "license": "MIT"
+  },
+  "python": [
+    "numpy",
+    "Pillow",
+    "imagequant==1.1.5"
+  ],
+  "references": [
+    "https://github.com/LagoLunatic/ww_model_helpers",
+    "https://github.com/zeldaret/tww"
+  ]
+}

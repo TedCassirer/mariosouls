@@ -16,6 +16,8 @@ extern "C" {
 #define SC_MAX_TRIANGLES 16384u
 #define SC_CAP_AUDIO 1u
 #define SC_CAP_ITEM_PROP 2u
+#define SC_CAP_TEXTURE_MODULATE 4u
+#define SC_CAP_ALPHA_TEST 8u
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u

@@ -3,7 +3,9 @@
 Reusable character integration for Dark Souls: Prepare to Die Edition, with Mario 64
 as its first adapter. Shared rendering, world collision, native interactions, input,
 health, stamina and combat now live under `framework/`. Character engines and
-animations live in separate adapter DLLs. Link/OoT and DK/DK64 are not implemented.
+animations live in separate adapter DLLs. Wind Waker Link now has a first playable
+adapter with privately extracted assets and an authored controller. Link/OoT and
+DK/DK64 are not implemented. See `framework/characters/link_ww/README.md` for scope.
 
 Start with [the framework guide](framework/README.md),
 [adding a character](framework/docs/ADDING_A_CHARACTER.md) and

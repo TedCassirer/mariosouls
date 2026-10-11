@@ -1,5 +1,22 @@
 # Character ABI version 3
 
+Framework 0.4 adds opt-in rendering capabilities without changing ABI structure
+layout: `SC_CAP_TEXTURE_MODULATE` multiplies atlas RGB by vertex RGB;
+`SC_CAP_ALPHA_TEST` discards atlas alpha <=127 and uses texture alpha in the
+character layer. Without these bits, the legacy texture-alpha color blend and
+opaque output remain unchanged. Install a matching host; older hosts reject the
+new capability bits. All rendering remains before native UI and restores D3D state.
+
+`core/mesh_pack.h` is an optional adapter-side helper, not a mandatory asset format.
+SCMESH01 contains an 8-byte magic, five little-endian uint32 fields (texture width,
+height, vertex count, bone count, clip count), RGBA8 pixels, 72-byte triangle-soup
+vertices, then named clips. Vertex layout: position3, normal3, UV2, RGB3 float32;
+four uint16 bone indices; four float32 weights; uint32 visibility group mask.
+Each clip has a null-terminated 32-byte name, uint32 frame count and loop flag,
+then frame-major/bone-major 3x4 row-major skin matrices at 30 Hz. The reader bounds
+size/counts, validates finite values/weights/indices, and rejects trailing data.
+Character recipes generate this private pack; the host never parses guest archives.
+
 `sdk/character_api.h` is the authoritative declaration. Adapters are trusted native
 32-bit Windows DLLs, loaded in-process; validation is not a memory-safety sandbox.
 Export `SoulsCharacterGetAPI` using C linkage and return null for any unsupported

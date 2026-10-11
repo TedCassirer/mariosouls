@@ -1,4 +1,10 @@
-# Souls Character Framework 0.3
+# Souls Character Framework 0.4
+
+Wind Waker Link is the second real adapter, using an authored controller and
+privately extracted original assets. Shared skeletal asset loading, offline
+preparation, cutout materials and kinematic queries support future adapters.
+See [Link's scope, preparation and limitations](characters/link_ww/README.md).
+Link/OoT and DK/DK64 remain separate, unimplemented projects.
 
 MarioSouls is the first character adapter for a shared Dark Souls PTDE integration.
 This is a working extraction of the installed 0.7 integration, with a versioned

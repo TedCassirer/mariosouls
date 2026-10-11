@@ -19,7 +19,7 @@ BUILD=ROOT/'work/framework-build'
 ZIG=ROOT/'work/tools/zig-windows-x86_64-0.13.0/zig.exe'
 GAME=Path(r'C:\Program Files (x86)\Steam\steamapps\common\Dark Souls Prepare to Die Edition\DATA')
 FLAGS={'automatic':1,'radial':2,'no_objects':4}
-CAPS={'audio':1,'item_prop':2}
+CAPS={'audio':1,'item_prop':2,'texture_modulate':4,'alpha_test':8}
 BODY_DEFAULTS=dict(model_scale=1.,radius_cm=0.,height_cm=0.,hurt_radius_cm=0.,hurt_height_cm=0.,fall_damage_scale=1.,fall_damage_max_hp_fraction=1.,nonlethal_falls=False)
 
 
@@ -108,7 +108,7 @@ def build(character,adapter_only=False,with_runtime=False):
             run([ZIG,'cc','-target','x86-windows-gnu','-O2','-c',source,'-o',obj]);objects.append(obj)
         compile_cpp(FRAMEWORK/'hosts/ds1ptde/runtime.cpp',BUILD/'dinput8.dll',extra=['-shared',FRAMEWORK/'hosts/ds1ptde/proxy.def',*objects,'-ld3d9','-ldxguid','-luser32','-lwinmm'])
     source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.c','.cpp','.def','.py','.json','.in'])
-    receipt={'framework_version':'0.3','abi':3,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
+    receipt={'framework_version':'0.4','abi':3,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
         'adapter_sha256':sha(out/'character.dll'),'source_sha256':{f.relative_to(ROOT).as_posix():sha(f) for f in source_paths}}
     if not adapter_only:receipt['host_sha256']=sha(BUILD/'dinput8.dll')
     (out/'build.json').write_text(json.dumps(receipt,indent=2))
@@ -146,6 +146,17 @@ def doctor(character):
     architecture_check();folder,p=load_profile(character)
     run([sys.executable,ROOT/'tools/dependencies.py'])
     if not ZIG.is_file():raise RuntimeError('Zig toolchain missing')
+    asset_lock=folder/'asset_dependencies.json'
+    if asset_lock.is_file():
+        for name,dep in json.loads(asset_lock.read_text()).items():
+            if not isinstance(dep,dict):continue
+            if 'exe' in dep:
+                tool=ROOT/dep['exe']
+                if not tool.is_file() or sha(tool)!=dep['exe_sha256']:raise RuntimeError('Restore pinned asset tool: '+name)
+            if 'commit' in dep:
+                actual=subprocess.run(['git','-C',str(ROOT/dep['path']),'rev-parse','HEAD'],capture_output=True,text=True,check=True).stdout.strip()
+                if actual!=dep['commit']:raise RuntimeError('Asset dependency revision differs: '+name)
+        print('Pinned asset tools verified')
     print('Profile valid: '+p['id']+' ('+p['status']+'); '+str(len(p['attacks']))+' attacks')
 
 
@@ -158,8 +169,14 @@ def main():
         if name=='test':p.add_argument('--asset');p.add_argument('--runtime')
         if name=='install':p.add_argument('--asset');p.add_argument('--runtime');p.add_argument('--check-only',action='store_true')
     p=commands.add_parser('new-character');p.add_argument('id');p.add_argument('--name',required=True)
+    p=commands.add_parser('prepare-assets');p.add_argument('--character',required=True);p.add_argument('--input',required=True);p.add_argument('--output',required=True)
     args=parser.parse_args()
     if args.command=='new-character':scaffold(args.id,args.name)
+    elif args.command=='prepare-assets':
+        folder,profile=load_profile(args.character)
+        recipe=folder/'prepare_assets.py'
+        if not recipe.is_file():raise ValueError('This character has no offline asset recipe')
+        run([sys.executable,recipe,'--input',args.input,'--output',args.output])
     elif args.command=='build':build(args.character,args.adapter_only,args.with_runtime)
     elif args.command=='doctor':doctor(args.character)
     elif args.command=='test':

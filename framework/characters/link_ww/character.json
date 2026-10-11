@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "id": "link_ww",
+  "display_name": "Wind Waker Link",
+  "status": "implemented",
+  "source": "adapter.cpp",
+  "max_triangles": 4600,
+  "texture": [
+    1024,
+    1024
+  ],
+  "audio_rate": 0,
+  "capabilities": [
+    "texture_modulate",
+    "alpha_test"
+  ],
+  "automatic_attack": null,
+  "base_power": 100,
+  "upgrade_power": 10,
+  "dexterity_weight": 0.5,
+  "assets": {
+    "required": true,
+    "description": "Private SCMESH01 pack converted from a user-supplied USA GZLE01 RVZ; never redistribute",
+    "format": "SCMESH01"
+  },
+  "attacks": [
+    {
+      "name": "sword_slash",
+      "multiplier": 0.85,
+      "poise": 12,
+      "stamina_cost": 14,
+      "flags": [],
+      "active_ticks": 20,
+      "max_targets": 2,
+      "range_cm": 145,
+      "min_height_cm": -80,
+      "max_height_cm": 135
+    },
+    {
+      "name": "sword_backslash",
+      "multiplier": 0.9,
+      "poise": 14,
+      "stamina_cost": 16,
+      "flags": [],
+      "active_ticks": 20,
+      "max_targets": 2,
+      "range_cm": 145,
+      "min_height_cm": -80,
+      "max_height_cm": 135
+    },
+    {
+      "name": "sword_finisher",
+      "multiplier": 1.25,
+      "poise": 22,
+      "stamina_cost": 22,
+      "flags": [],
+      "active_ticks": 20,
+      "max_targets": 2,
+      "range_cm": 155,
+      "min_height_cm": -80,
+      "max_height_cm": 135
+    },
+    {
+      "name": "spin_attack",
+      "multiplier": 1.45,
+      "poise": 20,
+      "stamina_cost": 30,
+      "flags": [
+        "radial"
+      ],
+      "active_ticks": 34,
+      "max_targets": 3,
+      "range_cm": 175,
+      "min_height_cm": -80,
+      "max_height_cm": 135
+    }
+  ],
+  "body": {
+    "model_scale": 1.0,
+    "radius_cm": 22.0,
+    "height_cm": 115.0,
+    "hurt_radius_cm": 24.0,
+    "hurt_height_cm": 125.0,
+    "fall_damage_scale": 1.0,
+    "fall_damage_max_hp_fraction": 1.0,
+    "nonlethal_falls": false
+  }
+}

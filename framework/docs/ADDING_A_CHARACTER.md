@@ -1,5 +1,19 @@
 # Add a character
 
+Wind Waker Link now demonstrates the asset-driven route: an original model and
+sampled animations with an authored controller. Mario still demonstrates an
+embedded guest engine. These routes share host collision, menus, combat and input.
+Neither automatically imports another game's mechanics.
+
+Adapters may provide `prepare_assets.py --input <owned-disc> --output <private-pack>`.
+Invoke it through `python tools/framework.py prepare-assets --character <id>` with
+those arguments. The optional SCMESH01 loader and kinematic queries live in core;
+game formats, clip names and equipment attachment rules remain character-specific.
+Declare `assets.format: SCMESH01` for exhaustive clip and malformed-pack tests.
+A character-local `test.cpp` is automatically run by the supported test workflow.
+Use `texture_modulate` and `alpha_test` manifest capabilities for ordinary textured
+models with cutout materials; do not add character-name branches to the renderer.
+
 Run from the repository root:
 
 ```powershell

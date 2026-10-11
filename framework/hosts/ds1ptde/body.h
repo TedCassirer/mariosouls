@@ -31,7 +31,7 @@ struct BodyGuard {
 };
 
 static bool bodyIdentity(const BodyBinding &b) {
-    return b.actor && chain(playerSlot, {0, 4, 0}) == b.actor &&
+    return b.actor && chain(gameSlots.player, {0, 4, 0}) == b.actor &&
            read<uintptr_t>(b.actor + 0x28) == b.movement &&
            read<uintptr_t>(b.movement + 0x1c) == b.physics &&
            read<uintptr_t>(b.physics + 0x38) == b.proxy &&

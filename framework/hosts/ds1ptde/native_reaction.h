@@ -22,7 +22,7 @@ static int nativeActiveAllowed(uintptr_t actor = player, bool captured = true) {
                        : -1;
         logf("Native passive action predicate signature=%d", verified == 1);
     }
-    if (verified != 1 || !actor || chain(playerSlot, {0, 4, 0}) != actor ||
+    if (verified != 1 || !actor || chain(gameSlots.player, {0, 4, 0}) != actor ||
         (captured && actor != lastPlayer))
         return -1;
     uintptr_t movement = 0, action = 0, owner = 0;

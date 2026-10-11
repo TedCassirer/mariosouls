@@ -11,7 +11,7 @@ static SCProjectile::Rate projectileRate;
 
 static void projectileRateRelease() {
     float current = 0, value = 0;
-    if (projectileRateAddress && chain(playerSlot, {0, 4, 0}) == projectileRateActor &&
+    if (projectileRateAddress && chain(gameSlots.player, {0, 4, 0}) == projectileRateActor &&
         chain(projectileRateActor + 0x28, {0, 0x14}) + 0x64 == projectileRateAddress &&
         get(projectileRateAddress, current) && projectileRate.restore(current, value))
         put(projectileRateAddress, value);

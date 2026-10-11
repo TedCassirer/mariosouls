@@ -15,7 +15,8 @@ static CharacterVisibilityFn characterOriginalVisibility = nullptr;
 static bool characterVisibilityReady = false;
 
 static bool visibilityIdentity(uintptr_t actor) {
-    return actor && actor == player && actor == lastPlayer && chain(playerSlot, {0, 4, 0}) == actor;
+    return actor && actor == player && actor == lastPlayer &&
+           chain(gameSlots.player, {0, 4, 0}) == actor;
 }
 
 static bool visibilityBit(uintptr_t model, unsigned flags, unsigned dirty, bool enabled) {

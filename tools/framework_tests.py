@@ -79,6 +79,7 @@ def _shared_tests(render=False):
         "controller_hooks",
         "action_input",
         "native_block",
+        "native_bindings",
         "native_targets",
     ]:
         f.compile_cpp(

@@ -88,7 +88,7 @@ static void diagnosticsTick() {
     f.owner = int(characterControl.session.owner());
     // Reject a cached actor replaced during loading. Read-only reporting is allowed
     // on any save; the guarded harness remains the only route for automated actions.
-    f.actor = player && posData && chain(playerSlot, {0, 4, 0}) == player &&
+    f.actor = player && posData && chain(gameSlots.player, {0, 4, 0}) == player &&
               chain(player + 0x28, {0, 0x1c}) == posData;
     f.requested = characterControl.session.requested();
     f.presented = characterPresented();

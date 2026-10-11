@@ -164,7 +164,7 @@ static void equipmentContact() {
     if (!equipmentSwing.active() || !combatEnabled || !characterDamageReady ||
         (harness.armed && harness.suppressOutgoing))
         return;
-    uintptr_t r = read<uint32_t>(playerSlot), begin = read<uint32_t>(r + 4),
+    uintptr_t r = read<uint32_t>(gameSlots.player), begin = read<uint32_t>(r + 4),
               end = read<uint32_t>(r + 8);
     if (!begin || end < begin || end - begin > 16384)
         return;

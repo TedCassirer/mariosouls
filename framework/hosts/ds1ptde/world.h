@@ -135,7 +135,7 @@ extern "C" __attribute__((used, noinline)) void characterWorldMotion(uintptr_t p
     DWORD now = GetTickCount();
     AcquireSRWLockExclusive(&worldLock);
     if (worldMode != 1 || physics != worldBinding.physics || !worldBinding.valid() ||
-        chain(playerSlot, {0, 4, 0}) != worldBinding.actor ||
+        chain(gameSlots.player, {0, 4, 0}) != worldBinding.actor ||
         read<uint32_t>(worldBinding.actor + 0x28) != worldBinding.movement ||
         DWORD(now - worldHeartbeat) > 250) {
         ReleaseSRWLockExclusive(&worldLock);

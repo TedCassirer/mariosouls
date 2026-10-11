@@ -36,7 +36,7 @@ static bool harnessIdentity() {
 }
 
 static uintptr_t harnessTarget() {
-    uintptr_t root = read<uint32_t>(playerSlot), begin = read<uint32_t>(root + 4),
+    uintptr_t root = read<uint32_t>(gameSlots.player), begin = read<uint32_t>(root + 4),
               end = read<uint32_t>(root + 8), result = 0;
     if (!begin || end < begin || end - begin > 16384)
         return 0;
@@ -169,12 +169,12 @@ static void harnessTick(bool focus, bool padConnected) {
             harness.targetId = GetPrivateProfileIntA("Harness", "Target", 1810101, harness.config);
             uintptr_t target = harnessTarget();
             if (!target || read<int>(target + 0x2d4) <= 0) {
-                uintptr_t rr = read<uint32_t>(playerSlot), bb = read<uint32_t>(rr + 4),
+                uintptr_t rr = read<uint32_t>(gameSlots.player), bb = read<uint32_t>(rr + 4),
                           ee = read<uint32_t>(rr + 8);
                 logf(
                     "harness arm rejected: target absent/dead id=%d target=%08x hp=%d slot=%08x root=%08x begin=%08x end=%08x",
                     harness.targetId, (unsigned)target, read<int>(target + 0x2d4),
-                    (unsigned)playerSlot, (unsigned)rr, (unsigned)bb, (unsigned)ee);
+                    (unsigned)gameSlots.player, (unsigned)rr, (unsigned)bb, (unsigned)ee);
                 if (bb && ee >= bb && ee - bb <= 16384)
                     for (uintptr_t at = bb; at < ee; at += 4) {
                         uintptr_t pp = read<uint32_t>(at);

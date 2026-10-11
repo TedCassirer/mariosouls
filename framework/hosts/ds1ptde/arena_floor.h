@@ -1,11 +1,10 @@
 #pragma once
-static uintptr_t eventFlagsSlot = 0;
 static size_t arenaBaseCount = 0;
 static bool arenaFloorPresent = false;
 static std::vector<Vec> arenaFloorVertices;
 
 static bool arenaBroken(bool &broken) {
-    uintptr_t flags = chain(eventFlagsSlot, {0, 0});
+    uintptr_t flags = chain(gameSlots.eventFlags, {0, 0});
     uint32_t value = 0;
     // Event11810220: group1 + area181(index17) + section0 + bit220.
     if (!flags || !get(flags + 0x5a18, value))

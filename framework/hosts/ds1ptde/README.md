@@ -37,7 +37,7 @@ Useful starting points:
 
 | Area | Files |
 | --- | --- |
-| Native boundary | `memory.h`, `loader.h`, `native_targets.h` |
+| Native boundary | `memory.h`, `native_bindings.h`, `loader.h`, `native_targets.h` |
 | Ownership and presentation | `presentation.h`, `character_visibility.h`, `death.h` |
 | Movement and collision | `world.h`, `body.h`, `arena_floor.h`, `hazards.h` |
 | Input and interactions | `controller.h`, `action_input.h`, `interaction.h`, `actions.h` |
@@ -53,6 +53,12 @@ The host supplies action filtering, logging and rumble installation callbacks;
 the hook layer does not depend on gameplay globals. Both XInput entry points
 share synthetic packet numbering so contextual input changes reach the game
 even when the physical controller has not moved.
+
+`native_bindings.h` owns discovery of the executable's player, camera, map and
+event-flag slots. Each signature must be unique in executable sections. The
+first three slots are required; event flags remain optional. Slot addresses
+survive level loads, while their actor/camera pointees do not. Features must
+validate those pointees before reading or restoring native state.
 
 Native HP, stamina, inventory, quest state and rewards remain authoritative.
 Actor pointers and cached geometry must be invalidated when their owning game

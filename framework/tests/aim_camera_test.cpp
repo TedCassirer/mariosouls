@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <initializer_list>
 #include "../../work/minhook/include/MinHook.h"
+#include "../hosts/ds1ptde/native_bindings.h"
 static DWORD testClock = 1000;
 
 static DWORD testNow() {
@@ -33,14 +34,15 @@ static Vec unit(Vec v) {
     return n > .0001f ? Vec{v.x / n, v.y / n, v.z / n} : Vec{0, 0, 1};
 }
 
-static uintptr_t cam = 0, player = 100, cameraSlot = 1, playerSlot = 2;
+static HostBindings::Slots gameSlots{2, 1, 0, 0};
+static uintptr_t cam = 0, player = 100;
 static int hp = 100;
 static volatile LONG actionAimUntil = 0;
 
 static void logf(const char *, ...) {}
 
 static uintptr_t chain(uintptr_t slot, std::initializer_list<unsigned>) {
-    return slot == cameraSlot ? cam : player;
+    return slot == gameSlots.camera ? cam : player;
 }
 
 template <class T> static T read(uintptr_t p) {

@@ -33,8 +33,8 @@ static bool debugHas(int layer) {
 
 static bool debugVisible() {
     return debugEnabled && player && posData && cam && currentMap() >= 0 &&
-           chain(playerSlot, {0, 4, 0}) == player && chain(player + 0x28, {0, 0x1c}) == posData &&
-           read<int>(player + 0x2d4) > 0;
+           chain(gameSlots.player, {0, 4, 0}) == player &&
+           chain(player + 0x28, {0, 0x1c}) == posData && read<int>(player + 0x2d4) > 0;
 }
 
 static bool renderWanted() {
@@ -192,7 +192,7 @@ static void debugGather() {
         if (read<uintptr_t>(part + 8) == player &&
             targetShapeCapsule(read<uintptr_t>(part + 0x1c), feet, cap))
             debugLines.capsule(cap, 0xffff63d5);
-        uintptr_t root = read<uintptr_t>(playerSlot), begin = read<uintptr_t>(root + 4),
+        uintptr_t root = read<uintptr_t>(gameSlots.player), begin = read<uintptr_t>(root + 4),
                   end = read<uintptr_t>(root + 8);
         if (begin && end >= begin && end - begin <= 16384)
             for (uintptr_t p = begin; p < end && debugActors < 48; p += 4) {

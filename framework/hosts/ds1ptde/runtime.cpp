@@ -68,51 +68,7 @@ using SCNativeMemory::get;
 using SCNativeMemory::put;
 using SCNativeMemory::read;
 
-// Accept an address only when its signature is unique in executable sections.
-// A mismatched executable therefore leaves the binding unavailable.
-static uintptr_t scan(const char *sig, int immediate) {
-    std::vector<int> pat;
-    const char *s = sig;
-    while (*s) {
-        if (*s == ' ') {
-            s++;
-            continue;
-        }
-        if (*s == '?') {
-            pat.push_back(-1);
-            s++;
-        } else {
-            char *e;
-            pat.push_back(strtoul(s, &e, 16));
-            s = e;
-        }
-    }
-    auto base = (BYTE *)GetModuleHandleA(NULL);
-    auto dos = (IMAGE_DOS_HEADER *)base;
-    auto nt = (IMAGE_NT_HEADERS *)(base + dos->e_lfanew);
-    auto sec = IMAGE_FIRST_SECTION(nt);
-    uintptr_t hit = 0;
-    int count = 0;
-    for (unsigned j = 0; j < nt->FileHeader.NumberOfSections; j++)
-        if (sec[j].Characteristics & IMAGE_SCN_MEM_EXECUTE) {
-            BYTE *b = base + sec[j].VirtualAddress;
-            size_t len = sec[j].Misc.VirtualSize;
-            for (size_t i = 0; i + pat.size() <= len; i++) {
-                bool ok = true;
-                for (size_t k = 0; k < pat.size(); k++)
-                    if (pat[k] >= 0 && b[i + k] != pat[k]) {
-                        ok = false;
-                        break;
-                    }
-                if (ok) {
-                    hit = (uintptr_t)(b + i);
-                    count++;
-                }
-            }
-        }
-    logf("signature matches=%d at=%08x", count, (unsigned)hit);
-    return count == 1 ? read<uint32_t>(hit + immediate) : 0;
-}
+#include "native_bindings.h"
 
 struct Vec {
     float x, y, z;
@@ -145,7 +101,8 @@ static Vec unit(Vec v) {
     return n > .0001f ? v * (1 / n) : Vec{0, 0, 1};
 }
 
-static uintptr_t playerSlot, cameraSlot, mapSlot, player, lastPlayer, posData, cam, lastMap;
+static HostBindings::Slots gameSlots;
+static uintptr_t player, lastPlayer, posData, cam, lastMap;
 static int loadedMap = -1, lastHP = 0;
 static unsigned pendingNativeHurt = 0;
 static uint32_t savedFlags1, savedFlags2, savedMapFlags;
@@ -245,7 +202,7 @@ static Vec cameraForward() {
 #include "projectile.h"
 
 static int currentMap() {
-    uintptr_t p = read<uint32_t>(mapSlot);
+    uintptr_t p = read<uint32_t>(gameSlots.map);
     if (!p)
         return -1;
     int world = read<uint8_t>(p + 0xa13), area = read<uint8_t>(p + 0xa12);
@@ -380,7 +337,7 @@ static void releaseControl(bool preserveRequest = true) {
     actionCancelPulse();
     InterlockedExchange(&actionRoute, LONG(ActionRoute::Free));
     HostController::setOwner(-1);
-    if (characterOwned() && lastPlayer && chain(playerSlot, {0, 4, 0}) == lastPlayer &&
+    if (characterOwned() && lastPlayer && chain(gameSlots.player, {0, 4, 0}) == lastPlayer &&
         read<uint32_t>(lastPlayer + 0x28) == lastMap) {
         uint32_t f1 = read<uint32_t>(lastPlayer + 0x1fc), f2 = read<uint32_t>(lastPlayer + 0x3c4);
         put(lastPlayer + 0x1fc, (f1 & ~0x804000u) | (savedFlags1 & 0x804000));
@@ -391,7 +348,8 @@ static void releaseControl(bool preserveRequest = true) {
         if (hideNative)
             put(lastPlayer + 0x258, savedOpacity);
     }
-    if (characterOwned() && lastPlayer && chain(playerSlot, {0, 4, 0}) == lastPlayer && hideNative)
+    if (characterOwned() && lastPlayer && chain(gameSlots.player, {0, 4, 0}) == lastPlayer &&
+        hideNative)
         put(lastPlayer + 0x258, savedOpacity);
     characterControl.session.release();
     if (audioOut)
@@ -578,8 +536,8 @@ struct GameplayFrame {
 };
 
 static GameplayFrame pollGameplayFrame() {
-    player = chain(playerSlot, {0, 4, 0});
-    cam = chain(cameraSlot, {0, 0x3c, 0x60});
+    player = chain(gameSlots.player, {0, 4, 0});
+    cam = chain(gameSlots.camera, {0, 0x3c, 0x60});
     uintptr_t mp = read<uint32_t>(player + 0x28);
     posData = read<uint32_t>(mp + 0x1c);
     presentationValidate();
@@ -1357,16 +1315,8 @@ static DWORD WINAPI start(void *) {
         logf("Unsupported executable; inactive");
         return 0;
     }
-    playerSlot = scan("8B 15 ? ? ? ? F3 0F 10 44 24 30 52", 2);
-    cameraSlot = scan("D9 45 08 A1 ? ? ? ? 51 D9 1C 24 50", 4);
-    if (!playerSlot || !cameraSlot)
+    if (!gameSlots.discover(logf))
         return 0;
-    mapSlot = scan(
-        "8B 48 04 8B 11 50 8B 42 34 FF D0 C7 46 2C 00 00 00 00 C3 8B 0D ? ? ? ? 8B 89 50 0B 00 00 32 C0 83 79 28 00",
-        0x15);
-    if (!mapSlot)
-        return 0;
-    eventFlagsSlot = scan("56 8B F1 8B 46 1C 50 A1 ? ? ? ? 32 C9", 8);
     ready = initCharacter();
     if (!ready) {
         logf("initialization failed");

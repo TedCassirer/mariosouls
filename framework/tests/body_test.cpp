@@ -8,10 +8,12 @@
 #include <map>
 #include <initializer_list>
 #include "../core/body.h"
+#include "../hosts/ds1ptde/native_bindings.h"
 using std::isfinite;
 static std::map<uintptr_t, uint8_t> memory;
 static unsigned writes = 0;
-static uintptr_t playerSlot = 0x1000, player = 0x4000, lastMap = 0x5000, posData = 0x6000;
+static HostBindings::Slots gameSlots{0x1000, 0, 0, 0};
+static uintptr_t player = 0x4000, lastMap = 0x5000, posData = 0x6000;
 
 template <class T> bool get(uintptr_t address, T &value) {
     auto out = reinterpret_cast<uint8_t *>(&value);
@@ -50,7 +52,7 @@ static void logf(const char *, ...) {}
 static void setup() {
     memory.clear();
     bodyBinding = {};
-    put(playerSlot, uintptr_t(0x2000));
+    put(gameSlots.player, uintptr_t(0x2000));
     put(0x2004, uintptr_t(0x3000));
     put(0x3000, player);
     put(player + 0x28, lastMap);

@@ -30,7 +30,7 @@ static bool classCreationMenu() {
     uintptr_t menu = read<uint32_t>(0x13786d0);
     // Native new-character menu +94; no world actor may coexist with a preview.
     int phase = read<int>(menu + 0x94);
-    return classEnabled && classHooksReady && menu && !chain(playerSlot, {0, 4, 0}) &&
+    return classEnabled && classHooksReady && menu && !chain(gameSlots.player, {0, 4, 0}) &&
            (phase == 2 || phase == 3 || phase == 5 || phase == 7 ||
             (read<int>(menu + 0xb4) == 1 && read<int>(menu + 0xb0) > 0 &&
              read<int>(menu + 0xb0) < 16));

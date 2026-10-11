@@ -146,7 +146,7 @@ static bool combatTestDrop(int height) {
 
 static bool environmentKill(double &acc, const char *reason) {
     if (!characterOwned() || nativeActionOwned() || player != lastPlayer ||
-        chain(playerSlot, {0, 4, 0}) != player)
+        chain(gameSlots.player, {0, 4, 0}) != player)
         return false;
     int hp = read<int>(player + 0x2d4);
     if (hp <= 0)
@@ -276,7 +276,7 @@ static void combat() {
         characterRecoveryUntil = GetTickCount() + characterRecoveryDelay;
         characterStaminaCeiling = std::min(characterStaminaCeiling, read<int>(player + 0x2e4));
     }
-    uintptr_t root = read<uint32_t>(playerSlot), begin = read<uint32_t>(root + 4),
+    uintptr_t root = read<uint32_t>(gameSlots.player), begin = read<uint32_t>(root + 4),
               end = read<uint32_t>(root + 8);
     if (!begin || end < begin || end - begin > 16384)
         return;

@@ -34,8 +34,8 @@ extern "C" __attribute__((used, noinline)) void aimCameraCopied(uintptr_t source
     frame = aimCameraRequest;
     ReleaseSRWLockShared(&aimCameraLock);
     if (!frame.active || source != frame.camera || DWORD(GetTickCount() - frame.time) >= 150 ||
-        source != chain(cameraSlot, {0, 0x3c, 0x60}) ||
-        frame.actor != chain(playerSlot, {0, 4, 0}) || read<int>(frame.actor + 0x2d4) <= 0)
+        source != chain(gameSlots.camera, {0, 0x3c, 0x60}) ||
+        frame.actor != chain(gameSlots.player, {0, 4, 0}) || read<int>(frame.actor + 0x2d4) <= 0)
         return;
     Vec z = unit(frame.forward), x = unit(cross({0, 1, 0}, z)), y = cross(z, x);
     if (!isfinite(dot(frame.eye, frame.eye)) || dot(z, z) < .99f || dot(x, x) < .99f)

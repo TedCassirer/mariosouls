@@ -88,6 +88,26 @@ int main(int argc,char**argv){
   }
   assert(terminalContact);assert(d->body.nonlethalFalls);
   puts("PASS real guest fall reaches host lethal surface despite nonlethal landing protection");
+  // Native-owned floors may be absent from the guest static cache. A missing
+  // floor must allow motion/freefall, not fabricate an invisible boundary wall.
+  SC_Surface edge[2]={{{{-1000,0,-200},{-1000,0,200},{1000,0,200}},0},{{{-1000,0,-200},{1000,0,200},{1000,0,-200}},0}};
+  a->surfaces(edge,2,0);a->surfaces(nullptr,0,1);a->resume(id,0,0,0,0);input={0,1,0,1,0,0,0,0};
+  for(int i=0;i<45;i++)step();
+  printf("missing-floor travel z=%.2f y=%.2f\n",state.position[2],state.position[1]);
+  assert(fabsf(state.position[2])>400);assert(state.position[1]<-50);assert(!(state.flags&SC_GROUNDED));
+  assert(a->floorHeight(0,100,1000)<-10000); // public probe still reports no real floor
+  // Native collision can then correct onto its currently enabled floor.
+  a->resume(id,0,0,0,0);SC_MotionResolution support={};support.size=sizeof(support);support.generation=3;
+  for(int i=0;i<60;i++){
+   step();for(int axis=0;axis<3;axis++)support.position[axis]=state.position[axis];
+   support.position[1]=0;support.normalCount=1;support.normals[0][1]=1;support.sequence=i+1;
+   assert(a->resolveMotion(id,&support,&state,&m));
+   int z=int(state.position[2]);SC_Surface patch[2]={{{{-42,0,z-42},{-42,0,z+42},{42,0,z+42}},0},{{{-42,0,z-42},{42,0,z+42},{42,0,z-42}},0}};
+   a->surfaces(patch,2,1);
+  }
+  assert(fabsf(state.position[2])>800);assert(fabsf(state.position[1])<1);
+  a->surfaces(nullptr,0,1);
+  puts("PASS missing guest floor: free movement/freefall and native floor contact handoff");
   // Real guest collision queries must match the descriptor, not retain the
   // old 50 cm wall radius / 160 cm ceiling height beneath a smaller host body.
   SC_Surface walls[6]={floor[0],floor[1],

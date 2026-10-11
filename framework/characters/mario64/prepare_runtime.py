@@ -33,6 +33,12 @@ def prepare(repo):
             if source.count(before)!=count:raise RuntimeError('Pinned runtime equipment anchor changed: '+name+' '+before)
             source=source.replace(before,after)
         path.write_text(source)
+    (repo/'src/sc_open_world.h').write_bytes(Path(__file__).with_name('runtime_open_world.h').read_bytes())
+    staged('decomp/engine/surface_collision.c',[
+        ('#include "surface_collision.h"', '#include "surface_collision.h"\n#include "../../sc_open_world.h"',1),
+        ('*pfloor = find_floor_from_list( xPos, yPos, zPos, &height );',
+         '*pfloor = find_floor_from_list( xPos, yPos, zPos, &height );\n    if (!*pfloor && scMarioOpenWorld) *pfloor = sc_mario_open_floor();',1),
+    ])
     (repo/'src/sc_equipment_keys.h').write_bytes(Path(__file__).with_name('equipment_keys.h').read_bytes())
     (repo/'src/sc_flower_keys.h').write_bytes(Path(__file__).with_name('flower_keys.h').read_bytes())
     (repo/'src/sc_equipment.h').write_bytes(Path(__file__).with_name('runtime_equipment.h').read_bytes())

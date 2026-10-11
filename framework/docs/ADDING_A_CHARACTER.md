@@ -214,3 +214,11 @@ world instance is created. Keep meshes and default facing in the adapter.
 Test class switching, preview rotation, name entry, new-game initialization,
 save/reload and manual toggle. Face/hair/body options still affect the fallback
 human, not the guest mesh. See STARTING_CLASSES.md for the implementation.
+
+
+Test movement across the end of guest floor data with no wall, both with and
+without native floor support. Missing cache triangles must not become an
+invisible boundary or freeze horizontal motion. Verify freefall remains airborne,
+public floor probes remain empty, and native contact corrections restore support.
+Keep guest-specific action invariants in the adapter; do not import disabled
+native event geometry to hide this failure.

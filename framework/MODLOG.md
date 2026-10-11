@@ -317,3 +317,33 @@ cache folder; every previously existing file listed in the backup manifest is
 present in the backup. No game launch, game input or save modification performed.
 The fixes are installed; live cannon/load/resolution/pit death regressions remain
 for the user's gameplay test.
+
+
+## 2026-10-11: Firelink doorway missing-floor boundary
+
+Read-only inspection of the reported doorway found no native contact or rejected
+motion. The guest cache ends at the player's stuck position near Z78.4; the
+original Firelink geometry continues through it on an event-controlled floor
+owned by native Havok. This is not evidence of a neighbouring-map loading block.
+SM64 stops horizontal movement on a NULL floor, preventing the host from reaching
+and supporting the next section.
+
+Mario's adapter now enables missing-floor freefall in its guest runtime. A
+non-null floor sentinel at the existing -11000 cm query limit satisfies SM64's
+action invariants without adding collision triangles or changing public floor
+height queries. Host origin rebasing keeps play above that limit. Native contact
+resolution and enabled-floor patches retain authority; true walls and lethal
+surfaces are unchanged. Runtime mode is disabled on adapter shutdown. No SDK ABI
+change and no host-side Mario switches.
+
+A real-runtime regression failed before the fix at Z199.68, then passed after it
+at Z492.66/Y-684.00. It also verifies native floor contact handoff beyond the
+cache edge and absent public floor queries. Full build with runtime, full offline
+suite and doctor passed, including existing walls/tunnels and lethal-floor tests.
+Live traversal of the reported doorway has not been verified. No game input or
+save modification performed.
+
+Installed while the game was closed under the user's existing installation
+authorization. Backup: work/checkpoints/before-framework-20261011-191254-239738.
+Read-back hashes matched all three binaries and all 15 collision caches; every
+previously existing file in the backup manifest is present. No live game test.

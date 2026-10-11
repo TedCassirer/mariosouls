@@ -549,3 +549,14 @@ cannot be resolved, all named collision candidates are conservatively excluded
 from the static cache; their current state is not guessed. Hazard sweep history
 resets at native-motion handbacks so teleports/ladders cannot create a false hit
 along an old-to-new straight line. ABI and guest contracts are unchanged.
+
+
+### Missing guest terrain
+
+A missing guest floor is not proof of a native wall or a grounded surface.
+Adapters must permit movement/freefall across absent cached geometry so native
+motion resolution can reach event-controlled terrain. Public floor probes must
+continue reporting absence until real geometry is available. Mario's runtime
+provides non-null action support at its lower query limit without inserting a
+collision surface; host origin rebasing prevents that limit becoming a landing.
+Other guest engines require their own implementation of this policy.

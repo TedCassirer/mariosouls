@@ -48,6 +48,7 @@ static decltype(&sm64_set_mario_forward_velocity) libForward;
 static decltype(&sm64_set_mario_action) libAction;
 static decltype(&sm64_set_mario_faceangle) libFace;
 static void (*libBody)(float,float);
+static void (*libOpenWorld)(int);
 static void (*libHealth)(int32_t,int32_t);
 static decltype(&sm64_surface_find_floor_height) libFloor;
 static uint32_t (*libProbe)(int32_t,float,float,float);
@@ -123,7 +124,7 @@ static void shiftEquipment(float x,float y,float z){
 }
 static void shutdown(){
     clearEquipment(active);
-    if(initialized){if(active>=0)libDestroy(active);libShutdown();}
+    if(initialized){libOpenWorld(0);if(active>=0)libDestroy(active);libShutdown();}
     initialized=false;active=-1;fireAppearance=false;raw={};rom.clear();if(runtime)FreeLibrary(runtime);runtime=nullptr;
 }
 static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
@@ -139,7 +140,7 @@ static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
     LOAD(libEquipment,sm64_mario_equipment);LOAD(libEquipmentHands,sm64_mario_equipment_hands);
     LOAD(libPosition,sm64_set_mario_position);LOAD(libAction,sm64_set_mario_action);LOAD(libFace,sm64_set_mario_faceangle);LOAD(libHealth,sm64_mario_host_health);
     LOAD(libFloor,sm64_surface_find_floor_height);LOAD(libProbe,sm64_mario_probe_attack);LOAD(libContact,sm64_mario_attack);
-    LOAD(libBody,sm64_host_body);
+    LOAD(libBody,sm64_host_body);LOAD(libOpenWorld,sm64_host_open_world);
     LOAD(libCannonBegin,sm64_mario_cannon_begin);LOAD(libCannonCancel,sm64_mario_cannon_cancel);LOAD(libCannonQuery,sm64_mario_cannon_query);
 #undef LOAD
     FILE*f=init->assetPath?fopen(init->assetPath,"rb"):nullptr;
@@ -148,7 +149,7 @@ static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
     if(ok){rom.resize(n);ok=fread(rom.data(),1,n,f)==size_t(n);}fclose(f);
     if(!ok||rom[0]!=0x80||rom[1]!=0x37||rom[2]!=0x12||rom[3]!=0x40){if(report)report("Expected a big-endian US Mario 64 ROM");shutdown();return 0;}
     cannonAssetsReady=MarioCannonAssets::initialize(rom);
-    libInit(rom.data(),texture->rgba);libAudioInit(rom.data());libBody(characterProfile.body.radiusCm,characterProfile.body.heightCm);initialized=true;return 1;
+    libInit(rom.data(),texture->rgba);libAudioInit(rom.data());libBody(characterProfile.body.radiusCm,characterProfile.body.heightCm);libOpenWorld(1);initialized=true;return 1;
 }
 static int32_t create(float x,float y,float z,float yaw){
     if(!initialized||active>=0)return -1;

@@ -7,3 +7,6 @@ SM64_LIB_FN void sm64_host_body(float radius,float height) {
     if(!isfinite(radius)||!isfinite(height)||radius<10||radius>50||height<radius*2||height>160)return;
     scMarioWallRadius=radius;scMarioBodyHeight=height;
 }
+
+int scMarioOpenWorld=0;
+SM64_LIB_FN void sm64_host_open_world(int enabled){scMarioOpenWorld=!!enabled;}

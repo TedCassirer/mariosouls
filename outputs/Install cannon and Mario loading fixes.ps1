@@ -16,5 +16,5 @@ Push-Location -LiteralPath $taskRepo
 try {
     & $taskPython @taskArgs
     if ($LASTEXITCODE -ne 0) { throw 'Installation checks failed. Read the message above.' }
-    if (-not $CheckOnly) { Write-Host 'Mario pit death, rendering, cannon aiming and loading fixes installed. Start Dark Souls normally.' }
+    if (-not $CheckOnly) { Write-Host 'Mario doorway, pit death, rendering, cannon aiming and loading fixes installed. Start Dark Souls normally.' }
 } finally { Pop-Location }

@@ -1,4 +1,4 @@
-# Framework diagnostic overlay (0.4.2, ABI 3)
+# Framework diagnostic overlay
 
 The current framework also provides **F11** for a reviewed bug-report draft,
 independently of this overlay. See [bug reporting](../../docs/BUG_REPORTING.md).

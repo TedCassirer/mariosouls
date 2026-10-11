@@ -1,110 +1,74 @@
-# SM64 cannon — framework 0.9.0
+# SM64 cannon
 
 The optional SDK world-launcher capability places a cannon and pink Bob-omb Buddy
-beside Firelink's central bonfire, toward the ruined arches. Available in Mario
-mode; adapters without the capability do not show these objects.
+beside Firelink's central bonfire, toward the ruined arches. They are available
+in Mario mode; adapters without the capability do not show them.
 
 ## Controls
 
 1. Stand beside the Buddy and press controller **A** or keyboard **Q** to unlock.
 2. Approach the cannon and press **A / Q** to enter. Opening takes about five seconds.
 3. Aim with **either stick / WASD**, fire with **A / Space**, leave with **Y / Q**.
-   Release the entry button before firing; a held entry cannot launch.
-   Right stick takes priority if both sticks move. The ordinary follow-camera
-   stick, lock-on press and mouse rotation are suppressed during cannon aiming.
 
-Native interaction prompts take priority over custom objects. The launch uses
-normal collision and native health, including Mario's existing fall-damage
-reduction. No cannon invulnerability or second health pool is added.
+Release the entry button before firing; holding it cannot launch. Right stick
+takes priority if both sticks move. Ordinary follow-camera input, lock-on and
+mouse rotation are suppressed during aiming. Native interaction prompts take
+priority over custom objects.
 
-## Fidelity and ownership
+## Guest and host responsibilities
 
-Original libsm64 act_in_cannon, act_shot_from_cannon, sounds, aim clamps, muzzle
-displacement, velocity and gravity run at 30 Hz. Three missing opening actions
-(4, 6, 5) are staged unchanged from pinned n64decomp/sm64 source at build time.
-A persistent per-Mario object supplies usedObj; flight uses the existing motion
-bridge rather than a teleport or a second character.
+The guest runs libsm64's cannon entry/flight actions, sounds, aim clamps, muzzle
+displacement, velocity and gravity at 30 Hz. Three missing opening actions are
+staged from pinned SM64 decompilation source at build time. A persistent guest
+object supplies cannon state; flight uses the framework motion bridge.
 
-Base, barrel, lid, pink body, eyes, feet, winding key, textures and Buddy joint
-animation channels come from the user's US ROM. The full SM64 object scheduler,
-Buddy dialogue/AI and save system are not ported. Framework proximity interaction
-unlocks the placement instead. Buddy faces the view and plays its ROM idle motion.
+Cannon and Buddy meshes, textures and joint-animation channels are decoded from
+the user's US ROM. The full SM64 object scheduler, Buddy dialogue/AI and save
+system are not ported. Framework proximity interaction unlocks the placement;
+Buddy faces the view and plays its ROM idle animation.
 
-The host supplies an SM64-style circular sight. The revised camera hook replaces
-the current gameplay camera's exported matrix at 404EA0 (ECX source, EAX output),
-leaving its simulation matrix untouched. This supersedes the ineffective FF7460
-CamSfx submission hook: the observed gameplay camera had render handle +4=0.
-Aim rotates about the fixed cannon eye, using the same yaw/pitch as launch.
-Requests expire after 150 ms without renewal and bind to camera and actor. Damage, death,
-focus loss, native takeover, character or map changes cancel opening/aiming.
+The host supplies a circular sight and camera export override. Aim rotates about
+a fixed cannon eye using the same yaw/pitch as launch. The override leaves the
+native simulation camera untouched, expires after 150 ms without renewal and
+binds to the current camera and actor. Damage, death, focus loss, native takeover,
+character or map changes cancel opening/aiming.
 
-Native HP, stamina, inventory, quests and rewards remain authoritative. Guest
-adapters receive no native memory pointers. See CONTRACT.md and ADDING_A_CHARACTER.md.
+Launches use normal collision and native health, including Mario's fall-damage
+reduction. No cannon invulnerability or second health pool is added. See the
+[SDK contract](CONTRACT.md) and [adapter guide](ADDING_A_CHARACTER.md).
 
 ## Configuration and build
 
-[WorldObjects.FirelinkLauncher] in mariosouls.ini accepts X, Y, Z, Yaw
-(metres/radians) and Unlocked. Defaults are (-45, -60.5, 56), yaw -pi/2.
-The Buddy is 2.5 metres east. Both snap to verified floor within 2 metres;
-invalid ground suppresses the kit. Unlock state is shared between local saves,
-not a native quest flag. [WorldObjects] QALauncher=1 enables a separate guarded
-Asylum test placement; this is disabled for delivery.
+`[WorldObjects.FirelinkLauncher]` in `mariosouls.ini` accepts `X`, `Y`, `Z`, `Yaw`
+(metres/radians) and `Unlocked`. Defaults are `(-45, -60.5, 56)`, yaw `-pi/2`.
+Buddy is 2.5 metres east. Both snap to verified floor within 2 metres; invalid
+ground suppresses the kit. Unlock state is shared between local saves rather
+than stored as a native quest flag.
 
-Use python tools/framework.py build --with-runtime, then test --asset <ROM>
---runtime <sm64.dll> and doctor. Pinned libsm64 and n64decomp dependencies are
-verified. prepare-collision --map m10_02_00_00 --output <fresh-directory> exports
-Firelink collision with five event-controlled colliders left native-owned.
-Install through the supported workflow with the game closed. ROMs, caches,
-binaries, saves, generated dependency code and recordings stay out of Git.
+`[WorldObjects] QALauncher=1` enables a separate guarded Asylum test placement.
+It is disabled by default and must remain disabled in delivered configuration.
 
-## Validation — 2026-10-11
+Use the supported [build and test workflow](../../docs/DEVELOPMENT.md), including
+`build --with-runtime`. Firelink collision preparation omits five event-controlled
+colliders from the guest cache so they remain native-owned. ROMs, generated
+caches, dependency code, binaries, saves and recordings stay out of Git.
 
-- Full offline suite passed: existing ownership/combat/equipment/death/controller
-  regressions plus bounded launcher state and mesh requests.
-- Actual guest opening with held A cannot fire; a separate press launches.
-  Pitch clamps to 80 degrees and yaw to +/-90 degrees. Launch speed is the
-  original 100 units/tick; cannon gravity subtracts 1 unit/tick. Duplicate entry,
-  hurt cancellation and restored visibility passed.
-- All 150 Buddy animation/blink frames have finite bounded meshes. Invalid
-  requests and small output buffers fail. ROM mesh counts: base 38, barrel 62,
-  Buddy 80 and lid 2 triangles.
-- Mario QA only, Asylum: Buddy unlock, entry, matching scene camera, launch,
-  upper-world contact, landing and ordinary controls. Native HP 594 -> 565 on
-  landing; debug protection flags stayed zero. Re-entry, Q cancel and normal
-  jumping were observed.
-- Firelink: Buddy prompt/unlock, opening, aiming camera, launch and landing.
-  Recorded Z 55.99 -> 78.91 m; peak Y -9.29 m from -59.45 m. Native HP 594 -> 565,
-  with no-hit/no-damage/no-death flags all zero. Unlock survived save/reload.
-- Buddy eyes, original joint motion and native/custom HUD ordering were checked
-  visually on the installed final build.
-- Opening the native inventory menu while aiming cancelled the sight, restored
-  Mario and the follow camera, and closing it returned to normal movement.
+## Verification and limits
 
-Private evidence: work/cannon-qa. framework/qa/launcher_smoke.py records bounded
-real keyboard navigation and actions. The observer explicitly allows Firelink
-only when requested and retains the Mario QA name/stat guard. Combat tools still
-default to Asylum. The optional Firelink fixture reset is limited to the bonfire
-area and requires focused, living native control outside menus/interactions.
+Offline tests exercise actual guest opening and flight, fresh-button launch,
+80-degree pitch and +/-90-degree yaw clamps, original launch speed/gravity,
+duplicate entry, cancellation, visibility and bounded ROM meshes. Camera wrapper
+tests cover native register outputs, a fixed eye with changing direction,
+source preservation, unrelated cameras, expiry and actor replacement. Adapter
+checks verify different headings, acknowledgements, muzzle offsets and velocity.
 
-Controller routing passed offline; the controller was disconnected during live
-cannon checks. Enemy hits and lethal damage while aiming, and every interruption
-path, have not all been verified live. Adapter hurt cancellation is tested.
+Historical live checks on Mario QA observed Buddy unlock, opening, launch,
+landing, restored controls and menu cancellation in Asylum and Firelink. The
+subsequent camera-pivot/input correction has offline coverage but still requires
+live visual confirmation. Controller use, enemy hits/lethal damage while aiming
+and every interruption path have not all been verified live.
 
-### Aiming correction prepared after the user's video
-
-The earlier live pass did not establish camera pivot correctness. The user clip
-revealed the normal follow-camera orbit; read-only observation confirmed its
-camera object had no direct render handle. The revised matrix-export hook has
-passed executable tests of its actual x86 wrapper, original register outputs,
-fixed eye/changing direction, source preservation, unrelated cameras, expiry,
-death, actor replacement and cancellation. Both sticks route to cannon aim;
-Mario's raw cannon yaw input is inverted relative to its locomotion mapping so
-right means screen-right. Real-adapter tests verify two different headings,
-button release, host position acknowledgements, muzzle displacement and flight
-velocity matching aim. This revision is prepared for user testing and has NOT
-been verified in the running game; no new live visual claim is made.
-
-Dark Souls was not designed for SM64 launch reach. Some trajectories reach roofs,
-awkward ledges or out-of-bounds areas. The recorded high shot landed beside upper
-ruin geometry and required resetting QA for the next check. This is a functioning
-launcher integration, not a claim that every direction is a safe shortcut.
+See the [archived observations and camera investigation](https://github.com/TedCassirer/mariosouls/blob/53a8e61/framework/docs/CANNON.md),
+[current coverage](VALIDATION.md) and guarded [launcher QA scenario](../qa/README.md).
+Some launch trajectories reach roofs, awkward ledges or out-of-bounds areas;
+this integration does not make every direction a safe shortcut.

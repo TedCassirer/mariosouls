@@ -59,9 +59,7 @@ their own narrow fixture identities. The guards in each scenario are the source
 of truth. No scenario should target the owner's level-65 character.
 
 The renderer is part of the supported `preview-equipment` workflow, not a live
-scenario. The old screenshot-dependent quit helper has been retired; exit the
-game through its native menu. Historical screenshot fixtures are not required by
-the maintained QA tools.
+scenario. Exit the game through its native menu.
 
 Write captures and measurements to ignored `work/` or `outputs/`. Do not commit
 saves, raw process observations or game-derived images. Record concise findings

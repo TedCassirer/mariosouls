@@ -55,7 +55,7 @@ def equipment_prop(source,metadata):
         if any(abs(a-b)>1e-5 for a,b in zip(minimum+maximum,bounds)):raise RuntimeError('Equipment vertices exceed declared bounds')
         for triangle in struct.iter_unpack('<3I',stream.read(triangles*12)):
             if any(i>=vertices for i in triangle):raise RuntimeError('Equipment triangle references invalid vertex')
-    if metadata['kind']=='sword':
+    if metadata['kind']!='shield':
         length=metadata.get('blade_length')
         if type(length) not in (int,float) or not math.isfinite(length) or length<=0 or abs(length-bounds[5])>1e-5:raise RuntimeError('Invalid equipment blade length')
 
@@ -68,11 +68,11 @@ def equipment_files(directory):
     if f.sha(f.GAME/'DARKSOULS.exe')!=supported:raise RuntimeError('Unsupported Dark Souls executable for equipment')
     if manifest.get('schema')!=1 or manifest.get('kind')!='ds1ptde-equipment-props' or manifest.get('game_exe_sha256')!=supported:raise RuntimeError('Invalid native equipment cache manifest')
     files,models,rows=manifest.get('files'),manifest.get('models'),manifest.get('equipment')
-    if not isinstance(files,dict) or not isinstance(models,dict) or not 1<=len(models)<=64 or len(files)!=len(models):raise RuntimeError('Invalid equipment cache model count')
+    if not isinstance(files,dict) or not isinstance(models,dict) or not 1<=len(models)<=128 or len(files)!=len(models):raise RuntimeError('Invalid equipment cache model count')
     if not isinstance(rows,dict) or not 1<=len(rows)<=20000:raise RuntimeError('Invalid equipment cache row count')
     sources={};used_files=set()
     for model_id,metadata in models.items():
-        if not re.fullmatch(r'(0|[1-9]\d{0,3})',model_id) or not isinstance(metadata,dict) or metadata.get('kind') not in ('sword','shield'):raise RuntimeError('Invalid equipment model identity')
+        if not re.fullmatch(r'(0|[1-9]\d{0,3})',model_id) or not isinstance(metadata,dict) or metadata.get('kind') not in ('sword','shield','dagger','curved_sword','greatsword','axe','hammer'):raise RuntimeError('Invalid equipment model identity')
         name=metadata.get('file');digest=metadata.get('sha256')
         if name!=f'wp_a_{int(model_id):04d}.scprop' or not isinstance(digest,str) or not re.fullmatch('[0-9a-f]{64}',digest) or files.get(name)!=digest:raise RuntimeError('Unsafe equipment filename or manifest hash')
         source=directory/name
@@ -151,10 +151,10 @@ def install(character,asset,runtime,check_only=False,collision=None,equipment=No
             harness['Harness'].update(Armed='0',Heartbeat='0',Mode='0',Frames='0',Buttons='0')
             with (temp/'harness.ini').open('w') as out:harness.write(out)
             sources[harness_path]=temp/'harness.ini'
-        legacy=json.loads((f.GAME/'MarioSouls/install.json').read_text());legacy['version']='framework-0.5.0';legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
+        legacy=json.loads((f.GAME/'MarioSouls/install.json').read_text());legacy['version']='framework-0.6.0';legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
         (temp/'legacy.json').write_text(json.dumps(legacy,indent=2));sources[f.GAME/'MarioSouls/install.json']=temp/'legacy.json'
         target_manifest=f.GAME/'SoulsCharacterFramework/install.json'
-        installed={'framework_version':'0.5.0','character':character,'abi':4,'build':receipt,'backup':str(backup),'files':{str(dst.relative_to(f.GAME)).replace('\\','/'):f.sha(src) for dst,src in sources.items()}}
+        installed={'framework_version':'0.6.0','character':character,'abi':4,'build':receipt,'backup':str(backup),'files':{str(dst.relative_to(f.GAME)).replace('\\','/'):f.sha(src) for dst,src in sources.items()}}
         (temp/'install.json').write_text(json.dumps(installed,indent=2));sources[target_manifest]=temp/'install.json'
         # Stage every source before touching destinations, including on reinstall
         # when the configured runtime already lives at its destination.
@@ -180,4 +180,4 @@ def install(character,asset,runtime,check_only=False,collision=None,equipment=No
                 if previous[name]:shutil.copy2(backup/name,dst)
                 elif dst.exists():dst.unlink()
             raise
-    print('Installed framework 0.5.0 with '+character+'; previous files retained at '+str(backup))
+    print('Installed framework 0.6.0 with '+character+'; previous files retained at '+str(backup))

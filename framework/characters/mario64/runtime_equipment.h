@@ -32,6 +32,12 @@ static const s16 scSwordKeys[4][9]={
     {3158,-3664,32622,-406,-6,12,-23609,12371,-25574},
     {-10751,2582,-32731,226,3,9,20675,412,23390}
 };
+static const s16 scChopKeys[4][9]={
+    {-6463,-7897,-30470,-38,4,37,-26207,7206,26008},
+    {17213,-11649,-17774,-49,255,8651,12615,-8195,19571},
+    {3158,-3664,32622,-406,-6,12,-23609,12371,-25574},
+    {-10751,2582,-30731,226,3,9,20675,412,23390}
+};
 static const s16 scShieldKeys[2][9]={
     {4344,6986,32649,35,-34,6614,-27706,10303,28385},
     {-1054,-4567,30852,-28,-10,12,30580,12574,29400}
@@ -73,18 +79,19 @@ void sc_mario_equipment_rotation(int attributeOffset,s16 *rotation) {
     // The guest tree calls X-positive the left arm. The host's left-handed
     // view presents that glove on the character's right. Mirrored authored
     // joint poses bind native equipment to the glove seen on the proper side.
-    if(instance->equipmentRight==1&&channel>=18&&channel<27){
+    if(instance->equipmentRight!=0&&channel>=18&&channel<27){
         int first=0,second=0;float blend=0;
         if(instance->equipmentSwing){
             const float times[5]={0.f,.20f,.37f,.55f,.90f};
             const int forward[5]={0,1,2,3,0},reverse[5]={0,3,2,1,0};
-            const int *keys=instance->equipmentSwing==2?reverse:forward;
+            const int *keys=instance->equipmentSwing==2&&instance->equipmentRight<6?reverse:forward;
             float phase=instance->equipmentPhase;
             for(int k=0;k<4;k++)if(phase>=times[k]&&phase<times[k+1]){
                 first=keys[k];second=keys[k+1];blend=sc_equipment_smooth((phase-times[k])/(times[k+1]-times[k]));break;
             }
         }
-        sc_equipment_rotation(scSwordKeys[first]+channel-18,scSwordKeys[second]+channel-18,blend,rotation);
+        const s16 (*pose)[9]=instance->equipmentRight>=6?scChopKeys:scSwordKeys;
+        sc_equipment_rotation(pose[first]+channel-18,pose[second]+channel-18,blend,rotation);
     }else if(instance->equipmentLeft==2&&channel>=30&&channel<39){
         float blend=sc_equipment_smooth(instance->equipmentGuard);
         sc_equipment_rotation(scShieldKeys[0]+channel-30,scShieldKeys[1]+channel-30,blend,rotation);
@@ -98,7 +105,7 @@ void sc_mario_equipment_hand(int attributeOffset,const float *matrix) {
     struct MarioInstance *instance=scEquipmentRendering;
     if(!instance)return;
     unsigned bit;float *out;
-    if(attributeOffset==54&&instance->equipmentRight==1){bit=1;out=instance->equipmentRightHand;}
+    if(attributeOffset==54&&instance->equipmentRight!=0){bit=1;out=instance->equipmentRightHand;}
     else if(attributeOffset==78&&instance->equipmentLeft==2){bit=2;out=instance->equipmentLeftHand;}
     else return;
     memset(out,0,sizeof(float)*16);
@@ -118,7 +125,7 @@ void sc_mario_equipment_hand(int attributeOffset,const float *matrix) {
 }
 
 SM64_LIB_FN uint32_t sm64_mario_equipment(int32_t id,uint32_t right,uint32_t left,uint32_t swing,float phase,float guard) {
-    if(id<0||id>=s_mario_instance_pool.size||!s_mario_instance_pool.objects[id]||right>1||(left!=0&&left!=2)||swing>2||!isfinite(phase)||!isfinite(guard))return 0;
+    if(id<0||id>=s_mario_instance_pool.size||!s_mario_instance_pool.objects[id]||(right!=0&&right!=1&&(right<3||right>7))||(left!=0&&left!=2)||swing>2||!isfinite(phase)||!isfinite(guard))return 0;
     struct MarioInstance *instance=s_mario_instance_pool.objects[id];
     instance->equipmentRight=right;instance->equipmentLeft=left;
     instance->equipmentSwing=right?swing:0;instance->equipmentPhase=sc_equipment_unit(phase);instance->equipmentGuard=left?sc_equipment_unit(guard):0;

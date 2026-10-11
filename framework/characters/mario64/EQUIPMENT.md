@@ -23,3 +23,12 @@ speeds, jumping, landing, or unarmed attacks.
 checks attachment transforms and correction/lifecycle rules, and tests long idle
 and waking. Its optional preview output contains geometry extracted from the
 user's own ROM and must remain private and outside Git.
+
+## Melee-family extension
+
+Mario opts into `SC_CAP_MELEE_FAMILIES`. All six supported kinds preserve the
+same movement/action trace. Axes and hammers use a lifted diagonal chop that
+returns along the same side; cutting families use alternating sweeps. The shared
+host timing stretches windup/recovery for heavier weapons and shortens dagger
+swings. Native stamina and weapon damage remain host-owned. These authored
+upper-body overlays do not reproduce the complete Dark Souls moveset.

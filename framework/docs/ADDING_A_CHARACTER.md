@@ -119,8 +119,11 @@ prepare-equipment --output <private-cache>`, then installed using
 `install --equipment-directory <private-cache>` alongside the character's usual
 asset/runtime arguments. The installer verifies executable identity, manifest,
 geometry bounds and hashes, and participates in the ordinary rollback transaction.
-The initial host scope is one-handed straight swords, small/medium shields,
-ground light swings and blocking. Preparing all supported assets is not proof
+The host supports one-handed straight swords plus the optional melee-family
+extension (daggers, curved swords, greatswords, axes, hammers/maces), small/medium
+shields, ground light swings and blocking. Advertise `melee_families` only after
+fitting and testing all five extra right-hand kinds. The host gates these kinds
+on that capability, leaving equipment-only adapters compatible. Preparing all supported assets is not proof
 of in-game behavior for every item. Validate real hits, misses, stamina exhaustion,
 front/rear shield impacts, guard breaks, equipment changes and native interactions
 on the dedicated test save, and document unverified cases explicitly.

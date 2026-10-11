@@ -225,7 +225,7 @@ static uint32_t resolveMotion(int32_t id,const SC_MotionResolution*r,SC_State*ou
     for(int k=0;k<3;k++){out->position[k]=raw.position[k];out->velocity[k]=raw.velocity[k]*SC_FIXED_HZ;}out->forwardSpeed=raw.forwardVelocity*SC_FIXED_HZ;return 1;
 }
 static uint32_t equipment(int32_t id,const SC_EquipmentPose*p){
-    if(id!=active||id<0||!p||p->size!=sizeof(*p)||p->rightKind>SC_EQUIPMENT_SWORD||(p->leftKind!=SC_EQUIPMENT_NONE&&p->leftKind!=SC_EQUIPMENT_SHIELD)||p->swing>2||!std::isfinite(p->swingPhase)||!std::isfinite(p->guard)||p->swingPhase<0||p->swingPhase>1||p->guard<0||p->guard>1)return 0;
+    if(id!=active||id<0||!p||p->size!=sizeof(*p)||(p->rightKind!=SC_EQUIPMENT_NONE&&p->rightKind!=SC_EQUIPMENT_SWORD&&(p->rightKind<SC_EQUIPMENT_DAGGER||p->rightKind>SC_EQUIPMENT_HAMMER))||(p->leftKind!=SC_EQUIPMENT_NONE&&p->leftKind!=SC_EQUIPMENT_SHIELD)||p->swing>2||!std::isfinite(p->swingPhase)||!std::isfinite(p->guard)||p->swingPhase<0||p->swingPhase>1||p->guard<0||p->guard>1)return 0;
     if(!libEquipment(id,p->rightKind,p->leftKind,p->swing,p->swingPhase,p->guard))return 0;
     if(p->rightKind!=equipmentPose.rightKind||p->leftKind!=equipmentPose.leftKind||(!p->rightKind&&!p->leftKind))equipmentHands={sizeof(SC_Attachments)};
     equipmentPose=*p;return 1;

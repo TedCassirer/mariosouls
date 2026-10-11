@@ -1,3 +1,26 @@
+# Melee-family extension 0.6.0 (2026-10-11, live testing pending)
+
+Implemented six one-handed families, distinct shared timings, axe/hammer distal
+contact and Mario chop poses. Optional capability64 gates new kinds while ABI4
+layouts remain unchanged. Equipment-only adapters retain their old contract.
+
+Offline supported build/test/doctor passed. Tests exercise each family's hit
+window, once-per-target contacts, cancellation and movement/attachment parity.
+Existing interaction, death, collision, input and native block checks also pass.
+Prepared and independently audited 82 rigid native props / 574 parameter rows.
+Gargoyle Tail Axe model509 is explicitly excluded because its mesh is flexible.
+
+No new live combat result is claimed yet. Installation and live QA await a current
+control handoff. The fixed one-time test kit (Test Mode5) is restricted to Mario QA,
+Asylum, living native control, idle/no-menu state, level6 with all eight stats11.
+It calls the signature-checked native item-acquisition function for Dagger100000,
+Longsword201000, Claymore301000, Scimitar400000, Battle Axe701000, Mace801000, then
+sets only STR16, DEX13 and level13. The exact resulting stat tuple is added to the
+QA guard; no broad higher-level range is allowed. Level65 remains rejected.
+The kit has not yet been invoked or proven in game. No arbitrary grant interface.
+
+Save backup before this work: `work/um-state/backups/dark-souls-before-melee-families/20261011-133406.zip`.
+
 # Mario death presentation (2026-10-11)
 
 Supported full runtime/host/adapter build and test passed. The shared session
@@ -217,9 +240,9 @@ existing boss already on the arena floor; it does not spawn or alter enemies.
 
 ---
 
-# Framework verification — 2026-10-11
+# Framework verification â€” 2026-10-11
 
-## Framework 0.4 — Wind Waker Link first playable slice
+## Framework 0.4 â€” Wind Waker Link first playable slice
 
 The final host and Link adapter were tested directly in PID 45932, using Mario QA
 level 6 in the Asylum. Candidate PID 43724 evidence is kept separately. Both loads
@@ -393,7 +416,7 @@ Checkpoint: `checkpoint-2026-10-11-framework-v0.2-ownership`.
 The following sections describe earlier versions.
 
 
-## Impact feedback addition — 2026-10-11
+## Impact feedback addition â€” 2026-10-11
 
 Final installed build was tested directly in PID 41044, on Mario QA level 6,
 Asylum only. Native HP was 594 throughout. The level-65 character was not loaded.
@@ -490,7 +513,7 @@ its native Quit Game menu after testing.
 - A closed cell door blocked forward travel. Interaction used the actual key,
   opened the gate and resumed the same adapter instance. No inventory/quest writes
   were used to manufacture the result.
-- Punched hollow 1810101: observed HP 44 → 0, a single framework hit record, native
+- Punched hollow 1810101: observed HP 44 â†’ 0, a single framework hit record, native
   death and a later native reward of 20 souls. Native return 22 is recorded as a
   return value, not interpreted as HP damage.
 - Lit the courtyard bonfire, rested, left, then jumped and punched successfully.

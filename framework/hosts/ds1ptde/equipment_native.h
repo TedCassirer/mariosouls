@@ -1,4 +1,5 @@
 #pragma once
+#include "equipment_family.h"
 // PTDE 1.0.2.0 equipment reads and native damage dispatch. No inventory edits.
 // All addresses are host-private. Adapters receive only SDK equipment snapshots.
 struct NativeEquipmentAttack {
@@ -6,7 +7,8 @@ struct NativeEquipmentAttack {
  bool valid=false;
 };
 struct NativeEquipmentItem {
- bool valid=false,empty=false,sword=false,shield=false;
+ bool valid=false,empty=false,melee=false,shield=false;
+ uint32_t kind=SC_EQUIPMENT_NONE;
  int id=-1,rowId=-1,model=-1,variation=-1,category=-1,animation=-1,guardAnimation=-1;
  int upgrade=0,reinforce=-1,requiredStrength=0,requiredDexterity=0;
  float weight=0,guard[4]={},stability=0;
@@ -83,12 +85,12 @@ static NativeEquipmentItem equipmentItem(int id){
  }
  item.stability=stability*multipliers[19];
  if(!isfinite(item.stability)||item.stability<0||item.stability>100)return item;
- item.sword=item.category==1&&item.animation==23;
+ item.kind=equipmentFamily(item.category,item.animation);item.melee=item.kind!=SC_EQUIPMENT_NONE;
  // Guard animation1 is a greatshield, outside the first supported family.
  item.shield=item.category==12&&(item.guardAnimation==0||item.guardAnimation==2)&&(bytes[0x100]&0x20);
- if(item.sword){
+ if(item.melee){
   item.attacks[0]=equipmentAttack(item.variation,0);item.attacks[1]=equipmentAttack(item.variation,10);
-  if(!item.attacks[0].valid||!item.attacks[1].valid)item.sword=false;
+  if(!item.attacks[0].valid||!item.attacks[1].valid)item.melee=false;
  }
  item.valid=true;return item;
 }
@@ -210,9 +212,9 @@ static void equipmentObservePacket(uintptr_t out,int id,uintptr_t context){
  logf("Equipment packet behavior=%d attack=%d weapon=%d observed=%d hand=%d power=%.2f/%.2f/%.2f/%.2f poise=%.2f valid=%d",id,equipmentPacket.attack,equipmentPacket.weapon,equipmentPacket.observedWeapon,equipmentPacket.hand,equipmentPacket.power[0],equipmentPacket.power[1],equipmentPacket.power[2],equipmentPacket.power[3],equipmentPacket.poise,valid);
 }
 static int equipmentNativeHit(const NativeEquipmentItem& sword,int combo,int target,Vec position){
- if(!nativeDamage||!sword.valid||!sword.sword||combo<0||combo>1||equipmentPacket.expected)return -1;
+ if(!nativeDamage||!sword.valid||!sword.melee||combo<0||combo>1||equipmentPacket.expected)return -1;
  auto current=equipmentRead();
- if(!current.valid||!current.oneHanded||!current.right.sword||current.right.id!=sword.id)return -1;
+ if(!current.valid||!current.oneHanded||!current.right.melee||current.right.id!=sword.id)return -1;
  const auto& attack=sword.attacks[combo];if(!attack.valid)return -1;
  equipmentPacket={};equipmentPacket.expected=true;equipmentPacket.weapon=sword.id;equipmentPacket.behavior=attack.behavior;equipmentPacket.attack=attack.attack;
  int result=nativeDamage(attack.behavior,10000,target,position.x,position.y,position.z);

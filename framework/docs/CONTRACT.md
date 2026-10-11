@@ -246,12 +246,12 @@ it contains no character-ID branches. See DEBUG_VIEW.md for view semantics and l
 
 ## Equipped melee and guard (ABI 4)
 
-The current PTDE implementation supports right-hand straight swords with the
-native straight-sword animation family and left-hand small/medium shields, in
-one-handed stance. It supplies two alternating ground light swings and held
-guard. It does not implement parry or two-handed moves; other weapon families
-and temporary weapon-buff parity are outside the verified scope. Mario provides
-the first fitted adapter. Other adapters must opt in and implement their own fit.
+PTDE 0.6 supports one-handed straight swords, daggers, curved swords, greatswords,
+axes, and hammers/maces, plus left-hand small/medium shields. This is two ground
+light attacks and held guard, not native heavy attacks, parry, two-handed moves,
+critical attacks or a complete weapon animation port. Flexible Gargoyle Tail Axe
+model 509 is excluded. Other weapon families and temporary weapon-buff parity
+remain outside the verified scope. Mario supplies the first fitted adapter.
 
 `SC_CAP_EQUIPMENT` opts into two required callbacks: `equipment` accepts a
 host-owned presentation snapshot and `attachments` returns hand/socket matrices
@@ -265,7 +265,12 @@ intangible, cutscene, climbing and special attack states. This is distinct from
 interaction eligibility. The host additionally requires native state, stamina,
 ownership and supported gear; the flag grants no damage protection.
 
-`SC_EquipmentPose` has right/left kinds (none, sword, shield), swing 0/1/2, normalized
+`SC_CAP_MELEE_FAMILIES` (64) additionally opts into right-hand dagger (3), curved
+sword (4), greatsword (5), axe (6), and hammer (7). It requires `SC_CAP_EQUIPMENT`.
+Existing equipment-only adapters receive only sword (1) and shield (2); none is 0.
+This extension preserves ABI4 layouts and old enum values.
+
+`SC_EquipmentPose` has right/left kinds, swing 0/1/2, normalized
 phase and native-confirmed guard 0..1. The adapter fits arm poses to its skeleton
 while its ordinary engine retains locomotion. No forced idle ticks or extra
 animation advancement. Unsupported states may invalidate the sockets.
@@ -292,7 +297,20 @@ Item stats, defenses, elemental powers, native status and rewards are not replac
 by direct HP writes. Data-path support is not live validation of every upgrade,
 elemental/status effect or temporary buff.
 
-Current authored sword timing is 24 ticks: windup 0..4, contact 5..12, recovery 13..23.
+Authored family timings at 30 Hz (total ticks, inclusive contact ticks):
+
+| Family | Total | Contact |
+| --- | ---: | --- |
+| Dagger | 18 | 4..9 |
+| Curved sword | 22 | 5..11 |
+| Straight sword | 24 | 5..12 |
+| Axe | 32 | 8..16 |
+| Hammer/mace | 34 | 9..17 |
+| Greatsword | 36 | 9..18 |
+
+Pose phase maps windup end to .20, contact end to .55, and recovery end to 1.
+These are authored guest timings, not claims of exact native TAE frame parity.
+
 Late recovery accepts one new press; holding attack cannot repeat forever. Gear
 change, damage, ownership loss or ineligible state cancels without refund. No
 stamina means no swing. Guarding routes only the native guard button, slows guest
@@ -300,7 +318,9 @@ ground movement, and displays a raised shield only after native guard confirms.
 Jump/crouch/attack/interaction release guard. Blocking never refunds HP or sets
 NoDamage; native guard stamina, shield defenses and guard breaks remain native.
 
-Blade contact sweeps between consecutive valid hand poses against native actor
+Axe/hammer contact uses the distal 45% of the prop with a bounded head radius
+from its transverse bounds (9..22 cm); cutting weapons use blade-axis contact.
+Contact sweeps between consecutive valid hand poses against native actor
 capsules, checks occlusion, and accepts each target once per swing. Contacts use
 the same canonical blade endpoints as rendering; they do not use a generic
 Mario punch range. Warps, stale sockets and unsupported gear cancel the work.

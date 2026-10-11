@@ -1,6 +1,7 @@
 // Opt-in, bounded test transport. Normal gameplay does not open its event file.
 // Included after the native interaction observer; all state runs on the update thread.
 #include "harness_policy.h"
+#include "../../core/qa_identity.h"
 struct HarnessRuntime {
  bool armed=false,requirePad=false,suppressOutgoing=false;DWORD session=0,closedSession=0,command=0,heartbeat=0,started=0,lastPoll=0;
  uintptr_t owner=0,targetRef=0;int targetId=1810101,remaining=0,buttons=0,buttonDelay=0,prevHP=-1,prevPlayerHP=-1;
@@ -11,7 +12,9 @@ static bool harnessIdentity(){
  uintptr_t stats=chain(0x1378700,{0,8});wchar_t name[20]={};SIZE_T got=0;
  if(!stats||!ReadProcessMemory(GetCurrentProcess(),(void*)(stats+0xa0),name,sizeof(name),&got)||got!=sizeof(name))return false;
  name[19]=0;int level=read<int>(stats+0x88);
- return (!wcscmp(name,L"test")||!wcscmp(name,L"Mario QA"))&&level>0&&level<=10&&currentMap()==1801;
+ bool base=(!wcscmp(name,L"test")||!wcscmp(name,L"Mario QA"))&&level>0&&level<=10;
+ bool melee=!wcscmp(name,L"Mario QA")&&SCQA::meleeFixture(level,read<int>(stats+0x38),read<int>(stats+0x40),read<int>(stats+0x48),read<int>(stats+0x50),read<int>(stats+0x58),read<int>(stats+0x80),read<int>(stats+0x60),read<int>(stats+0x68));
+ return (base||melee)&&currentMap()==1801;
 }
 static uintptr_t harnessTarget(){
  uintptr_t root=read<uint32_t>(playerSlot),begin=read<uint32_t>(root+4),end=read<uint32_t>(root+8),result=0;

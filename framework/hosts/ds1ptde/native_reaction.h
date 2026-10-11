@@ -30,7 +30,7 @@ static bool nativeReactionTick(double& acc,bool focus){
  if(!nativeReaction){
   if(!equipmentCapable())return false;
   const auto current=equipmentRead();
-  if(!current.valid||(!current.right.sword&&!current.left.shield))return false;
+  if(!current.valid||(!current.right.melee&&!current.left.shield))return false;
  }
  int allowed=nativeActiveAllowed();
  if(allowed<0){logf("Native reaction predicate invalid; native handback");releaseControl();acc=0;return true;}

@@ -201,6 +201,7 @@ static bool lineClear(Vec a,Vec b){
 #include "combat.h"
 #include "object_combat.h"
 #include "equipment.h"
+#include "qa_arsenal.h"
 #include "native_reaction.h"
 #include "death.h"
 #include "debug_view.h"
@@ -247,7 +248,7 @@ static void update(){
  else if(interactPressed){if(characterOwned()&&!nativeActionOwned())requestAction(1,padInteract);else if(nativeActionOwned()&&actionCurrentRoute()==ActionRoute::Menu)actionQueue(1,inputTime,padInteract);}
  if(itemPressed&&characterOwned()&&!nativeActionOwned())requestAction(2,padItem);
  if(characterOwned()&&!nativeActionOwned()&&!actionPending()&&actionRequestKind){logf("Action request unanswered; Character retained");actionRequestKind=0;}
- static DWORD configTime=0;static int command=0;if(GetTickCount()-configTime>200){configTime=GetTickCount();int serial=GetPrivateProfileIntA("Test","Serial",0,ini);if(serial!=command){command=serial;if(!focus||!harnessIdentity()){logf("test command rejected: focus/identity guard");}else{int mode=GetPrivateProfileIntA("Test","Mode",0,ini);if(mode==3)graphFrames=2;if(mode==1&&!characterOwned()){if(nativeActionOwned())releaseControl();activate();}if(mode==2&&(characterOwned()||nativeActionOwned()))releaseControl();if(mode==4&&characterOwned())beginInteraction(pad.slot);testFrames=std::clamp<int>(GetPrivateProfileIntA("Test","Frames",0,ini),0,150);testButtons=GetPrivateProfileIntA("Test","Buttons",0,ini);testX=std::clamp<int>(GetPrivateProfileIntA("Test","X",0,ini),-1,1);testY=std::clamp<int>(GetPrivateProfileIntA("Test","Y",0,ini),-1,1);logf("test command=%d mode=%d frames=%d buttons=%d",serial,mode,testFrames,testButtons);}}}
+ static DWORD configTime=0;static int command=0;if(GetTickCount()-configTime>200){configTime=GetTickCount();int serial=GetPrivateProfileIntA("Test","Serial",0,ini);if(serial!=command){command=serial;if(!focus||!harnessIdentity()){logf("test command rejected: focus/identity guard");}else{int mode=GetPrivateProfileIntA("Test","Mode",0,ini);if(mode==5)qaMeleeArsenal();if(mode==3)graphFrames=2;if(mode==1&&!characterOwned()){if(nativeActionOwned())releaseControl();activate();}if(mode==2&&(characterOwned()||nativeActionOwned()))releaseControl();if(mode==4&&characterOwned())beginInteraction(pad.slot);testFrames=std::clamp<int>(GetPrivateProfileIntA("Test","Frames",0,ini),0,150);testButtons=GetPrivateProfileIntA("Test","Buttons",0,ini);testX=std::clamp<int>(GetPrivateProfileIntA("Test","X",0,ini),-1,1);testY=std::clamp<int>(GetPrivateProfileIntA("Test","Y",0,ini),-1,1);logf("test command=%d mode=%d frames=%d buttons=%d",serial,mode,testFrames,testButtons);}}}
  static DWORD lastLog=0;if(GetTickCount()-lastLog>2000){lastLog=GetTickCount();combatSettings();renderMode=GetPrivateProfileIntA("MarioSouls","RenderMode",1,ini);depthTest=GetPrivateProfileIntA("MarioSouls","DepthTest",1,ini);combatEnabled=GetPrivateProfileIntA("MarioSouls","EnableCombat",0,ini)!=0;Vec p=read<Vec>(posData+0x10),c=cameraEye();logf("state active=%d focus=%d player=%08x cam=%08x xyz=%.3f %.3f %.3f eye=%.3f %.3f %.3f action=%08x tris=%u",characterOwned(),focus,(unsigned)player,(unsigned)cam,p.x,p.y,p.z,c.x,c.y,c.z,state.rawAction,geo.numTrianglesUsed);}
  InterlockedExchange(&controllerOwnedSlot,(characterOwned()||nativeActionOwned())?pad.slot:-1);
  if(!nativeActionOwned())InterlockedExchange(&actionRoute,LONG(characterOwned()?ActionRoute::Character:ActionRoute::Free));
@@ -339,7 +340,7 @@ static HRESULT WINAPI setRenderTarget(IDirect3DDevice9*d,DWORD index,IDirect3DSu
  return originalRenderTarget(d,index,target);
 }
 static DWORD WINAPI start(void*){
- GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.5.0 host ds1ptde starting");
+ GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.6.0 host ds1ptde starting");
  if(read<uint32_t>(0x400080)!=0xfc293654){logf("Unsupported executable; inactive");return 0;}
  playerSlot=scan("8B 15 ? ? ? ? F3 0F 10 44 24 30 52",2);cameraSlot=scan("D9 45 08 A1 ? ? ? ? 51 D9 1C 24 50",4);if(!playerSlot||!cameraSlot)return 0;
  mapSlot=scan("8B 48 04 8B 11 50 8B 42 34 FF D0 C7 46 2C 00 00 00 00 C3 8B 0D ? ? ? ? 8B 89 50 0B 00 00 32 C0 83 79 28 00",0x15);if(!mapSlot)return 0;eventFlagsSlot=scan("56 8B F1 8B 46 1C 50 A1 ? ? ? ? 32 C9",8);ready=initCharacter();if(!ready){logf("initialization failed");return 0;}

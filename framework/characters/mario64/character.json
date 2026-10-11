@@ -14,7 +14,8 @@
     "audio",
     "item_prop",
     "equipment",
-    "death_pose"
+    "death_pose",
+    "melee_families"
   ],
   "automatic_attack": "stomp",
   "base_power": 100,

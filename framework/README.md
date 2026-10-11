@@ -1,4 +1,4 @@
-# Souls Character Framework 0.5.0
+# Souls Character Framework 0.6.0
 
 Death presentation follow-up: Mario now plays his original SM64 collapse and
 death voice once, then holds the final pose while Dark Souls handles "YOU DIED"
@@ -10,15 +10,16 @@ and jumps elsewhere. Y remains an interaction alias. A weapon-stance idle check
 that rejected animation 120000 has been fixed. The user confirmed A recovered
 Mario QA's 212 souls without jumping; see the validation record for scope.
 
-0.5.0 adds optional equipped combat through ABI 4. Mario can hold a native
-one-handed straight sword and a small or medium shield while retaining his own
+0.6.0 expands the optional ABI4 equipment path to one-handed straight swords,
+daggers, curved swords, greatswords, axes and hammers/maces. Mario can carry these
+with a small or medium shield while retaining his own
 locomotion and fitted arm animations. Ground sword swings use the selected
 weapon's native power, reinforcement, stat scaling and attack stamina cost.
 An empty right hand retains Mario's original moves and independent attack power.
 The host owns damage and guard rules; adapters own their arm poses and sockets.
 
-This first equipment implementation covers two alternating grounded light swings
-and held blocking. Parrying, two-handing and other weapon families are not
+This equipment implementation covers two grounded light attacks per family
+and held blocking. Parrying, two-handing and the remaining weapon families are not
 implemented. Temporary weapon-buff parity is not verified. Props are suppressed during hurt
 reactions and native interactions. Wind Waker Link does not yet opt into equipment
 fitting. See [verification](docs/VALIDATION.md) for measured in-game coverage.
@@ -43,7 +44,7 @@ importer for arbitrary game models or ROMs.
 | `characters/mario64/` | Mario's engine, action IDs, animations, sounds, flask and equipment fitting |
 | `templates/` | Compilable starting adapter for a future character |
 | `tests/` | Shared policy and real DLL conformance tests |
-| `qa/` | Guarded observation and controls for Mario QA, level 1–10, Asylum only |
+| `qa/` | Guarded observation and controls for Mario QA, level 1â€“10, Asylum only |
 
 Build from the repository root with the pinned dependencies installed:
 
@@ -83,7 +84,7 @@ python tools/framework.py install --character mario64 --equipment-directory work
 ```
 
 Supply the usual asset/runtime arguments when they are not already configured.
-Preparation reads native parts and textures, producing 13 straight-sword models
+Preparation reads native parts and textures, producing 48 melee weapon models across six families
 and 34 small/medium-shield models. These are local game assets, never repository
 content. The installer checks their manifest, hashes, geometry and supported game
 executable, then installs them under `DATA/SoulsCharacterFramework/equipment/`
@@ -97,9 +98,9 @@ With supported equipment selected in the native inventory:
 | --- | --- | --- |
 | Attack | B or RB | Left mouse |
 | Hold shield guard | LB | Right mouse |
-| Jump | A | Space |
+| Jump when no interaction prompt | A | Space |
 | Crouch | LT | Left Ctrl |
-| Interact | Y | Q |
+| Interact | A when prompted; Y alias | Q |
 | Use selected item | X | E |
 
 Sword swings commit Mario briefly; holding attack does not repeat swings.
@@ -119,8 +120,8 @@ Independent guest-attack balance overrides use `[Combat.<id>]`, including
 `<attack>_multiplier` and `<attack>_cost`.
 Installation migrates the existing Mario `[Combat]` values once. Another character
 starts with its manifest defaults. Upgrades remain configurable test values;
-this refactor does not add an inventory/titanite upgrade shop. Equipped straight
-swords use their native weapon data instead of those independent power settings.
+this refactor does not add an inventory/titanite upgrade shop. Equipped supported melee
+weapons use their native weapon data instead of those independent power settings.
 
 Version 0.2 introduces a single-use native movement mailbox and explicit ownership
 for character locomotion, native actions and loading/death recovery. Each guest

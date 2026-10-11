@@ -2,26 +2,47 @@
 #include "contact.h"
 #include <unordered_set>
 #include <cstdint>
+#include "../sdk/character_api.h"
 namespace SCEquipment {
+struct Timing {int first=5,last=12,total=24,buffer=12;};
+inline Timing timing(uint32_t kind){
+ switch(kind){
+ case SC_EQUIPMENT_DAGGER:return {4,9,18,9};
+ case SC_EQUIPMENT_CURVED_SWORD:return {5,11,22,11};
+ case SC_EQUIPMENT_GREATSWORD:return {9,18,36,18};
+ case SC_EQUIPMENT_AXE:return {8,16,32,16};
+ case SC_EQUIPMENT_HAMMER:return {9,17,34,17};
+ default:return {};
+ }
+}
+inline bool meleeKind(uint32_t kind){return kind==SC_EQUIPMENT_SWORD||(kind>=SC_EQUIPMENT_DAGGER&&kind<=SC_EQUIPMENT_HAMMER);}
 // Presentation/action timing is shared. Native hosts supply the item's actual
 // stamina cost and damage rules. Equipment changes invalidate a pending attack.
 class Swing {
  bool held=false,queued=false;int rest=0,nextCombo=0;
+ Timing clock{};
 public:
  int age=-1,combo=0,weapon=-1,serial=0;std::unordered_set<int> targets;
  void cancel(){age=-1;weapon=-1;queued=false;rest=0;nextCombo=0;targets.clear();}
  void reset(){cancel();held=false;}
  bool running()const{return age>=0;}
- bool active()const{return age>=5&&age<=12;}
- float phase()const{return running()?std::min(1.f,age/23.f):0;}
+ bool active()const{return age>=clock.first&&age<=clock.last;}
+ // Normalized pose landmarks: windup .20, strike ends .55, recover to 1.
+ // This keeps the authored weapon sweep inside the family's actual hit window.
+ float phase()const{
+  if(!running())return 0;
+  if(age<=clock.first)return .20f*age/clock.first;
+  if(age<=clock.last)return .20f+.35f*(age-clock.first)/(clock.last-clock.first);
+  return .55f+.45f*(age-clock.last)/(clock.total-1-clock.last);
+ }
  // Returns an intent; caller must confirm affordability BEFORE begin(). Presses
  // in late recovery queue one attack, never an unlimited held-button chain.
  bool tick(bool pressed,bool eligible,int equipped){
   bool edge=pressed&&!held;held=pressed;
   if(!eligible||(running()&&weapon!=equipped)){cancel();return false;}
   if(running()){
-   if(edge&&age>=12)queued=true;
-   if(++age<24)return false;
+   if(edge&&age>=clock.buffer)queued=true;
+   if(++age<clock.total)return false;
    age=-1;rest=12;nextCombo=1-combo;
    if(queued){queued=false;return true;}
   }
@@ -29,7 +50,7 @@ public:
   return edge;
  }
  int intendedCombo()const{return nextCombo;}
- void begin(int equipped){weapon=equipped;combo=nextCombo;age=0;++serial;targets.clear();}
+ void begin(int equipped,uint32_t kind=SC_EQUIPMENT_SWORD){clock=timing(kind);weapon=equipped;combo=nextCombo;age=0;++serial;targets.clear();}
  bool claim(int target){return active()&&targets.size()<16&&targets.insert(target).second;}
 };
 using Point=SCContact::Point;

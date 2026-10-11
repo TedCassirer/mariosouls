@@ -35,7 +35,7 @@ def sha256(path):
 
 
 def canonical_matrix(kind):
-    if kind == 'sword':
+    if kind in ('sword','dagger','curved_sword','greatsword','axe','hammer'):
         # Native blades point -Y. -90 degrees around X produces +Z.
         return np.array([[1., 0., 0.], [0., 0., 1.], [0., -1., 0.]])
     if kind == 'shield':
@@ -201,7 +201,7 @@ def extract_model(archive, model_id, kind, output):
                           image.width, image.height, image.tobytes())
     metadata.update(file=target.name, kind=kind, source=source,
                     source_sha256=hashlib.sha256(raw).hexdigest(), diffuse=diffuse_name)
-    if kind == 'sword':
+    if kind in ('sword','dagger','curved_sword','greatsword','axe','hammer'):
         metadata['blade_base'] = [0., 0., 0.]
         metadata['blade_tip'] = [0., 0., metadata['bounds'][5]]
         metadata['blade_length'] = metadata['bounds'][5]
@@ -225,8 +225,8 @@ def prepare(game, output):
     for row_id, row in params.Weapons.rows.items():
         if row_id % 1000 or not names.get(row_id, '').strip():
             continue
-        if row.AttackAnimationCategory == 23 and row.WeaponCategory == 1:
-            kind = 'sword'
+        if (row.WeaponCategory,row.AttackAnimationCategory) in {(0,20),(1,23),(1,25),(3,28),(4,30),(5,33)}:
+            kind = {(0,20):'dagger',(1,23):'sword',(1,25):'greatsword',(3,28):'curved_sword',(4,30):'axe',(5,33):'hammer'}[(row.WeaponCategory,row.AttackAnimationCategory)]
         elif row.AttackAnimationCategory == 48 and row.WeaponCategory == 12:
             kind = 'shield'
         else:
@@ -237,7 +237,7 @@ def prepare(game, output):
             raise ValueError('Equipment model ID exceeds the renderer bounds')
         selected_models[row.WeaponModel] = kind
         base_rows[row_id] = kind
-    if not 1 <= len(selected_models) <= 64:
+    if not 1 <= len(selected_models) <= 128:
         raise ValueError('Equipment model count exceeds the renderer bounds')
     equipment = {}
     for row_id, row in params.Weapons.rows.items():
@@ -249,13 +249,23 @@ def prepare(game, output):
     output.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=output.name + '.staging-', dir=output.parent)).resolve()
     try:
-        models = {str(i): extract_model(archive, i, kind, staging)
-                  for i, kind in sorted(selected_models.items())}
+        models, unsupported = {}, {}
+        for i, kind in sorted(selected_models.items()):
+            try:
+                models[str(i)] = extract_model(archive, i, kind, staging)
+            except ValueError as error:
+                # Flexible, multi-material or otherwise unverified special props
+                # do not silently become a different weapon. Report exclusions.
+                unsupported[str(i)] = str(error)
+                print(f'Unsupported model {i}: {error}')
+        equipment = {k: v for k, v in equipment.items() if str(v['model']) in models}
+        if not models:
+            raise ValueError('No verified equipment models')
         manifest = dict(schema=1, kind='ds1ptde-equipment-props', game_exe_sha256=sha256(game / 'DARKSOULS.exe'),
                         game_params_sha256=hashlib.sha256(raw_params).hexdigest(),
                         coordinate_system='grip-relative metres; blade/front +Z; Y-up; UV unchanged',
                         files={m['file']: m['sha256'] for m in models.values()}, models=models,
-                        equipment=equipment)
+                        equipment=equipment, unsupported_models=unsupported)
         (staging / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
         if output.exists():
             raise ValueError('Output appeared during preparation; refusing to replace it')

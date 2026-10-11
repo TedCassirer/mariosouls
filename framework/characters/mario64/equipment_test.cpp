@@ -31,7 +31,8 @@ static SC_Input input(unsigned frame){
     if(frame>=160&&frame<165)in.attack=1;
     return in;
 }
-static std::vector<Frame> run(const SC_CharacterAPI*api,const char*asset,const char*runtime,bool equipped){
+static std::vector<Frame> run(const SC_CharacterAPI*api,const char*asset,const char*runtime,uint32_t kind){
+    bool equipped=kind!=0;
     const SC_Descriptor*d=api->describe();std::vector<uint8_t>texture(d->textureWidth*d->textureHeight*4);
     SC_Texture tex={texture.data(),(uint32_t)texture.size()};SC_Init init={sizeof(init),asset,runtime,logMessage};
     require(api->initialize(&init,&tex),"initialize owned Mario runtime");
@@ -43,7 +44,7 @@ static std::vector<Frame> run(const SC_CharacterAPI*api,const char*asset,const c
     // explicit locomotion resume boundary rather than that startup sentinel.
     SC_Input warmup{};warmup.camLookZ=1;SC_State warmState{};api->step(id,&warmup,&warmState,&b.mesh);api->resume(id,0,0,0,0);
     for(unsigned i=0;i<190;i++){
-        SC_EquipmentPose equipment={sizeof(equipment),equipped?SC_EQUIPMENT_SWORD:SC_EQUIPMENT_NONE,equipped?SC_EQUIPMENT_SHIELD:SC_EQUIPMENT_NONE,equipped?(i/23)%2+1:0,(i%23)/22.f,(i%31)/30.f};
+        SC_EquipmentPose equipment={sizeof(equipment),kind,equipped?SC_EQUIPMENT_SHIELD:SC_EQUIPMENT_NONE,equipped?(i/23)%2+1:0,(i%23)/22.f,(i%31)/30.f};
         require(api->equipment(id,&equipment),"accept valid equipment presentation");
         // Match the host order: presentation, authoritative-health maintenance,
         // then the simulation tick. Zero severity is not an incoming hit.
@@ -114,7 +115,9 @@ int main(int argc,char**argv){
     if(argc!=4&&argc!=5){fprintf(stderr,"usage: equipment_test character.dll owned-rom.z64 sm64.dll [private-preview.bin]\n");return 2;}
     HMODULE module=LoadLibraryA(argv[1]);require(module!=nullptr,"load adapter");auto get=(SC_GetAPI)GetProcAddress(module,"SoulsCharacterGetAPI");require(get!=nullptr,"adapter entrypoint");
     const SC_CharacterAPI*api=get(SC_ABI_VERSION,sizeof(SC_CharacterAPI));require(api&&api->equipment&&api->attachments,"equipment ABI");
-    auto baseline=run(api,argv[2],argv[3],false),equipped=run(api,argv[2],argv[3],true);unsigned changed=0;
+    auto baseline=run(api,argv[2],argv[3],0);
+    for(uint32_t kind:{1u,3u,4u,5u,6u,7u}){
+    auto equipped=run(api,argv[2],argv[3],kind);unsigned changed=0;
     require(baseline.size()==equipped.size(),"paired trace lengths");
     for(unsigned i=0;i<baseline.size();i++){
         const SC_State&a=baseline[i].state,&b=equipped[i].state;
@@ -125,5 +128,6 @@ int main(int argc,char**argv){
         require(baseline[i].geometry.size()==equipped[i].geometry.size(),"equipment preserves Mario topology");
         if(baseline[i].geometry!=equipped[i].geometry)changed++;
     }
-    require(changed>150,"rendered arms actually change");armedIdle(api,argv[2],argv[3]);if(argc==5)preview(api,argv[2],argv[3],argv[4]);FreeLibrary(module);puts("PASS: Mario equipment movement/action parity, rendered arm poses, finite rigid sockets, correction/rebase, interaction/hurt lifecycle, armed-idle wake policy");return 0;
+    require(changed>150,"rendered arms actually change");printf("Melee kind %u: movement parity and rigid attachments passed\n",kind);}
+    armedIdle(api,argv[2],argv[3]);if(argc==5)preview(api,argv[2],argv[3],argv[4]);FreeLibrary(module);puts("PASS: Mario equipment movement/action parity, rendered arm poses, finite rigid sockets, correction/rebase, interaction/hurt lifecycle, armed-idle wake policy");return 0;
 }

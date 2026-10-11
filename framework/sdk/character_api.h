@@ -20,6 +20,7 @@ extern "C" {
 #define SC_CAP_ALPHA_TEST 8u
 #define SC_CAP_EQUIPMENT 16u
 #define SC_CAP_DEATH_POSE 32u
+#define SC_CAP_MELEE_FAMILIES 64u
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u
@@ -106,7 +107,9 @@ typedef struct SC_MotionResolution {
 /* Host-owned equipment action, presentation only; never advance simulation.
  * Kind values carry no native inventory pointers or addresses. The host retains
  * native equipment rules, stamina, damage and guard state. */
-enum SC_EquipmentKind { SC_EQUIPMENT_NONE, SC_EQUIPMENT_SWORD, SC_EQUIPMENT_SHIELD };
+enum SC_EquipmentKind { SC_EQUIPMENT_NONE, SC_EQUIPMENT_SWORD, SC_EQUIPMENT_SHIELD,
+    SC_EQUIPMENT_DAGGER, SC_EQUIPMENT_CURVED_SWORD, SC_EQUIPMENT_GREATSWORD,
+    SC_EQUIPMENT_AXE, SC_EQUIPMENT_HAMMER };
 typedef struct SC_EquipmentPose {
     uint32_t size, rightKind, leftKind, swing;
     float swingPhase, guard;

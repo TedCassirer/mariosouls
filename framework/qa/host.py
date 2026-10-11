@@ -54,7 +54,9 @@ class Host:
   return dict(reference=hex(p),id=self.i(p+0x208),model=self.read(p+0x38,20).decode('utf-16-le',errors='replace').split('\0')[0],team=self.i(p+0x74),hp=self.i(p+0x2d4),hp_max=self.i(p+0x2d8),stamina=self.i(p+0x2e4),position=self.v(pos+0x10),facing=self.f(pos+4),flags1=self.u(p+0x1fc),flags2=self.u(p+0x3c4),tracks=self.tracks(p))
  def snapshot(self,target_id=1810101,require_test=True):
   stats=self.chain(0x1378700,0,8);name=self.read(stats+0xa0,40).decode('utf-16-le',errors='replace').split('\0')[0]
-  if require_test and (name!='Mario QA' or not 1<=self.i(stats+0x88)<=10):raise StateError('Requires Mario QA at level 1-10: '+name)
+  level=self.i(stats+0x88)
+  melee_fixture=level==13 and [self.i(stats+o) for o in (0x38,0x40,0x48,0x50,0x58,0x80,0x60,0x68)]==[11,11,11,16,13,11,11,11]
+  if require_test and (name!='Mario QA' or not (1<=level<=10 or melee_fixture)):raise StateError('Requires Mario QA low-level or exact melee fixture: '+name)
   world=self.u(0x137e204);raw=self.read(world+0xa12,2);mapid=raw[1]*100+raw[0]
   if raw==b'\xff\xff':raise StateError('Loading/map transition')
   if require_test and mapid!=1801:raise StateError('Unexpected map: '+str(mapid))

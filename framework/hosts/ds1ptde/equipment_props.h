@@ -9,7 +9,7 @@ static std::unordered_map<int,EquipmentProp> equipmentProps;
 static EquipmentProp* equipmentProp(int model){
  if(model<0||model>9999)return nullptr;
  auto found=equipmentProps.find(model);if(found!=equipmentProps.end())return found->second.valid?&found->second:nullptr;
- if(equipmentProps.size()>=64)return nullptr;
+ if(equipmentProps.size()>=128)return nullptr;
  auto& p=equipmentProps[model];char directory[MAX_PATH]={},file[MAX_PATH]={};
  GetPrivateProfileStringA("Framework","EquipmentDirectory","",directory,sizeof(directory),ini);
  if(!directory[0])return nullptr;

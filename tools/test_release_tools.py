@@ -7,10 +7,14 @@ import unittest
 from unittest.mock import patch
 import zipfile
 import dependencies
+import importlib.util
 import framework as f
 import framework_uninstall as removal
 import release
 import test_framework_install as install_tests
+
+spec=importlib.util.spec_from_file_location('runtime_geometry',f.FRAMEWORK/'characters/mario64/runtime_geometry.py')
+geometry=importlib.util.module_from_spec(spec);spec.loader.exec_module(geometry)
 
 
 class Archives(unittest.TestCase):
@@ -60,6 +64,19 @@ class Archives(unittest.TestCase):
         with patch.object(dependencies,'ROOT',self.root),self.assertRaisesRegex(RuntimeError,'archive hash'):
             dependencies.download_toolchain(dict(path='compiler/zig.exe',local_archive='archive.zip',archive_sha256='0'*64))
         self.assertFalse((self.root/'compiler').exists())
+    def test_passed_release_gate_requires_evidence(self):
+        (self.root/'release').mkdir()
+        checklist=dict(schema=1,checks=[dict(id='live',status='passed',description='Live check',evidence=None)])
+        (self.root/'release/checklist.json').write_text(json.dumps(checklist))
+        with patch.object(release,'ROOT',self.root),self.assertRaisesRegex(RuntimeError,'evidence'):release.release_blockers()
+    def test_geometry_rejects_corrupt_cache_before_generation(self):
+        (self.root/'work/runtime-geometry-source').mkdir(parents=True)
+        (self.root/'work/runtime-geometry-source/geo.inc.c').write_bytes(b'corrupt')
+        url='https://raw.githubusercontent.com/n64decomp/sm64/pinned/actors/mario/geo.inc.c'
+        (self.root/'dependencies.lock.json').write_text(json.dumps(dict(runtime_geometry=[dict(name='geo.inc.c',url=url,sha256='0'*64)])))
+        with patch.object(geometry.runpy,'run_path',return_value=dict(GEO_URL=url,MODEL_URL=url+'model')),patch.object(geometry.urllib.request,'urlopen') as network,self.assertRaisesRegex(RuntimeError,'hash mismatch'):
+            geometry.prepare_geometry(self.root,self.root/'stage')
+        network.assert_not_called();self.assertFalse((self.root/'stage').exists())
 
 
 class Removal(unittest.TestCase):

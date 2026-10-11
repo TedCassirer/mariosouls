@@ -116,6 +116,7 @@ def build(character,adapter_only=False,with_runtime=False):
             run([ZIG,'cc','-target','x86-windows-gnu','-O2','-c',source,'-o',obj]);objects.append(obj)
         compile_cpp(FRAMEWORK/'hosts/ds1ptde/runtime.cpp',BUILD/'dinput8.dll',extra=['-shared',FRAMEWORK/'hosts/ds1ptde/proxy.def',*objects,'-ld3d9','-ldxguid','-luser32','-lwinmm','-lgdi32'])
     source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.c','.cpp','.def','.py','.json','.in'])
+    source_paths.extend([ROOT/'dependencies.lock.json',ROOT/'release/project.json'])
     receipt={'framework_version':json.loads((ROOT/'release/project.json').read_text())['version'],'abi':4,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
         'adapter_sha256':sha(out/'character.dll'),'source_sha256':{f.relative_to(ROOT).as_posix():sha(f) for f in source_paths}}
     if not adapter_only:receipt['host_sha256']=sha(BUILD/'dinput8.dll')

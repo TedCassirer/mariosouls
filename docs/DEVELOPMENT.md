@@ -37,7 +37,9 @@ python tools/framework.py build --with-runtime
 
 Dependency setup clones pinned upstream repositories and applies our patches. It
 downloads and verifies the compiler only when requested; never downloads game assets and stops if existing dependency
-edits differ. Runtime preparation operates on a staged copy of the dependency.
+edits differ. Runtime preparation operates on a staged copy of the dependency. It fetches two
+geometry source files from the revision pinned by libsm64, verifies their hashes,
+and generates the required local sources; it never downloads a ROM.
 
 Build output is in `work/framework-build/`. Later builds without `--with-runtime`
 rebuild the host and adapter, reusing the existing runtime.

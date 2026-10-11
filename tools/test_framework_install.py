@@ -53,6 +53,9 @@ class Installation(unittest.TestCase):
  def test_untested_binary(self):
   (self.build/'dinput8.dll').write_bytes(b'different')
   with self.assertRaisesRegex(RuntimeError,'exact build'):self.call()
+ def test_shared_report_cannot_authorize_install(self):
+  (self.build/'test-report.json').write_text(json.dumps(dict(status='passed',scope='asset-free-shared',authorizes_install=False)))
+  with self.assertRaises(RuntimeError):self.call(True)
  def cache(self):
   cache=self.root/'cache';cache.mkdir()
   file=cache/'m18_01_00_00.bin';file.write_bytes(b'MSC1'+struct.pack('<I9f',1,*([0.]*9)))

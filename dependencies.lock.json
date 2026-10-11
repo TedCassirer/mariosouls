@@ -49,5 +49,17 @@
       "scipy",
       "soulstruct"
     ]
-  }
+  },
+  "runtime_geometry": [
+    {
+      "name": "geo.inc.c",
+      "url": "https://raw.githubusercontent.com/n64decomp/sm64/06ec56df7f951f88da05f468cdcacecba496145a/actors/mario/geo.inc.c",
+      "sha256": "fc276e326a9cb22f55dfae8349b0ff746b9a7db7c108074a47508f3e2b225364"
+    },
+    {
+      "name": "model.inc.c",
+      "url": "https://raw.githubusercontent.com/n64decomp/sm64/06ec56df7f951f88da05f468cdcacecba496145a/actors/mario/model.inc.c",
+      "sha256": "3c28959f915121cd94daab7941e144078098b3cac668fdc70817f4127c549e8f"
+    }
+  ]
 }

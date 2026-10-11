@@ -11,7 +11,7 @@ import framework as f
 
 ROOT=f.ROOT
 ROOT_FILES={'README.md','CONTRIBUTING.md','AGENTS.md','LICENSE','THIRD_PARTY.md','CHANGELOG.md','SECURITY.md','requirements-ci.txt','dependencies.lock.json'}
-PREFIXES=('framework/','tools/','patches/','docs/','licenses/','release/')
+PREFIXES=('framework/','tools/','patches/','docs/','licenses/','release/','.github/')
 BINARIES={'work/framework-build/dinput8.dll','work/framework-build/characters/mario64/character.dll','work/framework-build/characters/mario64/sm64.dll'}
 FORBIDDEN={'.z64','.n64','.v64','.rvz','.iso','.sl2','.scmesh','.scprop','.bin','.dcx','.hkx','.flver','.png','.jpg','.mp4','.exe','.dll','.zip'}
 SECRETS=[rb'-----BEGIN (?:OPENSSH|RSA|EC|DSA)? ?PRIVATE KEY-----',rb'\bgh[pousr]_[A-Za-z0-9]{30,}\b',rb'\bgithub_pat_[A-Za-z0-9_]{40,}\b',rb'\bAKIA[A-Z0-9]{16}\b',rb'\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{32,}\b']
@@ -56,6 +56,12 @@ def source_files():
 
 def release_blockers():
     checklist=json.loads((ROOT/'release/checklist.json').read_text())
+    if checklist.get('schema')!=1 or not checklist.get('checks'):raise RuntimeError('Invalid release checklist')
+    seen=set()
+    for item in checklist['checks']:
+        if item['id'] in seen or item['status'] not in ('pending','failed','passed'):raise RuntimeError('Invalid release check')
+        seen.add(item['id'])
+        if item['status']=='passed' and (not isinstance(item.get('evidence'),str) or not item['evidence'].strip()):raise RuntimeError('Passed release check needs evidence: '+item['id'])
     return [item['id']+': '+item['description'] for item in checklist['checks'] if item['status']!='passed']
 
 

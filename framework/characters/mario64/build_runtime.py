@@ -5,6 +5,7 @@ import subprocess
 import sys
 import shutil
 from prepare_runtime import prepare
+from runtime_geometry import prepare_geometry
 
 root=Path(__file__).resolve().parents[3]
 parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,required=True)
@@ -13,6 +14,7 @@ subprocess.run([sys.executable,root/'tools/dependencies.py'],check=True)
 repo=root/'work/libsm64';zig=root/'work/tools/zig-windows-x86_64-0.13.0/zig.exe'
 staged=args.output/'runtime-source'
 shutil.copytree(repo/'src',staged/'src',dirs_exist_ok=True)
+prepare_geometry(root,staged)
 repo=staged
 prepare(repo)
 dirs=['src','src/decomp','src/decomp/engine','src/decomp/include/PR','src/decomp/game',

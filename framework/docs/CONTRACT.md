@@ -1,4 +1,4 @@
-# Character ABI version 2
+# Character ABI version 3
 
 `sdk/character_api.h` is the authoritative declaration. Adapters are trusted native
 32-bit Windows DLLs, loaded in-process; validation is not a memory-safety sandbox.
@@ -29,7 +29,7 @@ audio thread. The current process-lifetime host does not hot-unload an adapter.
 
 ## Movement ownership (ABI 2)
 
-ABI 1 adapters are rejected; rebuild both host and adapter. `resolveMotion` is a
+ABI 1 and 2 adapters are rejected; rebuild both host and adapter. `resolveMotion` is a
 required callback. `SC_MotionResolution` contains the native capsule position in
 local centimetres, an ownership generation, a movement sequence (zero for an
 unsolicited correction), and up to four unit contact normals. Copy the corrected
@@ -107,7 +107,7 @@ in the adapter, never in host code.
 does not change behavior. Attack index/name pairs identify moves. Report -1 when
 no attack is underway. Distinct combo punches and finishing kicks need separate
 IDs. Repeated instances of the same move must include an intervening idle sample;
-v2 does not have an explicit attack-instance token. If a future engine can chain
+v3 does not have an explicit attack-instance token. If a future engine can chain
 identical attacks without that boundary, extend the SDK and shared window logic.
 
 `SC_ATTACK_ACTIVE` marks only the actual contact phase. `activeTicks` adds an
@@ -142,3 +142,35 @@ With `SC_CAP_AUDIO`, `audio` writes interleaved signed 16-bit stereo at audioRat
 Lengths are sample **frames**, two int16 values per frame. Never exceed
 capacityFrames, even if desiredFrames is larger. Return zero for insufficient
 capacity or absent audio. Without the capability, provide a no-op callback.
+
+
+## Body dimensions and landing damage (ABI 3)
+
+`SC_Descriptor.body` declares model scale, native movement radius/total height,
+secondary contact radius/total height (centimetres), and landing damage policy.
+Zero for all four dimensions preserves the host body. Default model scale and
+fall multiplier/cap are 1; default falls may kill. PTDE currently supports only
+smaller human capsules (radius 10-40cm, height up to150cm; secondary radius up to45cm,
+height up to160cm). Larger bodies require additional host support.
+
+The renderer scales vertices around the character's feet, including held props;
+this does not change movement velocity, jumps, or outgoing attack reach. Adapters
+must also adapt their own wall/ceiling queries to the declared body dimensions.
+Mario's runtime builder applies bounded source transformations to a generated
+copy of the pinned dependency; it never edits the preserved dependency checkout.
+
+PTDE validates actor ownership and capsule shape types, retains the original
+fields, and changes sizes at the native movement hook before Havok. The body stays
+small during native interactions. Releasing the character queues restoration at
+the next native movement update; stale actor/physics references are discarded.
+
+Fall policy scales only the framework's landing damage and caps it as a fraction
+of maximum native HP. `nonlethalFalls` also caps at current HP minus1 and removes
+the mid-air lethal-height check. It does not enable NoDamage/NoDead flags, heal
+the player, modify enemy damage or exempt native death volumes. The baseline safe
+and lethal distances still define the unscaled curve. Mario defaults: visual0.9,
+movement44cm wide/105cm tall, secondary48cm wide/110cm tall, multiplier0.05,
+maximum5% HP per landing, and nonlethal falls. Live checks confirm smaller native
+capsules, reduced actor separation and retained melee damage. This is not a
+per-bone hitbox rewrite; projectile, grab and boss-specific hit routes need separate
+coverage. See VALIDATION.md for measured scope.

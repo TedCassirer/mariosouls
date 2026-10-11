@@ -1,5 +1,65 @@
 # Framework verification — 2026-10-11
 
+## Framework 0.3 body and landing policy
+
+Final installed DLLs were tested directly in PID 22660 on Mario QA, level 6,
+Asylum. Exact hashes and measurements are in `work/body-qa/validation.json` and
+`checkpoints/framework-v0.3-body.json`. Earlier candidate evidence is retained
+separately under `work/body-qa/candidate/`.
+
+- Shared ABI 3 body descriptor: Mario model scale 0.9; movement capsule radius
+  22 cm, total height 105 cm (previously 40/150); secondary contact capsule
+  24/110 (previously 45/160). Support capsule preserves its original radius ratio.
+  Feet remain anchored. Outgoing attack reach, speed and jump constants unchanged.
+- Native geometry changes run before Havok in the existing movement hook.
+  Actor, movement, physics, owner and capsule type checks guard every write.
+  Three live on/off cycles restored original sizes exactly. Offline mock-memory
+  regression also covers rapid reactivation before deferred restoration, stale
+  actors, invalid shapes and original-body opt-out.
+- Mario's private wall/ceiling queries now match the host dimensions. Real adapter
+  test: 22 cm wall clearance, walking under a 120 cm ceiling, head-limited jump
+  peak 10.5 cm there. Open-floor jump remains 242 cm. Live jump measured 2.42 m
+  with no stamina debit. An unrelated generated adapter also passes ABI 3 checks.
+- Final live controlled falls: 11.999 m, HP 594 -> 589 (5 damage); 24.999 m,
+  HP 589 -> 560 (29 damage). Exactly one landing damage event per fall; no HP
+  restoration. Landing damage scales to 5% of its former value, rounds up, caps
+  at 5% of maximum native HP rounded down, and cannot reduce current HP below 1.
+  The 1 HP floor is covered by policy tests, not a manufactured live low-HP save.
+- Enemy push retained minimum horizontal separation 0.670 m, down from 0.850 m
+  in 0.2. Closed main door stopped Mario at Z=-3.604 m. Both remain solid.
+- Final incoming melee: one 80 HP hit occurred during native setup; while Mario
+  owned movement, HP 514 -> 429 produced Mario hurt and knockback. All sampled
+  NoDamage/NoDead/NoHit and other protection flags remained zero. Reduced landing
+  damage does not grant jump invulnerability or reduce enemy damage.
+- Bonfire rest healed 560 -> 594 after falls, and 429 -> 594 after melee; smaller
+  geometry persisted through menu/leave, followed by a successful jump. Final
+  save at bonfire, native menu quit, normal process closure. Test transports
+  disarmed. No motion rejection, bridge timeout or adapter failure in final log.
+- Full supported doctor/build/test workflow passed, including installer transaction,
+  core, feedback, motion, body lifecycle, input, actual Mario and unrelated adapter
+  checks. Build/runtime/installed hashes match; no replacement build substituted.
+
+Limits: native capsule sizing is not a per-bone hitbox rewrite. Incoming melee
+remains functional, but exact avoidance margins for projectiles, grabs and boss
+attacks have not been mapped. No fresh other-area, death/respawn, ladder, Estus,
+NPC-dialogue, object-break or physical-controller check is claimed. Native death
+volumes and bottomless pits remain dangerous; falls during native-controlled
+scripts use native rules. Heights beyond 25 m were not exercised in game.
+
+Test-selection incident: during the candidate launch, queued confirmation inputs
+unexpectedly loaded the level-65 slot. It was immediately quit normally, before
+movement, Mario activation or gameplay tests. The main slot's playtime advanced
+36 seconds; no deliberate HP/inventory/save edits were performed. The user was
+informed. All remaining load steps were observed individually and all gameplay
+checks used the strict Mario QA guard. Final build load selected Mario QA directly.
+Save backup: `work/um-state/backups/dark-souls-before-mario-body/20261011-065059.zip`.
+Pre-change runtime backup: `work/checkpoints/before-framework-20261011-065754-086026`.
+Final install backup: `work/checkpoints/before-framework-20261011-070718-675130`.
+Checkpoint: `checkpoint-2026-10-11-framework-v0.3-body`.
+
+The following sections describe earlier versions.
+
+
 ## Framework 0.2 movement ownership
 
 Final installed host and adapter were live-tested directly in PID 27264 on Mario

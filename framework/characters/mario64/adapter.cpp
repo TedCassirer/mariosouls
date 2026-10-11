@@ -35,6 +35,7 @@ static decltype(&sm64_set_mario_velocity) libVelocity;
 static decltype(&sm64_set_mario_forward_velocity) libForward;
 static decltype(&sm64_set_mario_action) libAction;
 static decltype(&sm64_set_mario_faceangle) libFace;
+static void (*libBody)(float,float);
 static void (*libHealth)(int32_t,int32_t);
 static decltype(&sm64_surface_find_floor_height) libFloor;
 static uint32_t (*libProbe)(int32_t,float,float,float);
@@ -88,13 +89,14 @@ static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
     LOAD(libTick,sm64_mario_tick);LOAD(libPose,sm64_mario_host_pose_tick);LOAD(libResume,sm64_mario_host_resume);LOAD(libHand,sm64_mario_hand_matrix);
     LOAD(libPosition,sm64_set_mario_position);LOAD(libAction,sm64_set_mario_action);LOAD(libFace,sm64_set_mario_faceangle);LOAD(libHealth,sm64_mario_host_health);
     LOAD(libFloor,sm64_surface_find_floor_height);LOAD(libProbe,sm64_mario_probe_attack);LOAD(libContact,sm64_mario_attack);
+    LOAD(libBody,sm64_host_body);
 #undef LOAD
     FILE*f=init->assetPath?fopen(init->assetPath,"rb"):nullptr;
     if(!f){if(report)report("Owned US Mario 64 ROM is missing");shutdown();return 0;}
     fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);bool ok=n==8388608;
     if(ok){rom.resize(n);ok=fread(rom.data(),1,n,f)==size_t(n);}fclose(f);
     if(!ok||rom[0]!=0x80||rom[1]!=0x37||rom[2]!=0x12||rom[3]!=0x40){if(report)report("Expected a big-endian US Mario 64 ROM");shutdown();return 0;}
-    libInit(rom.data(),texture->rgba);libAudioInit(rom.data());initialized=true;return 1;
+    libInit(rom.data(),texture->rgba);libAudioInit(rom.data());libBody(characterProfile.body.radiusCm,characterProfile.body.heightCm);initialized=true;return 1;
 }
 static int32_t create(float x,float y,float z,float yaw){
     if(!initialized||active>=0)return -1;

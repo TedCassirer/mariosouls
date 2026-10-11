@@ -47,6 +47,7 @@ static bool worldLineClear(Vec a,Vec b,uintptr_t target=0){
 }
 extern "C" __attribute__((used,noinline)) void characterWorldMotion(uintptr_t physics,uintptr_t motion){
  if(!physics)return;
+ bodyNativeMotion(physics);
  DWORD now=GetTickCount();
  AcquireSRWLockExclusive(&worldLock);
  if(worldMode!=1||physics!=worldBinding.physics||!worldBinding.valid()||chain(playerSlot,{0,4,0})!=worldBinding.actor||read<uint32_t>(worldBinding.actor+0x28)!=worldBinding.movement||DWORD(now-worldHeartbeat)>250){ReleaseSRWLockExclusive(&worldLock);return;}

@@ -9,6 +9,7 @@
 !/framework/**/
 !/framework/**/*.h
 !/framework/**/*.cpp
+!/framework/**/*.c
 !/framework/**/*.def
 !/framework/**/*.py
 !/framework/**/*.json

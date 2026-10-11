@@ -20,6 +20,7 @@ ZIG=ROOT/'work/tools/zig-windows-x86_64-0.13.0/zig.exe'
 GAME=Path(r'C:\Program Files (x86)\Steam\steamapps\common\Dark Souls Prepare to Die Edition\DATA')
 FLAGS={'automatic':1,'radial':2,'no_objects':4}
 CAPS={'audio':1,'item_prop':2}
+BODY_DEFAULTS=dict(model_scale=1.,radius_cm=0.,height_cm=0.,hurt_radius_cm=0.,hurt_height_cm=0.,fall_damage_scale=1.,fall_damage_max_hp_fraction=1.,nonlethal_falls=False)
 
 
 def run(args,**kw):
@@ -38,6 +39,15 @@ def load_profile(character):
     if not re.fullmatch('[a-zA-Z0-9_./-]+',p['source']) or not (folder/p['source']).resolve().is_relative_to(folder.resolve()):raise ValueError('Adapter source must stay inside its character folder')
     if not (folder/p['source']).is_file():raise ValueError('Adapter source is missing')
     if len(p['attacks'])>32 or not 1<=p['max_triangles']<=16384 or len(p['texture'])!=2 or not all(1<=v<=4096 for v in p['texture']):raise ValueError('Profile exceeds SDK bounds')
+    body=BODY_DEFAULTS|p.get('body',{})
+    if set(body)!=set(BODY_DEFAULTS):raise ValueError('Unknown body setting')
+    if not isinstance(body['nonlethal_falls'],bool):raise ValueError('nonlethal_falls must be boolean')
+    for key,value in body.items():
+        if key!='nonlethal_falls' and (not isinstance(value,(int,float)) or isinstance(value,bool) or not math.isfinite(value)):raise ValueError('Invalid body number: '+key)
+    if not .25<=body['model_scale']<=2 or not 0<=body['fall_damage_scale']<=1 or not 0<=body['fall_damage_max_hp_fraction']<=1:raise ValueError('Body scale or fall policy exceeds SDK bounds')
+    if any(body[k]!=0 for k in ['radius_cm','height_cm','hurt_radius_cm','hurt_height_cm']):
+        if not (10<=body['radius_cm']<=40 and 2*body['radius_cm']<=body['height_cm']<=150 and 10<=body['hurt_radius_cm']<=45 and 2*body['hurt_radius_cm']<=body['hurt_height_cm']<=160):raise ValueError('Body dimensions exceed SDK bounds')
+    p['body']=body
     names=[]
     for attack in p['attacks']:
         name=attack['name']
@@ -64,7 +74,9 @@ def profile_header(p,path):
         attacks.append('{'+','.join([json.dumps(a['name']),num(a['multiplier']),num(a['poise']),integer(a['stamina_cost']),str(sum(FLAGS[f] for f in a['flags'])),integer(a['active_ticks']),integer(a['max_targets']),num(a['range_cm']),num(a['min_height_cm']),num(a['max_height_cm']),num(a.get('automatic_radius_cm',0)),num(a.get('automatic_min_height_cm',0)),num(a.get('automatic_max_height_cm',0))])+'}')
     names=[a['name'] for a in p['attacks']]
     auto=names.index(p['automatic_attack']) if p.get('automatic_attack') else -1
-    text='static const SC_Descriptor characterProfile={sizeof(SC_Descriptor),SC_ABI_VERSION,'+','.join([json.dumps(p['id']),json.dumps(p['display_name']),integer(p['max_triangles']),integer(p['texture'][0]),integer(p['texture'][1]),str(sum(CAPS[c] for c in p['capabilities'])),integer(p.get('audio_rate',0)),str(len(attacks)),str(auto),num(p['base_power']),num(p['upgrade_power']),num(p['dexterity_weight'])])+',{'+','.join(attacks)+'}};\n'
+    body=p.get('body',BODY_DEFAULTS)
+    body_code=','.join(num(body[k]) for k in list(BODY_DEFAULTS)[:-1])+','+str(int(body['nonlethal_falls']))
+    text='static const SC_Descriptor characterProfile={sizeof(SC_Descriptor),SC_ABI_VERSION,'+','.join([json.dumps(p['id']),json.dumps(p['display_name']),integer(p['max_triangles']),integer(p['texture'][0]),integer(p['texture'][1]),str(sum(CAPS[c] for c in p['capabilities'])),integer(p.get('audio_rate',0)),str(len(attacks)),str(auto),num(p['base_power']),num(p['upgrade_power']),num(p['dexterity_weight'])])+',{'+','.join(attacks)+'},{'+body_code+'}};\n'
     path.write_text(text,encoding='utf-8')
 
 
@@ -95,8 +107,8 @@ def build(character,adapter_only=False,with_runtime=False):
             source=ROOT/'work/minhook/src'/f'{name}.c';obj=BUILD/(source.stem+'.o')
             run([ZIG,'cc','-target','x86-windows-gnu','-O2','-c',source,'-o',obj]);objects.append(obj)
         compile_cpp(FRAMEWORK/'hosts/ds1ptde/runtime.cpp',BUILD/'dinput8.dll',extra=['-shared',FRAMEWORK/'hosts/ds1ptde/proxy.def',*objects,'-ld3d9','-ldxguid','-luser32','-lwinmm'])
-    source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.cpp','.def','.py','.json','.in'])
-    receipt={'framework_version':'0.2','abi':2,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
+    source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.c','.cpp','.def','.py','.json','.in'])
+    receipt={'framework_version':'0.3','abi':3,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
         'adapter_sha256':sha(out/'character.dll'),'source_sha256':{f.relative_to(ROOT).as_posix():sha(f) for f in source_paths}}
     if not adapter_only:receipt['host_sha256']=sha(BUILD/'dinput8.dll')
     (out/'build.json').write_text(json.dumps(receipt,indent=2))

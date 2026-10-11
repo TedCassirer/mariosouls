@@ -18,6 +18,16 @@
   "base_power": 100,
   "upgrade_power": 10,
   "dexterity_weight": 0.5,
+  "body": {
+    "model_scale": 0.9,
+    "radius_cm": 22,
+    "height_cm": 105,
+    "hurt_radius_cm": 24,
+    "hurt_height_cm": 110,
+    "fall_damage_scale": 0.05,
+    "fall_damage_max_hp_fraction": 0.05,
+    "nonlethal_falls": true
+  },
   "assets": {
     "required": true,
     "description": "User-owned US Super Mario 64 ROM in big-endian .z64 format",

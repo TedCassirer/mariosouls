@@ -45,6 +45,15 @@ Link/OoT would need an OoT-compatible runtime/asset and animation implementation
 DK/DK64 would need its own. Neither is present. Research their runtime availability
 when implementing those ports; Mario's libsm64 cannot run them. Extra buttons,
 weapons, aiming, projectiles, transformations or unusually large collision shapes
-will require explicit framework extensions. Current v2 supports one active
-character, a shared native body, three movement/combat inputs and generic native
+will require explicit framework extensions. Current v3 supports one active
+character, a configurable native body, three movement/combat inputs and generic native
 interaction poses; it does not promise every game mechanic out of the box.
+
+
+Optional `body` manifest values: `model_scale`, `radius_cm`, `height_cm`,
+`hurt_radius_cm`, `hurt_height_cm`, `fall_damage_scale`,
+`fall_damage_max_hp_fraction`, `nonlethal_falls`. Dimensions default to zero
+(native unchanged); scale/multiplier/cap default to1. Keep private engine wall
+and ceiling tests consistent with the host body; never scale velocities to obtain
+a smaller mesh. `build --with-runtime` builds the adapter's guest extension too.
+Rebuild both host and adapters for ABI3; earlier DLLs are rejected.

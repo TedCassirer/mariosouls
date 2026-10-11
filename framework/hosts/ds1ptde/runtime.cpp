@@ -123,6 +123,7 @@ static void pumpAudio(){
 }
 static bool guestStep(int id,const SC_Input*input,SC_State*s,SC_Mesh*m){return guest->step(id,input,s,m)&&SC::frame(*s,*m,*profile);}
 static bool guestPose(int id,const SC_Pose*p,SC_State*s,SC_Mesh*m){return guest->pose(id,p,s,m)&&SC::frame(*s,*m,*profile);}
+#include "body.h"
 #include "world.h"
 using DamageFn=int(WINAPI*)(int,int,int,float,float,float);
 static DamageFn nativeDamage=nullptr;
@@ -145,7 +146,7 @@ static void rebuildSurfaces(){
 #include "loader.h"
 static void releaseControl(bool preserveRequest=false){
  characterSession.request(preserveRequest&&characterSession.requested());
- worldRelease();characterClock.clear();characterInput.clear();pendingNativeHurt=0;
+ bodyRelease();worldRelease();characterClock.clear();characterInput.clear();pendingNativeHurt=0;
  combatReset();
  actionReset();
  if(guest)guest->surfaces(nullptr,0,1);
@@ -165,7 +166,7 @@ static bool activate(){
  character=guest->create(0,40,0,read<float>(posData+4)-3.14159265f);if(character<0)return false;combatReset();guest->nativeDamage(character,0);state={};state.attackId=state.interruptedAttackId=-1;state.position[1]=40;
  savedFlags1=read<uint32_t>(player+0x1fc);savedFlags2=read<uint32_t>(player+0x3c4);lastPlayer=player;lastMap=read<uint32_t>(player+0x28);savedMapFlags=read<uint32_t>(lastMap+0xc4);savedOpacity=read<float>(player+0x258);
  hideNative=GetPrivateProfileIntA("MarioSouls","HideNative",0,ini)!=0&&savedOpacity>=0&&savedOpacity<=1;disableMapHit=GetPrivateProfileIntA("MarioSouls","DisableMapHit",1,ini)!=0;
- logf("native opacity=%.3f mapflags=%08x",savedOpacity,savedMapFlags);lastHP=read<int>(player+0x2d4);characterSession.activate({player,posData,lastMap,loadedMap});worldActivate();characterClock.clear();characterInput.clear();SC_Pose initial={};initial.yaw=read<float>(posData+4)-3.14159265f;initial.phase=-1;if(!guestPose(character,&initial,&state,&geo)){releaseControl();return false;}if(hideNative){put(player+0x258,0.f);put(player+0x1fc,read<uint32_t>(player+0x1fc)&~0x800000u);}return true;
+ logf("native opacity=%.3f mapflags=%08x",savedOpacity,savedMapFlags);lastHP=read<int>(player+0x2d4);characterSession.activate({player,posData,lastMap,loadedMap});if(!bodyCapture()){logf("BODY validation failed; native handback");releaseControl();return false;}worldActivate();characterClock.clear();characterInput.clear();SC_Pose initial={};initial.yaw=read<float>(posData+4)-3.14159265f;initial.phase=-1;if(!guestPose(character,&initial,&state,&geo)){releaseControl();return false;}if(hideNative){put(player+0x258,0.f);put(player+0x1fc,read<uint32_t>(player+0x1fc)&~0x800000u);}return true;
 }
 static bool pressed(int key){static bool prev[256]={};bool down=(GetAsyncKeyState(key)&0x8000)!=0;bool hit=down&&!prev[key];prev[key]=down;return hit;}
 static HostInteraction::Observation nativeInteractionState(){
@@ -252,7 +253,7 @@ static void update(){
   if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);
  }
  Vec p=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;
- if(!isfinite(p.x)||!isfinite(p.y)||!isfinite(p.z)||p.y<origin.y-30){logf("invalid/outside test area; disabled");releaseControl();return;}
+ if(!isfinite(p.x)||!isfinite(p.y)||!isfinite(p.z)||p.y< -1000){logf("invalid/outside test area; disabled");releaseControl();return;}
  actionFlags(false);
  put(lastMap+0xc4,read<uint32_t>(lastMap+0xc4)&~0x10u);
  if(stepped&&!worldSubmit(stepFrom,p)){logf("WORLD rejected movement request; native controls restored");releaseControl();return;}
@@ -268,7 +269,7 @@ static void draw(IDirect3DDevice9* d){
  D3DVIEWPORT9 vp;d->GetViewport(&vp);Vec eye=cameraEye();Vec at=eye+cameraForward();
  D3DMATRIX world=identity(),view=viewMatrix(eye,at),proj={};float fov=read<float>(cam+0x50),aspect=read<float>(cam+0x54),zn=read<float>(cam+0x58),zf=read<float>(cam+0x5c);if(fov<.1f||fov>2.8f)fov=.75049f;if(aspect<.5f||aspect>5)aspect=float(vp.Width)/vp.Height;if(zn<.001f||zn>2)zn=.05f;if(zf<50||zf>10000)zf=3000;float ys=1/tanf(fov/2);proj._11=ys/aspect;proj._22=ys;proj._33=zf/(zf-zn);proj._34=1;proj._43=-zn*proj._33;
  Vec renderOrigin=origin;if(characterOwned()&&worldMode==1&&worldMotionReady){Vec offset=read<Vec>(posData+0x10)-(origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f);if(isfinite(dot(offset,offset))&&dot(offset,offset)<4)renderOrigin=renderOrigin+offset;}
- std::vector<Vertex> verts(geo.numTrianglesUsed*3);for(size_t i=0;i<verts.size();i++){auto&p=verts[i];p.x=renderOrigin.x+gpos[i*3]*.01f;p.y=renderOrigin.y+gpos[i*3+1]*.01f;p.z=renderOrigin.z+gpos[i*3+2]*.01f;int r=std::clamp(int(gcolor[i*3]*255),0,255),g=std::clamp(int(gcolor[i*3+1]*255),0,255),b=std::clamp(int(gcolor[i*3+2]*255),0,255);p.color=0xff000000|(r<<16)|(g<<8)|b;Vec normal=unit({gnormal[i*3],gnormal[i*3+1],gnormal[i*3+2]});int light=int(255*(.4f+.6f*std::max(0.f,dot(normal,unit({-.3f,.8f,-.5f})))));p.shade=0xff000000|(light<<16)|(light<<8)|light;p.u=guv[i*2];p.v=guv[i*2+1];}
+ std::vector<Vertex> verts(geo.numTrianglesUsed*3);for(size_t i=0;i<verts.size();i++){auto&p=verts[i];p.x=renderOrigin.x+SCBody::modelCoordinate(gpos[i*3],state.position[0],characterBody.modelScale)*.01f;p.y=renderOrigin.y+SCBody::modelCoordinate(gpos[i*3+1],state.position[1],characterBody.modelScale)*.01f;p.z=renderOrigin.z+SCBody::modelCoordinate(gpos[i*3+2],state.position[2],characterBody.modelScale)*.01f;int r=std::clamp(int(gcolor[i*3]*255),0,255),g=std::clamp(int(gcolor[i*3+1]*255),0,255),b=std::clamp(int(gcolor[i*3+2]*255),0,255);p.color=0xff000000|(r<<16)|(g<<8)|b;Vec normal=unit({gnormal[i*3],gnormal[i*3+1],gnormal[i*3+2]});int light=int(255*(.4f+.6f*std::max(0.f,dot(normal,unit({-.3f,.8f,-.5f})))));p.shade=0xff000000|(light<<16)|(light<<8)|light;p.u=guv[i*2];p.v=guv[i*2+1];}
  d->SetVertexShader(NULL);d->SetPixelShader(NULL);d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_SPECULAR|D3DFVF_TEX1);d->SetTransform(D3DTS_WORLD,&world);d->SetTransform(D3DTS_VIEW,&view);d->SetTransform(D3DTS_PROJECTION,&proj);
  d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_ZENABLE,depthTest?TRUE:FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,TRUE);d->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);d->SetRenderState(D3DRS_ALPHAREF,1);d->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);d->SetRenderState(D3DRS_FOGENABLE,FALSE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_COLORWRITEENABLE,15);d->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);d->SetRenderState(D3DRS_CLIPPLANEENABLE,0);d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE);d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
  d->SetTexture(0,tex);d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_BLENDTEXTUREALPHA);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_DIFFUSE);d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(1,D3DTSS_COLORARG1,D3DTA_CURRENT);d->SetTextureStageState(1,D3DTSS_COLORARG2,D3DTA_SPECULAR);d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(1,D3DTSS_ALPHAARG1,D3DTA_CURRENT);d->SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_CLAMP);d->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_CLAMP);

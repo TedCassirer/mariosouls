@@ -43,6 +43,27 @@ int main(int argc,char**argv){
   assert(a->probeContact(id,0,0,0)&SC_CONTACT_AUTOMATIC);a->commitContact(id,0,0,0,160);
   for(int k=0;k<3;k++)resolution.position[k]=state.position[k];
   assert(a->resolveMotion(id,&resolution,&state,&m));step();assert(state.velocity[1]>0);
+  // Real guest collision queries must match the descriptor, not retain the
+  // old 50 cm wall radius / 160 cm ceiling height beneath a smaller host body.
+  SC_Surface walls[6]={floor[0],floor[1],
+   {{{-1000,0,200},{-1000,1000,200},{1000,1000,200}},0},
+   {{{-1000,0,200},{1000,1000,200},{1000,0,200}},0},
+   {{{-1000,0,-200},{1000,1000,-200},{-1000,1000,-200}},0},
+   {{{-1000,0,-200},{1000,0,-200},{1000,1000,-200}},0}};
+  a->surfaces(walls,6,0);a->resume(id,0,0,0,0);input={0,1,0,1,0,0,0,0};
+  for(int i=0;i<70;i++)step();
+  printf("body wall clearance: %.2f cm (profile %.2f)\n",200-fabsf(state.position[2]),d->body.radiusCm);
+  assert(fabsf(200-fabsf(state.position[2])-d->body.radiusCm)<1);
+  SC_Surface tunnel[4]={floor[0],floor[1],
+   {{{-1000,120,-1000},{1000,120,1000},{-1000,120,1000}},0},
+   {{{-1000,120,-1000},{1000,120,-1000},{1000,120,1000}},0}};
+  a->surfaces(tunnel,4,0);a->resume(id,0,0,0,0);
+  for(int i=0;i<20;i++)step();assert(fabsf(state.position[2])>100);assert(state.flags&SC_GROUNDED);
+  a->resume(id,0,0,0,0);input={0,1,0,0,0,0,0,0};step();float ceilingTop=0;
+  for(int i=0;i<35;i++){input.jump=i<8;step();ceilingTop=std::max(ceilingTop,state.position[1]);}
+  assert(ceilingTop<=120-d->body.heightCm+1);
+  printf("body tunnel: walks under 120 cm ceiling, jump peak %.2f cm\n",ceilingTop);
+  a->surfaces(floor,2,0);input={0,1,0,0,0,0,0,0};
  }
  for(int kind=SC_POSE_NEUTRAL;kind<=SC_POSE_TALK;kind++)for(int frame=0;frame<20;frame++){
   SC_Pose p={uint32_t(kind),{100,50,200},.75f,frame/19.f,float(frame*3)};assert(a->pose(id,&p,&state,&m));assert(SC::frame(state,m,*d));assert(fabsf(state.position[1]-50)<.01f);

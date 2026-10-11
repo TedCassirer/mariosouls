@@ -60,8 +60,8 @@ static bool combatEnvironment(){
  if(!characterFalling)return true;
  float drop=characterPeakY-y;int maxHP=read<int>(player+0x2d8),hp=read<int>(player+0x2d4);
  float safe=combatFloat("SafeFallMeters",8,6,20),lethal=combatFloat("LethalFallMeters",20,safe+2,50);
- if(grounded||drop>=lethal){
-  int damage=SCCombat::fallDamage(drop,maxHP,safe,lethal);characterFalling=false;
+ if(grounded||(!characterBody.nonlethalFalls&&drop>=lethal)){
+  int base=SCCombat::fallDamage(drop,maxHP,safe,lethal);int damage=SCBody::landingDamage(base,hp,maxHP,characterBody);characterFalling=false;
   // Only while Character owns gravity. Native interactions/falling use native logic.
   if(damage>0&&hp>0&&maxHP>0&&maxHP<100000&&(read<uint32_t>(player+0x1fc)&0x4000)&&player==lastPlayer){
    int after=std::max(0,hp-damage);put<int>(player+0x2d4,after);

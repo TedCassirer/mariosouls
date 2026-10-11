@@ -19,6 +19,8 @@ def test(character,asset,runtime):
     f.run([f.BUILD/'feedback-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/motion_test.cpp',f.BUILD/'motion-test.exe')
     f.run([f.BUILD/'motion-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/body_test.cpp',f.BUILD/'body-test.exe')
+    f.run([f.BUILD/'body-test.exe'])
     for name in ['controller','action_input']:
         f.compile_cpp(f.FRAMEWORK/f'tests/{name}_test.cpp',f.BUILD/f'{name}-test.exe',extra=['-luser32','-ldxguid'])
         f.run([f.BUILD/f'{name}-test.exe'])
@@ -40,5 +42,5 @@ def test(character,asset,runtime):
     profile=json.loads((generated/'character.json').read_text());f.profile_header(profile,generated/'profile.generated.h')
     f.compile_cpp(generated/'adapter.cpp',generated/'character.dll',[generated],['-shared'])
     f.run([f.BUILD/'adapter-test.exe',generated/'character.dll'])
-    (f.BUILD/'test-report.json').write_text(json.dumps({'character':character,'checks':['installer transactions (5 tests)','core policies','confirmed-hit feedback','motion mailbox, clock, input latch and ownership lifecycle','controller mapping','native input routes','real character adapter','generated unrelated adapter','architecture boundaries'],'status':'passed','live_game_test':False,'host_sha256':f.sha(f.BUILD/'dinput8.dll'),'adapter_sha256':f.sha(f.BUILD/'characters'/character/'character.dll'),'asset_sha256':f.sha(Path(asset)) if asset else None,'runtime_sha256':f.sha(Path(runtime)) if runtime else None},indent=2))
+    (f.BUILD/'test-report.json').write_text(json.dumps({'character':character,'checks':['installer transactions (5 tests)','core policies','confirmed-hit feedback','motion mailbox, clock, input latch and ownership lifecycle','native body lifecycle and restoration','controller mapping','native input routes','real character adapter','generated unrelated adapter','architecture boundaries'],'status':'passed','live_game_test':False,'host_sha256':f.sha(f.BUILD/'dinput8.dll'),'adapter_sha256':f.sha(f.BUILD/'characters'/character/'character.dll'),'asset_sha256':f.sha(Path(asset)) if asset else None,'runtime_sha256':f.sha(Path(runtime)) if runtime else None},indent=2))
     print('Framework offline checks passed. This does not replace live-game regression tests.')

@@ -1,0 +1,36 @@
+Mario size and fall protection - Framework 0.3
+
+Installed and tested on Mario QA, level 6.
+
+Mario's visible model is 10% smaller. His movement body is now 44 cm wide and
+105 cm tall, versus 80 cm and 150 cm before. The secondary native contact body
+is 48 cm wide and 110 cm tall, versus 90 cm and 160 cm. Mario's own wall and
+ceiling checks use the smaller dimensions too. Running speed, jump distances
+and outgoing attack reach are unchanged.
+
+While Mario controls movement, landing damage is reduced by 95%, capped at
+5% of maximum health, and leaves at least 1 HP. Bottomless pits and native death
+zones can still kill him. Native scripted falls are not covered by this policy.
+
+Measured in game: 12 m fall = 5 HP damage; 25 m fall = 29 HP damage at 594 max HP.
+Normal jump = 2.42 m with no stamina cost. Enemy melee still hurts and knocks
+Mario back. Enemy bodies and closed doors remain solid; bonfire healing, Leave
+and jumping work. Switching Mario off restores the original human body.
+
+The body reduction is capsule-based, not a bone-by-bone hitbox rewrite. Projectile,
+grab and boss-specific avoidance margins have not been tested in this update.
+
+These settings belong to the shared framework's character descriptor. Mario's
+values live in framework/characters/mario64/character.json. Changing them requires
+rebuilding and testing; editing the installed manifest alone does not hot reload.
+
+Mario QA was saved at the bonfire at full health and the game closed normally.
+Controls are yours. During an earlier candidate launch, the main level-65 save
+was briefly selected accidentally and immediately quit, with no movement, Mario
+activation or gameplay checks. Its playtime increased by 36 seconds. All gameplay
+tests used Mario QA; pre-test save backups are retained.
+
+New local recovery checkpoint: checkpoint-2026-10-11-framework-v0.3-body
+Restore this update: Restore Mario size and fall checkpoint.cmd (close game first).
+Restore the prior update: Restore Framework robustness checkpoint.cmd.
+Old checkpoint tags and runtime archives remain unchanged. Nothing uploaded.

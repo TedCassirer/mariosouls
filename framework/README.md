@@ -1,4 +1,4 @@
-# Souls Character Framework 0.2
+# Souls Character Framework 0.3
 
 MarioSouls is the first character adapter for a shared Dark Souls PTDE integration.
 This is a working extraction of the installed 0.7 integration, with a versioned
@@ -69,3 +69,9 @@ and [verification](docs/VALIDATION.md). New gameplay work follows the root
 `AGENTS.md`. The old `work/` implementation is retained as history; its two build
 entry points now delegate to this framework. The old checkpoint tag and runtime
 archive are untouched.
+
+
+Version 0.3 adds independent model/body sizing and a landing damage policy to the
+shared descriptor (ABI 3). Mario's body profile reduces collision dimensions and
+landing damage without changing his movement speed or jump height. See the
+contract and validation report for exact dimensions and measured coverage.

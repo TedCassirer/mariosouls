@@ -10,7 +10,7 @@ extern "C" {
  * Velocity is centimetres/second. Yaw is radians: 0 faces +Z, positive toward +X.
  * Fixed simulation callbacks are 30 Hz; adapters resample their own engine if needed.
  * Input X is right, Y is forward relative to camera. No host pointers are exposed. */
-#define SC_ABI_VERSION 2u
+#define SC_ABI_VERSION 3u
 #define SC_FIXED_HZ 30u
 #define SC_MAX_ATTACKS 32u
 #define SC_MAX_TRIANGLES 16384u
@@ -53,6 +53,16 @@ typedef struct SC_Attack {
     /* Automatic contact eligibility, relative enemy feet. */
     float automaticRadiusCm, automaticMinHeightCm, automaticMaxHeightCm;
 } SC_Attack;
+
+/* Presentation is independent of locomotion speed and attack reach. Zero body
+ * dimensions keep the host's original body. Heights include both rounded ends.
+ * Fall reduction applies only to landing damage, never enemy/environment hits. */
+typedef struct SC_Body {
+    float modelScale;
+    float radiusCm, heightCm, hurtRadiusCm, hurtHeightCm;
+    float fallDamageScale, fallDamageMaxHPFraction;
+    uint32_t nonlethalFalls;
+} SC_Body;
 typedef struct SC_Descriptor {
     uint32_t size, abiVersion;
     char id[48], displayName[64];
@@ -61,6 +71,7 @@ typedef struct SC_Descriptor {
     int32_t automaticAttackId;
     float basePower, upgradePower, dexterityWeight;
     SC_Attack attacks[SC_MAX_ATTACKS];
+    SC_Body body;
 } SC_Descriptor;
 typedef void (*SC_Log)(const char *message);
 typedef struct SC_Init {

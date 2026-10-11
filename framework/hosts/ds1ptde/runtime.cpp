@@ -136,7 +136,9 @@ static int currentMap(){uintptr_t p=read<uint32_t>(mapSlot);if(!p)return -1;int 
 static bool loadMap(){
  int map=currentMap();if(map<0)return false;if(map==loadedMap&&!mapVertices.empty())return true;
  char file[MAX_PATH];GetPrivateProfileStringA("MarioSouls","Collision","",file,sizeof(file),ini);char*slash=strrchr(file,'\\');if(!slash)return false;snprintf(slash+1,sizeof(file)-(slash+1-file),"m%02d_%02d_00_00.bin",map/100,map%100);
- FILE*f=fopen(file,"rb");if(!f){logf("No collision cache for map %d",map);return false;}
+ char prepared[MAX_PATH]={},directory[MAX_PATH]={};GetPrivateProfileStringA("Framework","CollisionDirectory","",directory,sizeof(directory),ini);
+ FILE*f=nullptr;if(directory[0]){snprintf(prepared,sizeof(prepared),"%s\\m%02d_%02d_00_00.bin",directory,map/100,map%100);f=fopen(prepared,"rb");if(f)logf("Native-owned event collision cache: %s",prepared);}
+ if(!f)f=fopen(file,"rb");if(!f){logf("No collision cache for map %d",map);return false;}
  char magic[4];uint32_t count=0;bool ok=fread(magic,1,4,f)==4&&memcmp(magic,"MSC1",4)==0&&fread(&count,4,1,f)==1&&count>0&&count<2000000;std::vector<Vec> data;if(ok){data.resize(count*3);ok=fread(data.data(),sizeof(Vec),count*3,f)==count*3;}fclose(f);if(!ok)return false;mapVertices.swap(data);loadedMap=map;arenaLoad();arenaRefresh();logf("map=%d collision triangles=%u",map,count);return true;
 }
 static void rebuildSurfaces(){

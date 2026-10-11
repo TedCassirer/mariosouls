@@ -2,6 +2,8 @@
 import configparser
 import datetime
 import json
+import re
+import struct
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,7 +15,22 @@ def require_closed():
     alive=subprocess.run(['powershell','-NoProfile','-Command','[bool](Get-Process DARKSOULS -ErrorAction SilentlyContinue)'],capture_output=True,text=True,check=True).stdout.strip()
     if alive!='False':raise RuntimeError('Close Dark Souls normally before installing')
 
-def install(character,asset,runtime,check_only=False):
+def collision_files(directory):
+    directory=Path(directory)
+    manifest=json.loads((directory/'manifest.json').read_text())
+    if manifest.get('schema')!=1 or manifest.get('policy')!='event-colliders-native' or manifest.get('game_exe_sha256')!=f.sha(f.GAME/'DARKSOULS.exe'):raise RuntimeError('Invalid native collision cache manifest')
+    sources={}
+    if not manifest.get('files'):raise RuntimeError('Empty collision cache')
+    for name,digest in manifest['files'].items():
+        if not re.fullmatch(r'm\d{2}_\d{2}_\d{2}_\d{2}\.bin',name):raise RuntimeError('Unsafe collision cache filename')
+        source=directory/name
+        if not source.resolve().is_relative_to(directory.resolve()) or f.sha(source)!=digest:raise RuntimeError('Collision cache hash mismatch')
+        data=source.read_bytes()
+        if len(data)<8 or data[:4]!=b'MSC1' or not 0<struct.unpack_from('<I',data,4)[0]<2000000 or len(data)!=8+36*struct.unpack_from('<I',data,4)[0]:raise RuntimeError('Invalid collision cache format')
+        sources[f.GAME/'SoulsCharacterFramework/collision'/name]=source
+    return sources
+
+def install(character,asset,runtime,check_only=False,collision=None):
     folder,p=f.load_profile(character)
     if p['status']!='implemented':raise RuntimeError('Scaffolds cannot be installed as completed characters')
     build=f.BUILD/'characters'/character;receipt=json.loads((build/'build.json').read_text())
@@ -36,7 +53,11 @@ def install(character,asset,runtime,check_only=False):
     if p['assets'].get('required') and checks.get('asset_sha256')!=f.sha(Path(asset)):raise RuntimeError('Asset differs from the one used in the adapter tests')
     destination=f.GAME/'SoulsCharacterFramework/characters'/character
     old_character=cfg.get('Framework','Character',fallback='mario64')
+    previous_collision=cfg.get('Framework','CollisionDirectory',fallback='')
+    prepared_collision=collision_files(collision) if collision else {}
     cfg['Framework']={'Character':character,'Adapter':str(destination/'character.dll'),'ABI':'3'}
+    if prepared_collision:cfg['Framework']['CollisionDirectory']=str(f.GAME/'SoulsCharacterFramework/collision')
+    elif previous_collision:cfg['Framework']['CollisionDirectory']=previous_collision
     cfg[section]={'Asset':str(Path(asset).resolve()) if asset else '', 'Runtime':str(destination/p['assets']['runtime']) if p['assets'].get('runtime') else ''}
     combat='Combat.'+character
     if combat not in cfg:cfg[combat]=dict(cfg['Combat']) if old_character==character and 'Combat' in cfg else {}
@@ -52,6 +73,7 @@ def install(character,asset,runtime,check_only=False):
     backup=f.ROOT/'work/checkpoints'/('before-framework-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'));backup.mkdir(parents=True)
     with tempfile.TemporaryDirectory(dir=backup,prefix='stage-') as tmp:
         temp=Path(tmp);sources={f.GAME/'dinput8.dll':f.BUILD/'dinput8.dll',destination/'character.dll':build/'character.dll',destination/'character.json':folder/'character.json'}
+        sources.update(prepared_collision)
         if p['assets'].get('runtime'):sources[destination/p['assets']['runtime']]=Path(runtime)
         with (temp/'mariosouls.ini').open('w') as out:cfg.write(out)
         sources[f.GAME/'mariosouls.ini']=temp/'mariosouls.ini'
@@ -62,10 +84,10 @@ def install(character,asset,runtime,check_only=False):
             harness['Harness'].update(Armed='0',Heartbeat='0',Mode='0',Frames='0',Buttons='0')
             with (temp/'harness.ini').open('w') as out:harness.write(out)
             sources[harness_path]=temp/'harness.ini'
-        legacy=json.loads((f.GAME/'MarioSouls/install.json').read_text());legacy['version']='framework-0.4';legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
+        legacy=json.loads((f.GAME/'MarioSouls/install.json').read_text());legacy['version']='framework-0.4.1';legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
         (temp/'legacy.json').write_text(json.dumps(legacy,indent=2));sources[f.GAME/'MarioSouls/install.json']=temp/'legacy.json'
         target_manifest=f.GAME/'SoulsCharacterFramework/install.json'
-        installed={'framework_version':'0.4','character':character,'abi':3,'build':receipt,'backup':str(backup),'files':{str(dst.relative_to(f.GAME)).replace('\\','/'):f.sha(src) for dst,src in sources.items()}}
+        installed={'framework_version':'0.4.1','character':character,'abi':3,'build':receipt,'backup':str(backup),'files':{str(dst.relative_to(f.GAME)).replace('\\','/'):f.sha(src) for dst,src in sources.items()}}
         (temp/'install.json').write_text(json.dumps(installed,indent=2));sources[target_manifest]=temp/'install.json'
         # Stage every source before touching destinations, including on reinstall
         # when the configured runtime already lives at its destination.
@@ -91,4 +113,4 @@ def install(character,asset,runtime,check_only=False):
                 if previous[name]:shutil.copy2(backup/name,dst)
                 elif dst.exists():dst.unlink()
             raise
-    print('Installed framework 0.4 with '+character+'; previous files retained at '+str(backup))
+    print('Installed framework 0.4.1 with '+character+'; previous files retained at '+str(backup))

@@ -88,6 +88,22 @@ doors, enemies and props. The adapter must respect host corrections, not insist
 that a stale guest wall or enemy overlap is authoritative. Surface material is
 reserved in v2; the current host supplies zero.
 
+Prepared PTDE collision caches exclude MSB collision parts controlled by the native
+event instructions SetMapCollisionState/SetMapCollisionBackreadMaskState. Native
+Havok and live contacts own those barriers in both their enabled and disabled
+states. The adapter must not recreate a removed barrier. The preparation tool
+reads owned game files and refuses unresolved parameterized collision IDs. Maps
+without a prepared override retain their legacy cache; they are not implicitly
+revalidated by preparing another map.
+
+Attack contact callbacks receive a candidate point on/in the target's native
+collision volume, in local centimetres. It is no longer necessarily the actor's
+foot origin. Guest callbacks decide action eligibility/facing; they must not assume
+a human-sized target. The host checks reach and occlusion to that point, then uses
+the same point for native damage and confirmed impact feedback. Automatic downward
+attacks use the upper body surface. The host owns target bounds; adapters have no
+native pointers or memory access. This clarification keeps ABI 3 unchanged.
+
 Mesh arrays are unindexed triangles. Position/normal/color each have
 `capacityTriangles * 9` floats; UV has `capacityTriangles * 6`. Do not write beyond
 capacity. Set `numTrianglesUsed` on every successful step/pose. The descriptor

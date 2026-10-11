@@ -1,3 +1,52 @@
+# Framework 0.4.1: boss contact and event-controlled doorway (2026-10-11)
+
+The user reported that Mario could not damage the Asylum Demon and could not pass
+its side exit. Both were reproduced/investigated on Mario QA level 6 only.
+
+- Native boss capsule: radius 2.5 m, endpoints 2.5/5.0 m above its origin. The old
+  attack check required the origin inside 1.25 m, even though native collision
+  could keep it farther away. Shared contact geometry now queries the body surface;
+  automatic downward attacks query the upper surface. Native HP, defense, poise,
+  stamina and rewards remain authoritative. No attack power or movement changes.
+- Old side doorway test stopped Mario at X=15.260; F6/native movement crossed to
+  X=18.276. The static export incorrectly included event-controlled collision
+  h0550B1_0000 / entity 1813121, two triangles at X=15.5. The installed event scripts
+  normally disable it, then briefly enable it while a gate closes. The new offline
+  compiler derives native-owned collider IDs from the installed MSB/event files;
+  it removes them from guest static geometry and leaves native Havok/live contacts
+  responsible for the barrier. It never writes native event flags or door state.
+- New Asylum cache has 65,732 triangles, exactly the old 65,734 minus those two;
+  all other triangles are byte-identical. Other maps retain their old caches.
+- Fixed centered-door test ran from X=14.0 to X=29.432 and down the stairway,
+  Y=198.198 to193.150, while Mario remained active. An earlier off-center candidate
+  ended at the right jamb and was not counted as a successful passage.
+- Boss combo at initial center separation 3.092 m: HP813->794->775->714, one
+  confirmed contact per punch/kick. Stamina93->84->75->58 (9,9,17 including the
+  existing equipment modifier). Confirmed feedback31/32/32 ms, pauses34/34/48 ms.
+- Separate jump kick: boss813->767,19 stamina,31 ms confirmed impact. Boss then
+  damaged Mario594->330; native hurt reaction observed, no extra invulnerability.
+- Hollow1810101:44->0 from one punch, one31 ms confirmation; native reward20 souls
+  (132->152). First fixture attempt saw the target still streaming and aborted;
+  the retry explicitly waited for a living target before attacking.
+- Closed main door still stopped Mario at Z=-3.616. Free jump sampled2.40 m with
+  stamina93 throughout; offline guest test measured2.42 m. Bonfire healed to594.
+- Seven isolated installer tests, three event-ownership tests, capsule geometry,
+  body/lifecycle/input/feedback/combat checks and real Mario adapter tests passed.
+  The unchanged guest runtime retains22 cm radius,105 cm height,0.9 model scale
+  and5%/nonlethal ordinary landing damage policy. Falls were not retested live.
+
+Final install followed normal Quit Game/close at the bonfire, full594 HP. Transports
+are disarmed. The final rebuilt host/adapter are byte-identical to the live-tested
+DLLs after excluding only PE build timestamp fields; the final offline suite passed.
+Private evidence and exact hash comparison: work/contact-fix/. No physical controller,
+other areas, every move, boss stagger balance, or per-bone hitbox accuracy is claimed.
+Contact remains capsule-based; native damage rules still decide whether damage lands.
+Repeatable guarded fixtures are in framework/qa/contact_smoke.py (door/boss), with
+read-only native contact inspection in contact_probe.py. Boss stage requires the
+existing boss already on the arena floor; it does not spawn or alter enemies.
+
+---
+
 # Framework verification — 2026-10-11
 
 ## Framework 0.4 — Wind Waker Link first playable slice

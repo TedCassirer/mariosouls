@@ -66,7 +66,7 @@ static int characterNativeHit(int move,float power,float poise,int target,Vec po
  memcpy(characterAttacks[move]+0x50,&base,2);memcpy(characterAttacks[move]+0x5e,&stagger,2);
  characterPacketMove=move;characterPacketPower=power;characterPacketPoise=poise;characterPacketBuilt=false;
  int staminaBefore=read<int>(player+0x2e4);
- int result=nativeDamage(990050+move,10000,target,position.x,position.y+.8f,position.z);
+ int result=nativeDamage(990050+move,10000,target,position.x,position.y,position.z);
  logf("Character native call stamina before=%d after=%d",staminaBefore,read<int>(player+0x2e4));
  characterPacketMove=-1;if(!characterPacketBuilt){logf("Character damage packet was not constructed; disabling outgoing damage");characterDamageReady=false;}
  return result;

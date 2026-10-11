@@ -1,4 +1,9 @@
-# Souls Character Framework 0.4
+# Souls Character Framework 0.4.1
+
+0.4.1 fixes large-enemy contact by querying the native capsule surface and removes
+event-controlled colliders from guest static caches. Native Havok still owns those
+barriers. Mario's reduced body and fall policy are retained. See VALIDATION.md for
+the reproduced Asylum doorway and boss regression results.
 
 Wind Waker Link is the second real adapter, using an authored controller and
 privately extracted original assets. Shared skeletal asset loading, offline
@@ -40,6 +45,17 @@ file. On a failed copy it restores those files. ROMs are referenced, never copie
 is useful for adapter development but intentionally cannot produce an installable
 receipt: make a full build and run tests before installing. Build products and
 private QA evidence go under `work/framework-build/`.
+
+To prepare a map's collision from the installed game (private generated output):
+
+```powershell
+python tools/framework.py prepare-collision --map m18_01_00_00 --output work/my-new-collision-cache
+python tools/framework.py install --character mario64 --collision-directory work/my-new-collision-cache
+```
+
+The installer still requires an exact tested build and the configured owned assets.
+It verifies and backs up the cache with the runtime. Unprepared maps fall back to
+the existing legacy caches; only the Asylum was regenerated and checked in 0.4.1.
 
 Installed adapters live under `DATA/SoulsCharacterFramework/characters/<id>/`.
 `[Framework] Character` selects one adapter on startup; live swapping is not

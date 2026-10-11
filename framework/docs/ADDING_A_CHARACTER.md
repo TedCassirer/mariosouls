@@ -71,3 +71,10 @@ Optional `body` manifest values: `model_scale`, `radius_cm`, `height_cm`,
 and ceiling tests consistent with the host body; never scale velocities to obtain
 a smaller mesh. `build --with-runtime` builds the adapter's guest extension too.
 Rebuild both host and adapters for ABI3; earlier DLLs are rejected.
+
+`probeContact` now receives a native body contact candidate, not necessarily the
+enemy foot origin. Use that point for facing/action checks; do not infer target
+size or multiply attack reach by target size in an adapter. Shared host geometry
+handles large bodies, upper-surface automatic attacks, occlusion and native damage.
+Prepared collision caches leave event-controlled barriers to native Havok; an
+adapter must honor their live contact/resolution callbacks.

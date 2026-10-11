@@ -1,0 +1,16 @@
+Mario collision fix / Souls Character Framework 0.4.1
+
+Installed and tested on Mario QA.
+
+Fixed: attacks check the enemy body surface rather than its center.
+Fixed: the Asylum side exit no longer has a stale invisible barrier.
+Preserved: smaller Mario body/model, reduced fall damage, movement and combat balance.
+
+Verified: Asylum Demon combo 19 + 19 + 61 HP, jump kick 46 HP; side exit and stairs passable; closed main door solid; hollow damage/death/souls; free jumping; native incoming damage and bonfire healing.
+
+Game is closed at the bonfire with Mario QA at full health. Launch normally and press F6 to activate Mario.
+
+To restore this version later, close Dark Souls and run Restore Mario collision fix checkpoint.cmd in this folder. It restores the mod and corrected Asylum cache without restoring character saves.
+Older checkpoint helpers intentionally restore older versions and can bring the old bugs back.
+
+Other areas and every attack were not retested. Collision remains capsule-based, not an exact per-bone rewrite. The shared code supports future characters; Wind Waker Link was not live-tested during this Mario fix.

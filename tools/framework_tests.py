@@ -12,6 +12,7 @@ def test(character,asset,runtime):
     (f.BUILD/'test-report.json').unlink(missing_ok=True)
     f.architecture_check()
     f.run([sys.executable,f.ROOT/'tools/test_framework_install.py'])
+    f.run([sys.executable,f.FRAMEWORK/'tests/collision_test.py'])
     f.BUILD.mkdir(parents=True,exist_ok=True)
     f.compile_cpp(f.FRAMEWORK/'tests/core_test.cpp',f.BUILD/'core-test.exe')
     f.run([f.BUILD/'core-test.exe'])
@@ -23,6 +24,8 @@ def test(character,asset,runtime):
     f.run([f.BUILD/'body-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/kinematic_test.cpp',f.BUILD/'kinematic-test.exe')
     f.run([f.BUILD/'kinematic-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/contact_test.cpp',f.BUILD/'contact-test.exe')
+    f.run([f.BUILD/'contact-test.exe'])
     for name in ['controller','action_input']:
         f.compile_cpp(f.FRAMEWORK/f'tests/{name}_test.cpp',f.BUILD/f'{name}-test.exe',extra=['-luser32','-ldxguid'])
         f.run([f.BUILD/f'{name}-test.exe'])
@@ -51,5 +54,5 @@ def test(character,asset,runtime):
     profile=json.loads((generated/'character.json').read_text());f.profile_header(profile,generated/'profile.generated.h')
     f.compile_cpp(generated/'adapter.cpp',generated/'character.dll',[generated],['-shared'])
     f.run([f.BUILD/'adapter-test.exe',generated/'character.dll'])
-    (f.BUILD/'test-report.json').write_text(json.dumps({'character':character,'checks':['installer transactions (5 tests)','core policies','confirmed-hit feedback','motion mailbox, clock, input latch and ownership lifecycle','native body lifecycle and restoration','controller mapping','native input routes','real character adapter','generated unrelated adapter','architecture boundaries'],'status':'passed','live_game_test':False,'host_sha256':f.sha(f.BUILD/'dinput8.dll'),'adapter_sha256':f.sha(f.BUILD/'characters'/character/'character.dll'),'asset_sha256':f.sha(Path(asset)) if asset else None,'runtime_sha256':f.sha(Path(runtime)) if runtime else None},indent=2))
+    (f.BUILD/'test-report.json').write_text(json.dumps({'character':character,'checks':['installer transactions (7 tests)','core policies','event collision ownership (3 tests)','target capsule contact geometry','confirmed-hit feedback','motion mailbox, clock, input latch and ownership lifecycle','native body lifecycle and restoration','controller mapping','native input routes','real character adapter','generated unrelated adapter','architecture boundaries'],'status':'passed','live_game_test':False,'host_sha256':f.sha(f.BUILD/'dinput8.dll'),'adapter_sha256':f.sha(f.BUILD/'characters'/character/'character.dll'),'asset_sha256':f.sha(Path(asset)) if asset else None,'runtime_sha256':f.sha(Path(runtime)) if runtime else None},indent=2))
     print('Framework offline checks passed. This does not replace live-game regression tests.')

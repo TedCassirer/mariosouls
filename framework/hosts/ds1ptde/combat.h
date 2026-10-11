@@ -1,4 +1,5 @@
 #pragma once
+#include "target_geometry.h"
 static SCCombat::Settings characterBalance;
 static SCCombat::Window characterWindow;
 static DWORD characterRecoveryUntil=0;
@@ -102,9 +103,13 @@ static void combat(){
  for(uintptr_t at=begin;at<end;at+=4){
   uintptr_t npc=read<uint32_t>(at);if(!npc||npc==player)continue;
   int team=read<int>(npc+0x74),hp=read<int>(npc+0x2d4),id=read<int>(npc+0x208);if((team!=6&&team!=7&&team!=9)||hp<=0||hp>100000||id<=0)continue;
-  uintptr_t np=chain(npc+0x28,{0,0x1c});if(!np)continue;Vec pos=read<Vec>(np+0x10),delta=pos-p;
-  float range=attack?attack->rangeCm*.01f:automatic?automatic->rangeCm*.01f:0;if(!isfinite(dot(delta,delta))||delta.x*delta.x+delta.z*delta.z>range*range||delta.y>(attack?attack->maxHeightCm:140)*.01f||delta.y<(attack?attack->minHeightCm:-200)*.01f)continue;
-  if(!lineClear(p+Vec{0,.7f,0},pos+Vec{0,.7f,0})||!worldLineClear(p+Vec{0,.7f,0},pos+Vec{0,.7f,0},npc))continue;
+  uintptr_t np=chain(npc+0x28,{0,0x1c});if(!np)continue;Vec center=read<Vec>(np+0x10);
+  bool downward=characterWindow.move==SCCombat::None||characterWindow.move==profile->automaticAttackId;
+  SCContact::Capsule capsule;bool shaped=targetCapsule(npc,center,capsule);
+  Vec pos=shaped?targetContact(capsule,p,downward):center+Vec{0,downward?1.f:.7f,0},delta=pos-p;
+  float range=attack?attack->rangeCm*.01f:automatic?automatic->rangeCm*.01f:0;
+  if(!SCContact::inReach({p.x,p.y,p.z},{pos.x,pos.y,pos.z},range,(attack?attack->minHeightCm:-200)*.01f,(attack?attack->maxHeightCm:140)*.01f))continue;
+  if(!lineClear(p+Vec{0,.7f,0},pos)||!worldLineClear(p+Vec{0,.7f,0},pos,npc))continue;
   Vec local=(pos-origin)*100;uint32_t contact=guest->probeContact(character,local.x,local.y,local.z);
   // Invulnerable/knockback actions are never offensive stomp states. Require
   // feet above the enemy and tight horizontal overlap, not the old broad sphere.
@@ -119,10 +124,10 @@ static void combat(){
   DWORD now=GetTickCount();float poise=characterBalance.poise[move];auto last=characterLastStagger.find(id);if(last!=characterLastStagger.end()&&DWORD(now-last->second)<1000)poise=0;else characterLastStagger[id]=now;
   harnessHitAttempt(id,hp,990050+move,0,"hit_attempt");int result=characterNativeHit(move,characterWindow.attackPower,poise,id,pos);harnessHitAttempt(id,hp,990050+move,result,"native_call_return");
   if(!characterPacketBuilt){if(harness.armed)harnessStop("native_damage_pipeline_unavailable");return;}
-  feedbackTrack(npc,id,hp,characterWindow.serial,move,pos+Vec{0,1.05f,0}+unit(p-pos)*.32f);
+  feedbackTrack(npc,id,hp,characterWindow.serial,move,pos+unit(p+Vec{0,.7f,0}-pos)*.05f);
   // Commit the guest contact reaction once, after eligibility/stamina checks. The
   // read-only probe never bounces an exhausted Character or resets an attack window.
   if(first&&characterPacketBuilt)guest->commitContact(character,local.x,local.y,local.z,160);
-  logf("Character hit target=%d move=%s serial=%d hp_before=%d native_result=%d",id,attackName(move),characterWindow.serial,hp,result);
+  logf("Character hit target=%d move=%s serial=%d hp_before=%d native_result=%d body=%d contact=%.3f/%.3f/%.3f",id,attackName(move),characterWindow.serial,hp,result,shaped,pos.x,pos.y,pos.z);
  }
 }

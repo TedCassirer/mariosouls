@@ -1,5 +1,6 @@
 """Isolated installer transaction checks, with a fake game and no save access."""
 import json
+import struct
 from pathlib import Path
 import tempfile
 import unittest
@@ -41,6 +42,19 @@ class Installation(unittest.TestCase):
  def test_untested_binary(self):
   (self.build/'dinput8.dll').write_bytes(b'different')
   with self.assertRaisesRegex(RuntimeError,'exact build'):self.call()
+ def cache(self):
+  cache=self.root/'cache';cache.mkdir()
+  file=cache/'m18_01_00_00.bin';file.write_bytes(b'MSC1'+struct.pack('<I9f',1,*([0.]*9)))
+  (cache/'manifest.json').write_text(json.dumps(dict(schema=1,policy='event-colliders-native',game_exe_sha256=f.sha(self.game/'DARKSOULS.exe'),files={file.name:f.sha(file)})))
+  return cache
+ def test_collision_install_and_preservation(self):
+  cache=self.cache();installer.install('fixture',None,str(self.runtime),False,str(cache))
+  self.assertEqual((cache/'m18_01_00_00.bin').read_bytes(),(self.game/'SoulsCharacterFramework/collision/m18_01_00_00.bin').read_bytes())
+  self.call();self.assertIn('CollisionDirectory = ',(self.game/'mariosouls.ini').read_text())
+ def test_collision_hash_rejection(self):
+  cache=self.cache();(cache/'m18_01_00_00.bin').write_bytes(b'wrong')
+  with self.assertRaisesRegex(RuntimeError,'hash mismatch'):installer.install('fixture',None,str(self.runtime),False,str(cache))
+  self.assertEqual((self.game/'dinput8.dll').read_bytes(),b'old-host')
  def test_rollback_after_partial_copy(self):
   original=installer.shutil.copy2
   # Inject one failure after the host/adapter have been copied, then permit rollback.

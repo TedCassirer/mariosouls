@@ -10,7 +10,7 @@ import zipfile
 import framework as f
 
 ROOT=f.ROOT
-ROOT_FILES={'README.md','CONTRIBUTING.md','AGENTS.md','LICENSE','THIRD_PARTY.md','CHANGELOG.md','SECURITY.md','requirements-ci.txt','dependencies.lock.json'}
+ROOT_FILES={'.gitignore','.gitattributes','README.md','CONTRIBUTING.md','AGENTS.md','LICENSE','THIRD_PARTY.md','CHANGELOG.md','SECURITY.md','requirements-ci.txt','dependencies.lock.json'}
 PREFIXES=('framework/','tools/','patches/','docs/','licenses/','release/','.github/')
 BINARIES={'work/framework-build/dinput8.dll','work/framework-build/characters/mario64/character.dll','work/framework-build/characters/mario64/sm64.dll'}
 FORBIDDEN={'.z64','.n64','.v64','.rvz','.iso','.sl2','.scmesh','.scprop','.bin','.dcx','.hkx','.flver','.png','.jpg','.mp4','.exe','.dll','.zip'}

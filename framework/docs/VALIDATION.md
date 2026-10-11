@@ -1,3 +1,10 @@
+# Poise-aware kick knockback (2026-10-11)
+
+Framework 0.8.3: see [the kick impact record](KICK_IMPACTS.md) for measured
+combo/slide/jump reactions, Asylum Demon exclusion, native damage, test setup
+failures and coverage limits. Full framework tests and doctor passed. Native
+poise and reaction rules remain authoritative; no enemy motion is forced.
+
 # Bouncing Fire Flower (2026-10-11)
 
 Framework 0.8.2 extends ABI4 with an independently versioned optional projectile

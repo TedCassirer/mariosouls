@@ -68,25 +68,27 @@
       "name": "combo_kick",
       "multiplier": 1.1,
       "stamina_cost": 16,
-      "poise": 10,
+      "poise": 30,
       "active_ticks": 14,
       "max_targets": 8,
       "range_cm": 125,
       "min_height_cm": -200,
       "max_height_cm": 140,
-      "flags": []
+      "flags": [],
+      "knockback_cm": 140
     },
     {
       "name": "jump_kick",
       "multiplier": 0.95,
       "stamina_cost": 18,
-      "poise": 8,
+      "poise": 25,
       "active_ticks": 18,
       "max_targets": 8,
       "range_cm": 125,
       "min_height_cm": -200,
       "max_height_cm": 140,
-      "flags": []
+      "flags": [],
+      "knockback_cm": 115
     },
     {
       "name": "dive",
@@ -104,13 +106,14 @@
       "name": "slide_kick",
       "multiplier": 1.0,
       "stamina_cost": 20,
-      "poise": 8,
+      "poise": 35,
       "active_ticks": 24,
       "max_targets": 8,
       "range_cm": 125,
       "min_height_cm": -200,
       "max_height_cm": 140,
-      "flags": []
+      "flags": [],
+      "knockback_cm": 160
     },
     {
       "name": "stomp",

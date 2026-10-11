@@ -12,7 +12,14 @@ Start with [the framework guide](framework/README.md),
 [verification](framework/docs/VALIDATION.md). Future gameplay changes follow
 [AGENTS.md](AGENTS.md). The `work/` prototype remains historical source.
 
-Current local checkpoint: **framework 0.8.2 bouncing Fire Flower**, tagged
+Current local checkpoint: **framework 0.8.3 poise-aware kick knockback**, tagged
+`checkpoint-2026-10-11-kick-knockback`. Mario's combo, jump and slide kicks push
+small enemies using native impacts, with poise resistance and large-body
+exclusion. With the game closed, run
+`outputs/Restore kick knockback checkpoint.cmd` to return to this tested version.
+See [the kick evidence](framework/docs/KICK_IMPACTS.md) for measured behavior.
+
+The **framework 0.8.2 bouncing Fire Flower** checkpoint remains available, tagged
 `checkpoint-2026-10-11-bouncing-fireball`. Mario's ordinary Fireball casts faster
 and bounces on floors while native charges, enemy damage and rewards remain
 authoritative. With the game closed, run

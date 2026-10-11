@@ -32,6 +32,13 @@ typedef struct SC_ProjectileProfile {
     float castSpeed, speed, gravity, bounceSpeed, lifetime, spawnHeight;
 } SC_ProjectileProfile;
 typedef const SC_ProjectileProfile* (*SC_GetProjectileProfile)(uint32_t version,uint32_t size);
+/* Optional native impact tuning; zero distance opts an attack out. */
+#define SC_IMPACT_PROFILE_VERSION 1u
+typedef struct SC_ImpactProfile {
+    uint32_t size, version, attackCount, cooldownMs;
+    float resistantPoise, knockbackCm[SC_MAX_ATTACKS];
+} SC_ImpactProfile;
+typedef const SC_ImpactProfile* (*SC_GetImpactProfile)(uint32_t version,uint32_t size);
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u

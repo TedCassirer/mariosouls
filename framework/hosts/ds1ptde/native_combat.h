@@ -1,5 +1,13 @@
 #pragma once
 #include "param_templates.h"
+#include "../../core/impact.h"
+static SC_ImpactProfile characterImpact{};
+static bool characterImpactSupported=false;
+static void impactConfigure(){
+ auto entry=(SC_GetImpactProfile)GetProcAddress(adapterModule,"SoulsCharacterGetImpactProfile");
+ auto p=entry?entry(SC_IMPACT_PROFILE_VERSION,sizeof(SC_ImpactProfile)):nullptr;
+ characterImpactSupported=SCImpact::valid(p,profile->attackCount);if(characterImpactSupported)characterImpact=*p;
+}
 // Exact PTDE executable only; private rows never replace native ladder rows.
 static unsigned char characterAttacks[SC_MAX_ATTACKS][128],characterBehaviors[SC_MAX_ATTACKS][32];
 static bool characterDamageReady=false;
@@ -28,6 +36,7 @@ using CharacterBuildPacket=bool(__cdecl*)(uintptr_t,int,uintptr_t,uintptr_t,int,
 static CharacterBuildPacket characterOriginalPacket=nullptr;
 static thread_local int characterPacketMove=-1;
 static thread_local float characterPacketPower=0,characterPacketPoise=0;
+static thread_local float characterPacketKnockback=-1;
 static thread_local bool characterPacketBuilt=false;
 static bool __cdecl characterBuildPacket(uintptr_t out,int id,uintptr_t effects,uintptr_t context,int a,int b,float c){
  // Native guard selects the left item for its attack context. A guest right-hand
@@ -47,6 +56,9 @@ static bool __cdecl characterBuildPacket(uintptr_t out,int id,uintptr_t effects,
   float prior=read<float>(out);put<float>(out,characterPacketPower);
   for(int off:{4,8,12})put<float>(out+off,0.f);
   put<float>(out+0x28,characterPacketPoise);
+  // D20122..D20145 copies AtkParam +10 to packet +54. Native poise,
+  // guard and reaction remapping downstream decide whether it moves the target.
+  if(characterPacketKnockback>=0)put<float>(out+0x54,characterPacketKnockback);
   // No weapon status/SpEffect inheritance or weapon attack multipliers.
   for(int off=0x6c;off<=0x88;off+=4)put<int>(out+off,-1);
   for(int off:{0x58,0x8c,0x90,0x94,0x98,0x9c,0xa0,0xa4})put<float>(out+off,1.f);
@@ -69,11 +81,12 @@ static bool characterInstallDamage(){
  for(int i=0;i<4;i++)if(MH_EnableHook(addresses[i])!=MH_OK){for(auto p:addresses){MH_DisableHook(p);MH_RemoveHook(p);}return false;}
  characterDamageReady=true;logf("Character-owned native attack templates ready");return true;
 }
-static int characterNativeHit(int move,float power,float poise,int target,Vec position){
+static int characterNativeHit(int move,float power,float poise,int target,Vec position,float knockback=-1){
  if(!characterDamageReady||move<0||move>=int(profile->attackCount))return -1;
  uint16_t base=(uint16_t)std::clamp(power,0.f,2000.f),stagger=(uint16_t)poise;
  memcpy(characterAttacks[move]+0x50,&base,2);memcpy(characterAttacks[move]+0x5e,&stagger,2);
- characterPacketMove=move;characterPacketPower=power;characterPacketPoise=poise;characterPacketBuilt=false;
+ float distance=knockback>=0?knockback:.3f;memcpy(characterAttacks[move]+0x10,&distance,4);
+ characterPacketMove=move;characterPacketPower=power;characterPacketPoise=poise;characterPacketKnockback=knockback;characterPacketBuilt=false;
  int staminaBefore=read<int>(player+0x2e4);
  int result=nativeDamage(990050+move,10000,target,position.x,position.y,position.z);
  logf("Character native call stamina before=%d after=%d",staminaBefore,read<int>(player+0x2e4));

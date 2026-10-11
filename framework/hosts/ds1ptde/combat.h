@@ -36,6 +36,7 @@ static float combatEquipmentWeight(uintptr_t stats){
  }return total;
 }
 static std::unordered_map<int,DWORD> characterLastStagger;
+static std::unordered_map<int,SCImpact::Cooldown> characterLastPush;
 static char combatConfigSection[96]={};
 static float combatFloat(const char* key,float fallback,float lo,float hi){char d[40],v[40];snprintf(d,sizeof(d),"%.4f",fallback);GetPrivateProfileStringA(combatConfigSection,key,d,v,sizeof(v),ini);float f=strtof(v,nullptr);return isfinite(f)?std::clamp(f,lo,hi):fallback;}
 static void combatSettings(){
@@ -48,7 +49,7 @@ static void combatSettings(){
 
  for(unsigned i=0;i<profile->attackCount;i++){char key[80];snprintf(key,sizeof(key),"%s_multiplier",attackName(i));characterBalance.multiplier[i]=combatFloat(key,profile->attacks[i].multiplier,0,3);snprintf(key,sizeof(key),"%s_cost",attackName(i));characterBalance.poise[i]=profile->attacks[i].poise;characterBalance.cost[i]=std::clamp<int>(GetPrivateProfileIntA(combatConfigSection,key,profile->attacks[i].staminaCost,ini),0,100);}
 }
-static void combatReset(){equipmentClearNativeBlock();equipmentReset();feedbackReset();characterWindow.reset();characterRecoveryUntil=0;characterStaminaCeiling=0;characterLandingRecovery=0;characterLastStagger.clear();characterFalling=false;}
+static void combatReset(){equipmentClearNativeBlock();equipmentReset();feedbackReset();characterWindow.reset();characterRecoveryUntil=0;characterStaminaCeiling=0;characterLandingRecovery=0;characterLastStagger.clear();characterLastPush.clear();characterFalling=false;}
 static bool combatTestDrop(int height){
  if(!harness.armed||!harnessIdentity()||!characterOwned()||nativeActionOwned()||height<1||height>25||state.position[1]>state.floorHeight+5)return false;
  state.position[1]+=height*100;guest->setPosition(character,state.position[0],state.position[1],state.position[2]);guest->command(character,SC_COMMAND_FALL);state.flags=0;
@@ -124,8 +125,17 @@ static void combat(){
   bool first=characterWindow.hit.empty();characterWindow.hit.insert(id);
   debugContact(pos,false);
   char fields[240];snprintf(fields,sizeof(fields),",\"move\":\"%s\",\"serial\":%d,\"target_id\":%d,\"power\":%.3f",attackName(move),characterWindow.serial,id,characterWindow.attackPower);harnessEvent("character_contact",fields);
-  DWORD now=GetTickCount();float poise=characterBalance.poise[move];auto last=characterLastStagger.find(id);if(last!=characterLastStagger.end()&&DWORD(now-last->second)<1000)poise=0;else characterLastStagger[id]=now;
-  harnessHitAttempt(id,hp,990050+move,0,"hit_attempt");int result=characterNativeHit(move,characterWindow.attackPower,poise,id,pos);harnessHitAttempt(id,hp,990050+move,result,"native_call_return");
+  DWORD now=GetTickCount();float poise=characterBalance.poise[move],push=-1;
+  bool pushAttack=characterImpactSupported&&characterImpact.knockbackCm[move]>0;
+  if(pushAttack){
+   auto&cooldown=characterLastPush[id];bool ready=cooldown.ready(npc,now,characterImpact.cooldownMs);
+   float current=NAN,maximum=NAN;get(npc+0x1c0,current);get(npc+0x1c4,maximum);
+   if(!ready)poise=0;
+   push=shaped&&ready?SCImpact::distance(characterImpact.knockbackCm[move],current,maximum,poise,characterImpact.resistantPoise,capsule.radius,capsule.top+capsule.radius):0;
+   if(push>0)cooldown.commit(npc,now);
+   logf("Character push target=%d move=%s poise=%.2f/%.2f attack_poise=%.2f requested_m=%.3f ready=%d radius=%.3f height=%.3f",id,attackName(move),current,maximum,poise,push,ready,shaped?capsule.radius:0,shaped?capsule.top+capsule.radius:0);
+  }else{auto last=characterLastStagger.find(id);if(last!=characterLastStagger.end()&&DWORD(now-last->second)<1000)poise=0;else characterLastStagger[id]=now;}
+  harnessHitAttempt(id,hp,990050+move,0,"hit_attempt");int result=characterNativeHit(move,characterWindow.attackPower,poise,id,pos,push);harnessHitAttempt(id,hp,990050+move,result,"native_call_return");
   if(!characterPacketBuilt){if(harness.armed)harnessStop("native_damage_pipeline_unavailable");return;}
   feedbackTrack(npc,id,hp,characterWindow.serial,move,pos+unit(p+Vec{0,.7f,0}-pos)*.05f);
   // Commit the guest contact reaction once, after eligibility/stamina checks. The

@@ -450,3 +450,24 @@ interruption, death, interaction and mode handback release the lease. Source
 pointers and actor identity are checked before restoration; external rate edits
 revoke ownership. `[Projectiles] Enabled=0` in mariosouls.ini disables enrollment
 and cast acceleration; already-launched shots finish their bounded flight.
+
+## Optional native impact profile (version 1)
+
+`SoulsCharacterGetImpactProfile(version, size)` returns `SC_ImpactProfile` or null
+for incompatible requests. ABI4 is unchanged. `attackCount` must match the main
+descriptor; `knockbackCm` indexes the same attacks. Zero leaves an attack on its
+existing native path. Distances are bounded to 200 cm, cooldown to 1000..5000 ms,
+and the resistant-poise threshold to 20..200. Invalid profiles opt out.
+
+DS1 reads target current/maximum poise and its native collision capsule. At a
+possible poise break, requested displacement scales by `1 - maxPoise/threshold`.
+At/above the threshold, unknown shapes, radius above 80 cm or height above 280 cm,
+the enhanced attack requests zero displacement. Native guard, immunity and reaction
+remapping remain final authorities. The host writes only its own attack row and
+pre-defense packet, never target position, velocity or poise. A target-specific
+cooldown prevents repeated enhanced pushes; punches do not consume that cooldown.
+The cooldown is conservatively spent on a push request, even if native defenses
+later reject it. Target identity and actor reference are checked on reuse.
+
+Mario opts in for combo kick, jump kick and slide kick. Other guest attacks,
+equipped weapons, criticals and projectiles keep their existing impact paths.

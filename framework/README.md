@@ -1,4 +1,10 @@
-# Souls Character Framework 0.8.2
+# Souls Character Framework 0.8.3
+
+Mario's combo finisher, jump kick and slide kick now request stronger native
+knockback on small enemies whose poise can be broken. Push decreases with poise;
+large bodies are excluded even if their numeric poise is zero. A per-enemy
+cooldown limits repeated enhanced pushes. Equipped weapons are unchanged.
+See [kick tuning and live evidence](docs/KICK_IMPACTS.md).
 
 Mario's Fire Flower now launches a fast, bouncing Fireball. Casting takes about
 0.9 seconds instead of the measured native 2.7 seconds. Floor contacts bounce the

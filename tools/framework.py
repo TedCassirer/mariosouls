@@ -58,6 +58,8 @@ def load_profile(character):
         if not re.fullmatch('[a-z][a-z0-9_]{0,30}',name) or name in names:raise ValueError('Attack names must be unique identifiers')
         names.append(name)
         if any(flag not in FLAGS for flag in attack['flags']):raise ValueError('Unknown attack flag')
+        knockback=attack.get('knockback_cm',0)
+        if isinstance(knockback,bool) or not isinstance(knockback,(int,float)) or not math.isfinite(knockback) or not 0<=knockback<=200:raise ValueError('Attack knockback must be 0..200 cm')
     if any(cap not in CAPS for cap in p['capabilities']):raise ValueError('Unknown capability')
     runtime=p.get('assets',{}).get('runtime')
     if runtime and not re.fullmatch('[a-zA-Z0-9_-]+\\.dll',runtime):raise ValueError('Runtime must be a DLL filename')
@@ -83,6 +85,7 @@ def profile_header(p,path):
     text='static const SC_Descriptor characterProfile={sizeof(SC_Descriptor),SC_ABI_VERSION,'+','.join([json.dumps(p['id']),json.dumps(p['display_name']),integer(p['max_triangles']),integer(p['texture'][0]),integer(p['texture'][1]),str(sum(CAPS[c] for c in p['capabilities'])),integer(p.get('audio_rate',0)),str(len(attacks)),str(auto),num(p['base_power']),num(p['upgrade_power']),num(p['dexterity_weight'])])+',{'+','.join(attacks)+'},{'+body_code+'}};\n'
     path.write_text(text,encoding='utf-8')
     with path.open('a',encoding='utf-8') as stream:stream.write('static const SC_CameraProfile characterCameraProfile={sizeof(SC_CameraProfile),SC_CAMERA_PROFILE_VERSION,'+num(p.get('camera',{'distance_scale':1.0})['distance_scale'])+'};\n')
+    with path.open('a',encoding='utf-8') as stream:stream.write('static const SC_ImpactProfile characterImpactProfile={sizeof(SC_ImpactProfile),SC_IMPACT_PROFILE_VERSION,'+str(len(attacks))+',1200,80,{'+','.join(num(a.get('knockback_cm',0)) for a in p['attacks'])+'}};\n')
 
 
 def compile_cpp(source,dest,includes=(),extra=()):
@@ -113,7 +116,7 @@ def build(character,adapter_only=False,with_runtime=False):
             run([ZIG,'cc','-target','x86-windows-gnu','-O2','-c',source,'-o',obj]);objects.append(obj)
         compile_cpp(FRAMEWORK/'hosts/ds1ptde/runtime.cpp',BUILD/'dinput8.dll',extra=['-shared',FRAMEWORK/'hosts/ds1ptde/proxy.def',*objects,'-ld3d9','-ldxguid','-luser32','-lwinmm','-lgdi32'])
     source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.c','.cpp','.def','.py','.json','.in'])
-    receipt={'framework_version':'0.8.2','abi':4,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
+    receipt={'framework_version':'0.8.3','abi':4,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
         'adapter_sha256':sha(out/'character.dll'),'source_sha256':{f.relative_to(ROOT).as_posix():sha(f) for f in source_paths}}
     if not adapter_only:receipt['host_sha256']=sha(BUILD/'dinput8.dll')
     (out/'build.json').write_text(json.dumps(receipt,indent=2))

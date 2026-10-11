@@ -10,6 +10,7 @@
 #include "../core/validation.h"
 #include "../core/camera.h"
 #include "../core/projectile.h"
+#include "../core/impact.h"
 static void log(const char*s){printf("adapter: %s\n",s);}
 int main(int argc,char**argv){
  if(argc<2)return 2;HMODULE dll=LoadLibraryA(argv[1]);if(!dll){printf("LoadLibrary failed %lu\n",GetLastError());return 3;}
@@ -20,6 +21,10 @@ int main(int argc,char**argv){
   assert(SCCamera::valid(camera(SC_CAMERA_PROFILE_VERSION,sizeof(SC_CameraProfile))));
  }
  std::vector<uint8_t> atlas(d->textureWidth*d->textureHeight*4);
+ if(auto impact=(SC_GetImpactProfile)GetProcAddress(dll,"SoulsCharacterGetImpactProfile")){
+  assert(!impact(99,sizeof(SC_ImpactProfile)));assert(!impact(SC_IMPACT_PROFILE_VERSION,0));
+  assert(SCImpact::valid(impact(SC_IMPACT_PROFILE_VERSION,sizeof(SC_ImpactProfile)),d->attackCount));
+ }
  if(auto projectile=(SC_GetProjectileProfile)GetProcAddress(dll,"SoulsCharacterGetProjectileProfile")){
   assert(!projectile(99,sizeof(SC_ProjectileProfile)));assert(!projectile(SC_PROJECTILE_PROFILE_VERSION,0));
   assert(SCProjectile::valid(projectile(SC_PROJECTILE_PROFILE_VERSION,sizeof(SC_ProjectileProfile))));

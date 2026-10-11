@@ -172,3 +172,13 @@ hands, floor seams, walls, enemy damage, charges, recovery and native fallback.
 `pyromancy_smoke.py --yaw -1.5707963` provides a courtyard flight fixture, while
 `--enemy --target 1810103 --distance 3` uses the guarded hollow. Evidence is not
 success until the trace and recording are checked.
+
+## Optional kick or shove impacts
+
+Add `knockback_cm` (0..200) to selected attacks in character.json; omitted values
+are zero. The generator emits `characterImpactProfile` with a 1200 ms push cooldown
+and an 80-poise resistance threshold. Export `SoulsCharacterGetImpactProfile`
+using the SDK version/size handshake to opt in. Custom adapters may author a
+bounded profile directly. Keep poise attack power in the existing attack entry.
+The host applies native impacts and immunity; adapters must not move enemy bodies.
+Verify light and resistant targets, attack chains, guarding and map collision.

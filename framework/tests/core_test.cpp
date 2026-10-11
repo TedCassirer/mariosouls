@@ -3,10 +3,19 @@
 #include "../core/validation.h"
 #include "../core/camera.h"
 #include "../core/projectile.h"
+#include "../core/impact.h"
 #include <cassert>
 #include <cstdio>
 #include <limits>
 int main(){
+ SC_ImpactProfile impact={sizeof(impact),SC_IMPACT_PROFILE_VERSION,8,1200,80,{0,0,140,115,0,160}};assert(SCImpact::valid(&impact,8));
+ auto badImpact=impact;badImpact.knockbackCm[2]=NAN;assert(!SCImpact::valid(&badImpact,8));badImpact=impact;badImpact.version=99;assert(!SCImpact::valid(&badImpact,8));assert(!SCImpact::valid(&impact,7));
+ assert(fabsf(SCImpact::distance(140,0,0,30,80,.3f,1.8f)-1.4f)<.001f);
+ assert(fabsf(SCImpact::distance(140,20,40,30,80,.3f,1.8f)-.7f)<.001f);
+ assert(SCImpact::distance(140,40,40,30,80,.3f,1.8f)==0);assert(SCImpact::distance(140,0,80,30,80,.3f,1.8f)==0);
+ assert(SCImpact::distance(140,0,0,30,80,2,5)==0);assert(SCImpact::distance(140,NAN,0,30,80,.3f,1.8f)==0);assert(SCImpact::distance(140,0,0,0,80,.3f,1.8f)==0);
+ SCImpact::Cooldown pushCooldown;assert(pushCooldown.ready(123,0,1200));pushCooldown.commit(123,0xfffffff0u);assert(!pushCooldown.ready(123,10,1200));assert(pushCooldown.ready(123,1300,1200));assert(pushCooldown.ready(456,10,1200));
+ puts("PASS impact: poise break eligibility, resistance scaling, large-body exclusion, invalid data, repeat suppression and clock wrap");
  SC_ProjectileProfile projectile={sizeof(projectile),SC_PROJECTILE_PROFILE_VERSION,SC_PROJECTILE_FIREBALL,3.5f,1200,2400,600,3,75};assert(SCProjectile::valid(&projectile));
  auto badProjectile=projectile;badProjectile.gravity=NAN;assert(!SCProjectile::valid(&badProjectile));badProjectile=projectile;badProjectile.lifetime=100;assert(!SCProjectile::valid(&badProjectile));badProjectile=projectile;badProjectile.castSpeed=0;assert(!SCProjectile::valid(&badProjectile));
  assert(SCProjectile::floorBounce(1,1,-5,0));assert(!SCProjectile::floorBounce(0,1,-5,0));assert(!SCProjectile::floorBounce(-1,1,-5,0));assert(!SCProjectile::floorBounce(1,1,5,0));assert(!SCProjectile::floorBounce(1,1,-5,12));

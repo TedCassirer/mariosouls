@@ -56,7 +56,7 @@ class Host:
   return [[j,self.i(t+j*0x9c)] for j in range(29) if self.u(t+j*0x9c+4)!=0xffffffff]
  def actor(self,p):
   pos=self.chain(p,0x28,0x1c)
-  return dict(reference=hex(p),id=self.i(p+0x208),model=self.read(p+0x38,20).decode('utf-16-le',errors='replace').split('\0')[0],team=self.i(p+0x74),hp=self.i(p+0x2d4),hp_max=self.i(p+0x2d8),stamina=self.i(p+0x2e4),position=self.v(pos+0x10),facing=self.f(pos+4),flags1=self.u(p+0x1fc),flags2=self.u(p+0x3c4),tracks=self.tracks(p))
+  return dict(reference=hex(p),id=self.i(p+0x208),model=self.read(p+0x38,20).decode('utf-16-le',errors='replace').split('\0')[0],team=self.i(p+0x74),hp=self.i(p+0x2d4),hp_max=self.i(p+0x2d8),stamina=self.i(p+0x2e4),poise=self.f(p+0x1c0),poise_max=self.f(p+0x1c4),position=self.v(pos+0x10),facing=self.f(pos+4),flags1=self.u(p+0x1fc),flags2=self.u(p+0x3c4),tracks=self.tracks(p))
  def snapshot(self,target_id=1810101,require_test=True):
   stats=self.chain(0x1378700,0,8);name=self.read(stats+0xa0,40).decode('utf-16-le',errors='replace').split('\0')[0]
   level=self.i(stats+0x88)

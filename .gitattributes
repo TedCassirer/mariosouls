@@ -3,3 +3,8 @@
 *.jpg binary
 *.mp4 binary
 *.zip binary
+
+# Keep historical investigations and local helper files out of GitHub language stats.
+work/** linguist-vendored
+outputs/** linguist-vendored
+checkpoints/** linguist-vendored

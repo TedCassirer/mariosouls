@@ -11,8 +11,9 @@ costume while hiding hand props when necessary.
 Attune Fireball at a bonfire and select it with the native spell selector.
 Right flower: B/RB/left mouse. Left flower: RT/Tab. The left input takes the
 place of parrying while that hand holds a flame; a shield still uses it to parry.
-LB/Shift remains the held-block input, not the flower cast control. A/Space
-retains contextual interaction/jumping. Empty right hand retains Mario attacks.
+LB/right mouse remains the held-block input, not the flower cast control.
+A interacts at eligible prompts and jumps elsewhere; Space jumps and Q interacts.
+Empty right hand retains Mario attacks.
 One-handed use only; sorcery/miracle catalysts and two-handing are not supported.
 
 The host invokes the actual native cast. It does not grant unlimited fireballs,

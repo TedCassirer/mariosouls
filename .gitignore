@@ -3,6 +3,15 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
+!/CONTRIBUTING.md
+!/docs/
+/docs/*
+!/docs/*.md
+!/.github/
+/.github/*
+!/.github/ISSUE_TEMPLATE/
+/.github/ISSUE_TEMPLATE/*
+!/.github/ISSUE_TEMPLATE/*.md
 !/AGENTS.md
 !/framework/
 /framework/**
@@ -37,7 +46,9 @@
 !/work/*.def
 !/work/*.py
 !/work/*.ps1
+/work/doorway-*.py
 !/work/MODLOG.md
+!/work/README.md
 !/work/MODDING_PLAN.md
 /work/asylum.evs.py
 !/work/combat-harness/
@@ -84,6 +95,7 @@
 !/outputs/
 /outputs/*
 !/outputs/*.txt
+!/outputs/README.md
 !/outputs/*.csv
 !/outputs/*.ps1
 !/outputs/*.cmd

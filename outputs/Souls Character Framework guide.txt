@@ -1,0 +1,58 @@
+SOULS CHARACTER FRAMEWORK 0.1
+
+Mario now runs as the first character module in a reusable Dark Souls framework.
+The framework shares world collision, rendering, menus and interactions, native
+health/stamina, damage, progression, controller routing and test tools.
+
+Future changes should go through the framework:
+  framework/hosts/ds1ptde/     Dark Souls integration
+  framework/core/             shared gameplay rules
+  framework/sdk/              character interface
+  framework/characters/      each character's engine and animations
+
+Mario's code is under characters/mario64. A future Link or DK module goes in its
+own folder and plugs into the same interface. Neither port exists yet. They still
+need an appropriate movement/animation engine and an asset loader; a model or ROM
+alone is not enough. New abilities that do not fit the interface should extend
+the shared framework, so subsequent characters can use them too.
+
+Developer starting points, from the project directory:
+  python tools/framework.py doctor
+  python tools/framework.py build --with-runtime
+  python tools/framework.py new-character my_character --name "My character"
+
+The generator creates a compilable example, not a finished port. The installer
+refuses unfinished examples. Build/test/install instructions are in
+framework/README.md; the interface and porting guide are in framework/docs/.
+AGENTS.md directs future development to these shared components.
+
+VERIFICATION
+Offline checks passed for the Mario module, an unrelated generated sample module,
+combat policy, input/controller routes and installer rollback.
+
+Live checks used Mario QA (level 6), not the level-65 character:
+- key pickup and native door opening while Mario remained active
+- closed-door collision and readable text in front of Mario
+- jumps around 2.4 metres with no stamina cost
+- a punch costing 9 stamina with the current equipment penalty
+- native hollow death and 20 souls
+- bonfire light/rest/leave, followed by a working jump and punch
+
+See Souls Character Framework regression.mp4 for the short bonfire recording.
+The full test scope and remaining unverified scenarios are documented in
+framework/docs/VALIDATION.md. This pass does not prove every NPC, item or area.
+Mario QA was saved and the game closed normally after testing.
+
+RECOVERY
+The original checkpoint-2026-10-11-mariosouls-v0.7 tag and private runtime archive
+are preserved. "Restore MarioSouls checkpoint.cmd" still returns the installed
+mod to that version without restoring or changing saves. Quit the game first.
+
+The framework installer also backs up replaced files under work/checkpoints/.
+Keep this workspace's ignored runtime archives and dependencies with the source
+repository; Git contains authored code, not ROMs, game assets, saves or binaries.
+
+The existing mariosouls.ini and log names are retained for compatibility. Character
+selection is in [Framework]; Mario balance overrides are in [Combat.mario64].
+Switching modules requires restarting the game. No online repository was created
+and no files were published.

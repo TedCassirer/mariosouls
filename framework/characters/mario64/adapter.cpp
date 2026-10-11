@@ -1,0 +1,161 @@
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include "../../sdk/character_api.h"
+#include "../../../work/libsm64/src/libsm64.h"
+#include "profile.generated.h"
+
+// libsm64 and ROM formats are private to this adapter. The host never sees them.
+static HMODULE runtime=nullptr;
+static bool initialized=false;
+static SC_Log report=nullptr;
+static std::vector<uint8_t> rom;
+static SM64MarioState raw{};
+static uint32_t previousAction=0;
+static int32_t active=-1;
+static decltype(&sm64_global_init) libInit;
+static decltype(&sm64_global_terminate) libShutdown;
+static decltype(&sm64_audio_init) libAudioInit;
+static decltype(&sm64_audio_tick) libAudio;
+static decltype(&sm64_static_surfaces_load) libSurfaces;
+static decltype(&sm64_host_contacts_load) libContacts;
+static decltype(&sm64_mario_create) libCreate;
+static decltype(&sm64_mario_delete) libDestroy;
+static decltype(&sm64_mario_tick) libTick;
+static decltype(&sm64_mario_host_pose_tick) libPose;
+static decltype(&sm64_mario_host_resume) libResume;
+static decltype(&sm64_mario_hand_matrix) libHand;
+static decltype(&sm64_set_mario_position) libPosition;
+static decltype(&sm64_set_mario_action) libAction;
+static decltype(&sm64_set_mario_faceangle) libFace;
+static void (*libHealth)(int32_t,int32_t);
+static decltype(&sm64_surface_find_floor_height) libFloor;
+static uint32_t (*libProbe)(int32_t,float,float,float);
+static decltype(&sm64_mario_attack) libContact;
+
+enum Move { None=-1,Punch1,Punch2,Kick,JumpKick,Dive,SlideKick,Stomp,Pound };
+static int identify(uint32_t a,unsigned arg){
+    if(a==0x00800380||a==0x00800457){if(arg<=2)return Punch1;if(arg<=5)return Punch2;if(arg==6)return Kick;if(arg==9)return SlideKick;return None;}
+    if(a==0x018008ac)return JumpKick;
+    if(a==0x0188088a||a==0x00880456)return Dive;
+    if(a==0x018008aa||a==0x0080045a)return SlideKick;
+    if(a==0x008008a9||a==0x0080023c)return Pound;
+    return None;
+}
+static void state(SC_State*out){
+    *out={};for(int i=0;i<3;i++){out->position[i]=raw.position[i];out->velocity[i]=raw.velocity[i]*SC_FIXED_HZ;}
+    out->faceAngle=raw.faceAngle;out->forwardSpeed=raw.forwardVelocity*SC_FIXED_HZ;out->floorHeight=raw.floorHeight;
+    out->rawAction=raw.action;out->rawFlags=raw.flags;out->rawActionArg=raw.actionArg;out->rawActionTimer=raw.actionTimer;out->rawAnimation=raw.animID;out->rawAnimationFrame=raw.animFrame;
+    out->attackId=identify(raw.action,raw.actionArg);out->interruptedAttackId=identify(raw.interruptedAction,0);
+    if(!(raw.action&0x800)){out->flags|=SC_CAN_INTERACT;if(raw.position[1]<=raw.floorHeight+5)out->flags|=SC_GROUNDED;}
+    if(!(raw.action&0x20000))out->flags|=SC_AUTO_ATTACK_ELIGIBLE;
+    bool hitting=false;
+    switch(out->attackId){
+        case Punch1:case Punch2:hitting=raw.flags&0x00100000;break;
+        case Kick:case JumpKick:hitting=raw.flags&0x00200000;break;
+        case Dive:case SlideKick:hitting=true;break;
+        case Pound:hitting=(raw.action==0x008008a9&&raw.velocity[1]<0)||(raw.action==0x0080023c&&raw.actionTimer<=2);break;
+    }
+    if(hitting)out->flags|=SC_ATTACK_ACTIVE;
+    if(raw.action==0x0080023c&&previousAction!=raw.action)out->landingRecoveryTicks=12;
+    previousAction=raw.action;
+}
+static bool geometry(SC_Mesh*m,SM64MarioGeometryBuffers&g){
+    if(!m||m->capacityTriangles<SM64_GEO_MAX_TRIANGLES||!m->position||!m->normal||!m->color||!m->uv)return false;
+    g={m->position,m->normal,m->color,m->uv,0};return true;
+}
+static const SC_Descriptor* describe(){return &characterProfile;}
+static void shutdown(){
+    if(initialized){if(active>=0)libDestroy(active);libShutdown();}
+    initialized=false;active=-1;raw={};rom.clear();if(runtime)FreeLibrary(runtime);runtime=nullptr;
+}
+static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
+    if(initialized||!init||init->size!=sizeof(*init)||!texture||!texture->rgba||texture->capacityBytes<SM64_TEXTURE_WIDTH*SM64_TEXTURE_HEIGHT*4)return 0;
+    report=init->log;
+    runtime=LoadLibraryExA(init->runtimePath,nullptr,LOAD_WITH_ALTERED_SEARCH_PATH);
+    if(!runtime){if(report)report("Mario runtime could not be loaded");return 0;}
+#define LOAD(var,name) var=(decltype(var))GetProcAddress(runtime,#name);if(!var){if(report)report("Missing " #name);shutdown();return 0;}
+    LOAD(libInit,sm64_global_init);LOAD(libShutdown,sm64_global_terminate);LOAD(libAudioInit,sm64_audio_init);LOAD(libAudio,sm64_audio_tick);
+    LOAD(libSurfaces,sm64_static_surfaces_load);LOAD(libContacts,sm64_host_contacts_load);LOAD(libCreate,sm64_mario_create);LOAD(libDestroy,sm64_mario_delete);
+    LOAD(libTick,sm64_mario_tick);LOAD(libPose,sm64_mario_host_pose_tick);LOAD(libResume,sm64_mario_host_resume);LOAD(libHand,sm64_mario_hand_matrix);
+    LOAD(libPosition,sm64_set_mario_position);LOAD(libAction,sm64_set_mario_action);LOAD(libFace,sm64_set_mario_faceangle);LOAD(libHealth,sm64_mario_host_health);
+    LOAD(libFloor,sm64_surface_find_floor_height);LOAD(libProbe,sm64_mario_probe_attack);LOAD(libContact,sm64_mario_attack);
+#undef LOAD
+    FILE*f=init->assetPath?fopen(init->assetPath,"rb"):nullptr;
+    if(!f){if(report)report("Owned US Mario 64 ROM is missing");shutdown();return 0;}
+    fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);bool ok=n==8388608;
+    if(ok){rom.resize(n);ok=fread(rom.data(),1,n,f)==size_t(n);}fclose(f);
+    if(!ok||rom[0]!=0x80||rom[1]!=0x37||rom[2]!=0x12||rom[3]!=0x40){if(report)report("Expected a big-endian US Mario 64 ROM");shutdown();return 0;}
+    libInit(rom.data(),texture->rgba);libAudioInit(rom.data());initialized=true;return 1;
+}
+static int32_t create(float x,float y,float z,float yaw){
+    if(!initialized||active>=0)return -1;
+    active=libCreate(x,y,z);if(active>=0){raw={};previousAction=0;libHealth(active,0);libAction(active,0x0c400201);libFace(active,yaw);}return active;
+}
+static void destroy(int32_t id){if(id>=0&&id==active){libDestroy(id);active=-1;}}
+static uint32_t step(int32_t id,const SC_Input*in,SC_State*out,SC_Mesh*mesh){
+    if(id!=active||id<0||!in||!out)return 0;SM64MarioGeometryBuffers g;
+    if(!geometry(mesh,g))return 0;
+    SM64MarioInputs input={in->camLookX,in->camLookZ,-in->moveX,-in->moveY,in->jump,in->attack,in->crouch};
+    libTick(id,&input,&raw,&g);mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);return 1;
+}
+
+struct Vec{float x,y,z;Vec operator+(Vec b)const{return{x+b.x,y+b.y,z+b.z};}Vec operator-(Vec b)const{return{x-b.x,y-b.y,z-b.z};}Vec operator*(float s)const{return{x*s,y*s,z*s};}};
+static Vec cross(Vec a,Vec b){return{a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x};}
+static Vec unit(Vec v){float n=sqrtf(v.x*v.x+v.y*v.y+v.z*v.z);return n>.0001f?v*(1/n):Vec{0,0,1};}
+// Original procedural accessory, fitted to this character's hand. The shared host
+// only knows that this adapter supplies its own item prop.
+static void flask(SC_Mesh&mesh){
+    float m[16];libHand(m);Vec axis=unit({.09665986f,-.21849427f,-.9710392f});
+    Vec u=unit(cross(axis,{1,0,0})),v=cross(axis,u),grip={40,0,0};
+    auto transform=[&](Vec p){return Vec{p.x*m[0]+p.y*m[4]+p.z*m[8]+m[12],p.x*m[1]+p.y*m[5]+p.z*m[9]+m[13],p.x*m[2]+p.y*m[6]+p.z*m[10]+m[14]};};
+    const float heights[]={-125,-110,-50,-15,0,70,75},radii[]={0,45,42,30,15,15,0};
+    for(int band=0;band<6;band++)for(int side=0;side<10;side++){
+        float a=side*6.2831853f/10,b=(side+1)*6.2831853f/10;Vec ra=u*cosf(a)+v*sinf(a),rb=u*cosf(b)+v*sinf(b);
+        Vec q[4]={transform(grip+axis*heights[band]+ra*radii[band]),transform(grip+axis*heights[band]+rb*radii[band]),transform(grip+axis*heights[band+1]+rb*radii[band+1]),transform(grip+axis*heights[band+1]+ra*radii[band+1])};
+        for(int half=0;half<2;half++){
+            if(mesh.numTrianglesUsed>=mesh.capacityTriangles)return;
+            int ids[3]={0,half?2:1,half?3:2};Vec n=unit(cross(q[ids[1]]-q[0],q[ids[2]]-q[0]));
+            for(int k=0;k<3;k++){size_t i=mesh.numTrianglesUsed*3+k;Vec p=q[ids[k]];mesh.position[i*3]=p.x;mesh.position[i*3+1]=p.y;mesh.position[i*3+2]=p.z;mesh.normal[i*3]=n.x;mesh.normal[i*3+1]=n.y;mesh.normal[i*3+2]=n.z;mesh.color[i*3]=1;mesh.color[i*3+1]=band>=4?.75f:.4f;mesh.color[i*3+2]=.04f;mesh.uv[i*2]=mesh.uv[i*2+1]=1;}
+            ++mesh.numTrianglesUsed;
+        }
+    }
+}
+static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
+    if(id!=active||id<0||!p||!out)return 0;SM64MarioGeometryBuffers g;if(!geometry(mesh,g))return 0;
+    int anim=0xc3,style=0;float phase=-1;
+    switch(p->kind){
+        case SC_POSE_CLIMB:anim=5;style=2;phase=p->travelCm*.9f;break;
+        case SC_POSE_DRINK:anim=0x30;style=4;phase=p->phase;break;
+        case SC_POSE_REST:anim=0x84;style=1;phase=p->phase;break;
+        case SC_POSE_DOOR:anim=0x60;style=1;phase=p->phase;break;
+        case SC_POSE_WALK:anim=0x48;break;
+        case SC_POSE_DOWNED:anim=0x19;break;
+    }
+    libPose(id,p->position[0],p->position[1],p->position[2],p->yaw,anim,phase,style,&raw,&g);
+    mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);
+    if(p->kind==SC_POSE_DRINK&&p->phase>.02f)flask(*mesh);
+    return 1;
+}
+static void resume(int32_t id,float x,float y,float z,float yaw){if(id==active&&id>=0){libResume(id,x,y,z,yaw);previousAction=0;}}
+static void position(int32_t id,float x,float y,float z){if(id==active&&id>=0)libPosition(id,x,y,z);}
+static void command(int32_t id,uint32_t c){if(id==active&&id>=0)libAction(id,c==SC_COMMAND_FALL?0x0100088c:0x0c400201);}
+static void damage(int32_t id,uint32_t severity){if(id==active&&id>=0)libHealth(id,std::min(severity,2u));}
+static void surfaces(const SC_Surface*s,uint32_t n,uint32_t dynamic){
+    if(!initialized||(!s&&n)||n>2000000||dynamic&&n>48)return;
+    std::vector<SM64Surface> dest(n);for(uint32_t i=0;i<n;i++)memcpy(dest[i].vertices,s[i].vertices,sizeof(s[i].vertices));
+    if(dynamic)libContacts(dest.data(),n);else libSurfaces(dest.data(),n);
+}
+static float floorHeight(float x,float y,float z){return initialized?libFloor(x,y,z):-11000;}
+static uint32_t probe(int32_t id,float x,float y,float z){if(id!=active||id<0)return 0;auto p=libProbe(id,x,y,z);return (p&0x3f?SC_CONTACT_ATTACK:0)|(p&0x40?SC_CONTACT_AUTOMATIC:0);}
+static void contact(int32_t id,float x,float y,float z,float radius){if(id==active&&id>=0)libContact(id,x,y,z,radius);}
+static uint32_t audio(uint32_t queued,uint32_t desired,int16_t*stereo,uint32_t capacity){
+    if(!initialized||!stereo||capacity<1088)return 0;
+    return 2*libAudio(queued,desired,stereo);
+}
+static SC_CharacterAPI api={sizeof(SC_CharacterAPI),SC_ABI_VERSION,describe,initialize,shutdown,create,destroy,step,pose,resume,position,command,damage,surfaces,floorHeight,probe,contact,audio};
+extern "C" __declspec(dllexport) const SC_CharacterAPI* SoulsCharacterGetAPI(uint32_t abi,uint32_t size){return abi==SC_ABI_VERSION&&size==sizeof(api)?&api:nullptr;}

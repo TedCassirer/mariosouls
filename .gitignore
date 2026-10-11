@@ -3,6 +3,17 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
+!/AGENTS.md
+!/framework/
+/framework/**
+!/framework/**/
+!/framework/**/*.h
+!/framework/**/*.cpp
+!/framework/**/*.def
+!/framework/**/*.py
+!/framework/**/*.json
+!/framework/**/*.in
+!/framework/**/*.md
 !/dependencies.lock.json
 !/tools/
 /tools/*

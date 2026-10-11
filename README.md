@@ -1,8 +1,17 @@
-# MarioSouls
+# Souls Character Framework
 
-Local development project for the Dark Souls: Prepare to Die Edition Mario integration.
-This repository starts with the installed **0.7 contextual interactions** checkpoint,
-tagged `checkpoint-2026-10-11-mariosouls-v0.7`.
+Reusable character integration for Dark Souls: Prepare to Die Edition, with Mario 64
+as its first adapter. Shared rendering, world collision, native interactions, input,
+health, stamina and combat now live under `framework/`. Character engines and
+animations live in separate adapter DLLs. Link/OoT and DK/DK64 are not implemented.
+
+Start with [the framework guide](framework/README.md),
+[adding a character](framework/docs/ADDING_A_CHARACTER.md) and
+[verification](framework/docs/VALIDATION.md). Future gameplay changes follow
+[AGENTS.md](AGENTS.md). The `work/` prototype remains historical source.
+
+The original playable **0.7 contextual interactions** checkpoint is preserved at
+`checkpoint-2026-10-11-mariosouls-v0.7`. The instructions below still restore it.
 
 ## Return to this playable version
 
@@ -31,9 +40,11 @@ and backups. `Restore original game.cmd` is a different operation: it disables t
 
 ## Repository contents
 
-- `work/mariosouls.cpp`, related headers: native host integration, rendering, input,
-  combat, interactions, world collision and test bridge.
-- `work/build_sm64.py`, `work/build_plugin.py`: existing 32-bit Windows build scripts.
+- `framework/`: supported host, core, SDK, Mario adapter, templates and checks.
+- `tools/framework.py`: build, test, doctor, install and new-character commands.
+- `work/mariosouls.cpp`, related headers: preserved 0.7 implementation history.
+- `work/build_sm64.py`, `work/build_plugin.py`: compatibility wrappers that now
+  delegate to the framework, instead of compiling the old host.
 - `work/combat-harness`, `work/progression`, `work/interaction-v2`,
   `work/world-bridge`, `work/ui-render`: development and verification scripts.
 - `patches/libsm64.patch`, `patches/libsm64/host_pose.h`: our complete local libsm64 changes.
@@ -75,11 +86,14 @@ copy/extract that compiler at the same relative path, then:
 
 ```powershell
 python tools/dependencies.py
-python work/build_sm64.py
-python work/build_plugin.py
+python tools/framework.py doctor
+python tools/framework.py build --with-runtime
 ```
 
-Both DLLs go to `work/build`. These commands do not install them. For exact rollback,
+Framework DLLs go to `work/framework-build`, including the selected character's
+adapter and optional runtime in `characters/<id>`. These commands do not install
+them. Run the framework's `test` then `install` commands documented in its guide.
+For exact rollback,
 use the captured runtime restore above instead of rebuilding. Historical installers
 and source-transformation scripts are retained as development history; do not run them
 as a generic installer because some target earlier versions.
@@ -88,9 +102,9 @@ The running game reads the user's US Mario 64 ROM from the configured local path
 Collision data was generated privately from the installed Dark Souls files using
 `work/export_collision.py`. Neither input assets nor generated caches are tracked.
 Optional live tests also require Universal Modder 0.2.0 and the local packages listed
-in the dependency lock. The existing combat harness permits only character `test`
-in the Asylum; `Mario QA` setup is pending. Do not loosen the guard or use the level-65
-character to make a test pass.
+in the dependency lock. New live helpers under `framework/qa/` require `Mario QA`,
+level 1–10, in the Asylum and foreground. The host's bounded harness also permits
+the old `test` character at level 1–10. Do not use the level-65 character.
 
 ## Checkpoint status
 

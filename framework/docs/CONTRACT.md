@@ -566,3 +566,12 @@ continue reporting absence until real geometry is available. Mario's runtime
 provides non-null action support at its lower query limit without inserting a
 collision surface; host origin rebasing prevents that limit becoming a landing.
 Other guest engines require their own implementation of this policy.
+
+Native event floors and platforms may hold the actor without reporting a
+contact triangle. The host now observes acknowledged native motion: two
+successive downward guest requests rejected vertically by native movement
+allow a small temporary walkable patch under the native actor. Sideways
+corrections cannot create support. The patch follows the native position and
+is cleared on upward movement, actual native descent, warp, ownership release
+or map change. It never enters the static cache, so disabled event geometry
+does not persist. Native collision and lethal surfaces remain authoritative.

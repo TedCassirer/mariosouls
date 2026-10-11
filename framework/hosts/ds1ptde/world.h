@@ -6,6 +6,7 @@ static bool worldMotionReady=false,worldObjectDamageReady=false;
 static int worldMode=0;
 static SRWLOCK worldLock=SRWLOCK_INIT;
 static SCMotion::Mailbox worldMailbox;
+static SCMotion::NativeSupport worldNativeSupport;
 static SCSession::Identity worldBinding{};
 static DWORD worldHeartbeat=0;
 static uint32_t worldSubmissions=0,worldAcknowledgements=0,worldRejected=0;
@@ -37,6 +38,20 @@ static void worldHostSurfaces(){
   Vec corners[4]={raw.point-u-v,raw.point+u-v,raw.point+u+v,raw.point-u+v};
   int indices[6]={0,1,2,0,2,3};for(int t=0;t<2;t++)for(int k=0;k<3;k++){Vec local=(corners[indices[t*3+k]]-origin)*100;auto& dest=triangles[used+t].vertices[k];dest[0]=int(lroundf(local.x));dest[1]=int(lroundf(local.y));dest[2]=int(lroundf(local.z));}used+=2;
  }
+ // Event-controlled floors and lifts can support the native actor without
+ // yielding a Havok contact entry. This patch exists only after native motion
+ // has repeatedly refused Mario's downward request; it follows the actor and
+ // is discarded as soon as native motion starts falling or Mario jumps.
+ if(worldNativeSupport.supported()&&used+2<=48){
+  Vec u{.42f,0,0},v{0,0,.42f},center=feet-Vec{0,.04f,0};
+  Vec corners[4]={center-u-v,center+u-v,center+u+v,center-u+v};
+  int indices[6]={0,2,1,0,3,2};
+  for(int t=0;t<2;t++)for(int k=0;k<3;k++){
+   Vec local=(corners[indices[t*3+k]]-origin)*100;
+   auto& dest=triangles[used+t].vertices[k];
+   dest[0]=int(lroundf(local.x));dest[1]=int(lroundf(local.y));dest[2]=int(lroundf(local.z));
+  }used+=2;
+ }
  guest->surfaces(triangles,used,1);
 }
 static bool worldLineClear(Vec a,Vec b,uintptr_t target=0){
@@ -61,8 +76,8 @@ extern "C" __attribute__((used,noinline)) void characterWorldMotion(uintptr_t ph
  float angle=read<float>(physics+4),cs=cosf(angle),sn=sinf(angle);float vectors[12]={cs*delta.x-sn*delta.z,delta.y,sn*delta.x+cs*delta.z,0,0,0,0,0,1,1,1,0};SIZE_T n;WriteProcessMemory(GetCurrentProcess(),(void*)motion,vectors,sizeof(vectors),&n);
  ReleaseSRWLockExclusive(&worldLock);
 }
-static void worldRelease(){hazardPreviousValid=false;AcquireSRWLockExclusive(&worldLock);worldMailbox.reset();worldBinding={};worldPaused=false;ReleaseSRWLockExclusive(&worldLock);worldContacts.clear();}
-static void worldActivate(){hazardStart(read<Vec>(posData+0x10));AcquireSRWLockExclusive(&worldLock);worldMode=1;worldMailbox.bind();worldBinding={player,posData,lastMap,loadedMap};worldHeartbeat=GetTickCount();worldPaused=false;ReleaseSRWLockExclusive(&worldLock);}
+static void worldRelease(){hazardPreviousValid=false;worldNativeSupport.reset();AcquireSRWLockExclusive(&worldLock);worldMailbox.reset();worldBinding={};worldPaused=false;ReleaseSRWLockExclusive(&worldLock);worldContacts.clear();}
+static void worldActivate(){worldNativeSupport.reset();hazardStart(read<Vec>(posData+0x10));AcquireSRWLockExclusive(&worldLock);worldMode=1;worldMailbox.bind();worldBinding={player,posData,lastMap,loadedMap};worldHeartbeat=GetTickCount();worldPaused=false;ReleaseSRWLockExclusive(&worldLock);}
 static void worldPause(bool paused){AcquireSRWLockExclusive(&worldLock);worldHeartbeat=GetTickCount();if(paused!=worldPaused){worldMailbox.bind();worldPaused=paused;}ReleaseSRWLockExclusive(&worldLock);}
 static bool worldReady(){AcquireSRWLockShared(&worldLock);bool ok=worldMailbox.ready()&&!worldPaused;ReleaseSRWLockShared(&worldLock);return ok;}
 static bool worldReconcile(bool& resolvedTick){
@@ -72,6 +87,9 @@ static bool worldReconcile(bool& resolvedTick){
  if(expired){logf("WORLD motion timeout; native handback");return false;}if(busy)return true;
  Vec host=read<Vec>(posData+0x10),current=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f,correction=host-current;
  if(!isfinite(dot(correction,correction))||dot(correction,correction)>4)return false;
+ bool wasSupported=worldNativeSupport.supported();
+ worldNativeSupport.observe(resolved?&ticket:nullptr,motionPoint(host));
+ if(wasSupported!=worldNativeSupport.supported())logf("WORLD native platform support=%d pos=%.3f,%.3f,%.3f",int(worldNativeSupport.supported()),host.x,host.y,host.z);
  SC_MotionResolution r={};r.size=sizeof(r);r.generation=generation;r.sequence=resolved?ticket.sequence:0;Vec local=(host-origin)*100;r.position[0]=local.x;r.position[1]=local.y;r.position[2]=local.z;
  if(resolved){
   ++worldAcknowledgements;Vec wanted={ticket.to.x-ticket.from.x,ticket.to.y-ticket.from.y,ticket.to.z-ticket.from.z};

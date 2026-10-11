@@ -316,8 +316,9 @@ static void updateGameplay(){
  if(nativeReactionTick(acc,focus))return;
  worldPause(!focus);
  Vec host=read<Vec>(posData+0x10),expected=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;if(dot(host-expected,host-expected)>64){logf("native warp/load detected");releaseControl(true);return;}
- worldHostSurfaces();bool resolvedTick=false;
+ bool resolvedTick=false;
  if(!worldReconcile(resolvedTick)){logf("WORLD invalid handoff; native controls restored");releaseControl();return;}
+ worldHostSurfaces();
  if(fabsf(state.position[0])>4000||fabsf(state.position[2])>4000||fabsf(state.position[1])>5000){Vec shift={state.position[0],state.position[1],state.position[2]};origin=origin+shift*.01f;rebuildSurfaces();guest->setPosition(character,0,0,0);for(size_t i=0;i<geo.numTrianglesUsed*3;i++){gpos[i*3]-=shift.x;gpos[i*3+1]-=shift.y;gpos[i*3+2]-=shift.z;}state.position[0]=state.position[1]=state.position[2]=0;logf("collision origin rebased");}
  feedbackPoll();
  int hp=read<int>(player+0x2d4);bool hurt=hp<lastHP&&hp>0;if(hurt){feedbackPause.clear();combatReset();int lost=lastHP-hp;pendingNativeHurt=std::max(pendingNativeHurt,lost>=read<int>(player+0x2d8)/5?2u:1u);logf("native damage %d -> %d; host-confirmed hurt, no extra i-frames",lastHP,hp);}lastHP=hp;

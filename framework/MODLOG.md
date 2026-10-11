@@ -388,3 +388,20 @@ work/lifecycle-death. A subsequent menu sequence accidentally loaded the level-6
 save; the guard rejected testing before any gameplay checks or mutations. Closed
 that session immediately; it is not counted as validation. Use individual
 observed menu steps, not a batch of confirmations, for further reload checks.
+
+# Firelink event-floor support, 2026-10-11
+
+The event-controlled Firelink floor at roughly (-38, -56, 87) is absent from
+the guest static cache and supplied no Havok contact entries. Native movement
+held the actor at a steady height while Mario repeatedly entered his falling
+action. The shared motion policy now recognizes two consecutive native rejections
+of downward movement and lets the PTDE host supply a short-lived, actor-centered
+floor patch. Upward movement, native descent, warp and ownership reset remove
+it; the event floor is still omitted from the static collision cache.
+
+The framework build and offline suite passed. In the installed game, the level-1
+Mario save at that exact Firelink area changed from repeated fall/landing actions
+to stable idle, completed a normal jump/landing, and walked about 1.7 m across
+the area without re-entering an endless fall. HP remained 564/573; no level-65
+save was loaded. A moving elevator and the later event removal were not tested
+live, so their behavior remains provisional.

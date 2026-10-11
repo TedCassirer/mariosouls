@@ -14,6 +14,16 @@ int main(){
  Clock clock;clock.advance(10);assert(clock.take(true));assert(clock.take(true));assert(!clock.take(true));clock.clear();clock.advance(.1);assert(!clock.take(false));assert(clock.take(true));assert(!clock.take(true));
  InputLatch latch;SC_Input input{};input.attack=1;latch.sample(input,10);input.attack=0;input.moveY=1;latch.sample(input,20);auto out=latch.take(25);assert(out.attack&&out.moveY==1);assert(!latch.take(26).attack);input.jump=1;latch.sample(input,30);assert(!latch.take(200).jump);
  auto v=clip({100,300,0},{-1,0,0});assert(v.x==0&&v.y==300);v=clip({100,300,0},{0,-1,0});assert(v.y==0&&v.x==100);v=clip({100,-300,0},{0,1,0});assert(v.y==0&&v.x==100);
+ NativeSupport support;Ticket falling{};falling.from={0,0,0};falling.to={0,-.08f,0};
+ support.observe(&falling,{0,0,0});assert(!support.supported());
+ support.observe(&falling,{0,0,0});assert(support.supported());
+ support.observe(nullptr,{.03f,0,0});assert(support.supported()); // steady platform
+ support.observe(nullptr,{.03f,-.06f,0});assert(!support.supported()); // pit
+ support.observe(&falling,{.3f,0,0});assert(!support.supported()); // side correction is not floor
+ support.observe(&falling,{0,0,0});assert(!support.supported());
+ support.observe(&falling,{0,0,0});assert(support.supported());
+ Ticket jump{};jump.from={0,0,0};jump.to={0,.06f,0};support.observe(&jump,{0,.06f,0});assert(!support.supported());
+ support.observe(&falling,{0,0,0});support.observe(&falling,{0,0,0});assert(support.supported());support.reset();assert(!support.supported());
  SCSession::Session session;SCSession::Identity identity{1,2,3,1801};session.request(true);assert(!session.canRetry(identity,true,1000));assert(session.canRetry(identity,true,1500));session.activate(identity);assert(session.matches(identity)&&session.character());assert(session.handoff()&&session.action());assert(!session.handoff());assert(session.resume()&&session.character());session.release();assert(session.requested()&&!session.visible());assert(!session.canRetry(identity,false,2000));assert(session.canRetry(identity,true,2500));assert(!session.canRetry({1,2,4,1801},true,3000));assert(!session.matches(identity));session.request(false);assert(!session.canRetry(identity,true,4000));
  assert(!session.die());session.activate(identity);assert(session.die()&&session.death()&&session.visible()&&!session.character()&&!session.action());
  assert(!session.resume()&&!session.handoff()&&!session.die()&&!session.canRetry(identity,true,5000));

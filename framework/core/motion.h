@@ -31,6 +31,33 @@ public:
  bool acknowledge(Ticket&out){if(!bound||!submitted)return false;out=ticket;submitted=false;return true;}
  bool expired(uint32_t now)const{return bound&&busy()&&uint32_t(now-ticket.created)>250;}
 };
+// Some event-owned platforms are absent from the prepared guest map and do not
+// appear in PTDE's contact list. Infer temporary support only when Havok rejects
+// successive downward guest requests. Native motion remains authoritative.
+class NativeSupport {
+ Point previous{};bool havePrevious=false,active=false;unsigned confirmations=0;
+public:
+ void reset(){previous={};havePrevious=active=false;confirmations=0;}
+ bool supported()const{return active;}
+ void observe(const Ticket* ticket,Point host){
+  if(!finite(host)){reset();return;}
+  if(havePrevious&&(host.y<previous.y-.05f||squared(host-previous)>1.f)){
+   active=false;confirmations=0;
+  }
+  previous=host;havePrevious=true;
+  if(!ticket)return;
+  Point wanted=ticket->to-ticket->from;
+  if(wanted.y>.025f){active=false;confirmations=0;return;}
+  // A wall or diagonal correction cannot by itself create a floor. The game
+  // must have held the actor vertically against a meaningful downward request.
+  Point disagreement=host-ticket->to;
+  bool held=wanted.y<-.02f&&host.y>=ticket->from.y-.015f&&
+   disagreement.y>.035f&&
+   std::abs(disagreement.x)<.15f&&std::abs(disagreement.z)<.15f;
+  if(held){if(confirmations<3)++confirmations;if(confirmations>=2)active=true;}
+  else if(!active)confirmations=0;
+ }
+};
 // One guest tick at most per rendered frame and only after its previous request
 // was consumed. Keep the fractional remainder; discard pause/stall backlog.
 class Clock {

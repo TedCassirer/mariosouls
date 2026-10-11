@@ -24,6 +24,9 @@
 #include "../../core/context_action.h"
 static void combatReset();
 static bool deathBegin(double& acc);
+static int currentMap();
+static void presentationRelease();
+static void presentationValidate();
 static void launcherConfigure();
 static void launcherCancel();
 static bool launcherVisible();
@@ -73,7 +76,9 @@ static DWORD nativeReactionIncomingUntil=0;
 static SCSession::Session characterSession;
 static SCMotion::Clock characterClock;
 static SCMotion::InputLatch characterInput;
+static bool presentationActive=false;
 static bool characterOwned(){return characterSession.visible();}
+static bool characterPresented(){return characterOwned()||presentationActive;}
 static bool nativeActionOwned(){return characterSession.action()||characterSession.death();}
 static Vec interactionPrevious;
 static int interactionMap=-1;
@@ -176,7 +181,8 @@ static void rebuildSurfaces(){
  for(size_t i=0;i<mapVertices.size();i+=3){Vec center=(mapVertices[i]+mapVertices[i+1]+mapVertices[i+2])*(1.f/3);if(fabsf(center.x-origin.x)>110||fabsf(center.z-origin.z)>110||fabsf(center.y-origin.y)>110)continue;SC_Surface surface={};for(int v=0;v<3;v++){Vec q=(mapVertices[i+(flip?2-v:v)]-origin)*100;surface.vertices[v][0]=(int)roundf(q.x);surface.vertices[v][1]=(int)roundf(q.y);surface.vertices[v][2]=(int)roundf(q.z);}surfaces.push_back(surface);}guest->surfaces(surfaces.data(),surfaces.size(),0);
 }
 #include "loader.h"
-static void releaseControl(bool preserveRequest=false){
+static void releaseControl(bool preserveRequest=true){
+ presentationRelease();
  hazardPreviousValid=false;
  launcherCancel();
  projectileRateRelease();
@@ -194,16 +200,18 @@ static void releaseControl(bool preserveRequest=false){
  characterSession.release();if(audioOut)waveOutReset(audioOut);if(character>=0){guest->destroy(character);character=-1;}geo.numTrianglesUsed=0;logf("native controls restored; character requested=%d",characterSession.requested());
 }
 static bool activate(){
+ presentationRelease();
  classPreviewRelease();
  if(!player||!posData||!cam||read<int>(player+0x2d4)<=0||!ready||!loadMap())return false;
  if(!actionInputReady){logf("Character refused: native action input filter unavailable");return false;}
  if(GetPrivateProfileIntA("World","NativeMotion",1,ini)!=1||!worldMotionReady){logf("Character refused: native collision bridge required");return false;}
  hazardPreviousValid=false;origin=read<Vec>(posData+0x10);if(!isfinite(origin.x)||!isfinite(origin.y)||!isfinite(origin.z))return false;
  rebuildSurfaces();float floor=guest->floorHeight(0,100,0);logf("activate origin=%.3f %.3f %.3f map=%d floor=%.3f",origin.x,origin.y,origin.z,loadedMap,floor);
- if(floor < -300||floor > 200){logf("unsafe floor; refusing movement");return false;}
- character=guest->create(0,40,0,read<float>(posData+4)-3.14159265f);if(character<0)return false;combatReset();guest->nativeDamage(character,0);state={};state.attackId=state.interruptedAttackId=-1;state.position[1]=40;
+ // Missing static terrain is not an activation veto: native Havok owns
+ // event-controlled floors and airborne spawns. Never snap to a cached floor.
+ character=guest->create(0,0,0,read<float>(posData+4)-3.14159265f);if(character<0)return false;combatReset();guest->nativeDamage(character,0);state={};state.attackId=state.interruptedAttackId=-1;state.position[1]=0;
  savedFlags1=read<uint32_t>(player+0x1fc);savedFlags2=read<uint32_t>(player+0x3c4);lastPlayer=player;lastMap=read<uint32_t>(player+0x28);savedMapFlags=read<uint32_t>(lastMap+0xc4);savedOpacity=read<float>(player+0x258);
- hideNative=GetPrivateProfileIntA("MarioSouls","HideNative",0,ini)!=0&&savedOpacity>=0&&savedOpacity<=1;disableMapHit=GetPrivateProfileIntA("MarioSouls","DisableMapHit",1,ini)!=0;
+ hideNative=(classSelection.required()||GetPrivateProfileIntA("MarioSouls","HideNative",0,ini)!=0)&&savedOpacity>=0&&savedOpacity<=1;disableMapHit=GetPrivateProfileIntA("MarioSouls","DisableMapHit",1,ini)!=0;
  logf("native opacity=%.3f mapflags=%08x",savedOpacity,savedMapFlags);lastHP=read<int>(player+0x2d4);characterSession.activate({player,posData,lastMap,loadedMap});if(!bodyCapture()){logf("BODY validation failed; native handback");releaseControl();return false;}worldActivate();visibilityCapture();characterClock.clear();characterInput.clear();SC_Pose initial={};initial.yaw=read<float>(posData+4)-3.14159265f;initial.phase=-1;if(!guestPose(character,&initial,&state,&geo)){releaseControl();return false;}if(hideNative){put(player+0x258,0.f);put(player+0x1fc,read<uint32_t>(player+0x1fc)&~0x800000u);}return true;
 }
 static bool pressed(int key){static bool prev[256]={};bool down=(GetAsyncKeyState(key)&0x8000)!=0;bool hit=down&&!prev[key];prev[key]=down;return hit;}
@@ -236,10 +244,13 @@ static bool lineClear(Vec a,Vec b){
 #include "death.h"
 #include "debug_view.h"
 #include "launcher.h"
-static void update(){
+#include "presentation.h"
+static void updateGameplay(){
  static LARGE_INTEGER freq={},prev={};if(!freq.QuadPart)QueryPerformanceFrequency(&freq);LARGE_INTEGER now;QueryPerformanceCounter(&now);double dt=prev.QuadPart?double(now.QuadPart-prev.QuadPart)/freq.QuadPart:0;prev=now;static double acc=0;acc=std::min(acc+std::min(dt,.1),.1);
  player=chain(playerSlot,{0,4,0});cam=chain(cameraSlot,{0,0x3c,0x60});uintptr_t mp=read<uint32_t>(player+0x28);posData=read<uint32_t>(mp+0x1c);
+ presentationValidate();
  classTick();
+ if(characterOwned()&&!characterSession.requested())releaseControl(false);
  DWORD fg=0;GetWindowThreadProcessId(GetForegroundWindow(),&fg);bool focus=fg==GetCurrentProcessId();
  debugInput(focus);
  feedbackFocused=focus;if(!focus)feedbackReset();
@@ -257,7 +268,7 @@ static void update(){
   classSelection.manual(player);
   // A pending load request is not a visible character. Pressing the toggle
   // while still human should enable the guest, not cancel automatic activation.
-  if(characterOwned()){characterSession.request(false);releaseControl();}
+  if(characterPresented()){characterSession.request(false);releaseControl(false);}
   else{characterSession.request(true);if(!activate())characterSession.failed(inputTime);}
  }
  cameraTick();
@@ -292,7 +303,7 @@ static void update(){
  else if(interactPressed){if(characterOwned()&&!nativeActionOwned())requestAction(1,padInteract);else if(nativeActionOwned()&&actionCurrentRoute()==ActionRoute::Menu)actionQueue(1,inputTime,padInteract);}
  if(itemPressed&&!launcherBusy()&&characterOwned()&&!nativeActionOwned())requestAction(2,padItem);
  if(characterOwned()&&!nativeActionOwned()&&!actionPending()&&actionRequestKind){logf("Action request unanswered; Character retained");actionRequestKind=0;}
- static DWORD configTime=0;static int command=0;if(GetTickCount()-configTime>200){configTime=GetTickCount();int serial=GetPrivateProfileIntA("Test","Serial",0,ini);if(serial!=command){command=serial;if(!focus||!harnessIdentity()){logf("test command rejected: focus/identity guard");}else{int mode=GetPrivateProfileIntA("Test","Mode",0,ini);if(mode==5)qaMeleeArsenal();if(mode==6)qaPyromancyKit();if(mode==3)graphFrames=2;if(mode==1&&!characterOwned()){if(nativeActionOwned())releaseControl();activate();}if(mode==2&&(characterOwned()||nativeActionOwned()))releaseControl();if(mode==4&&characterOwned())beginInteraction(pad.slot);testFrames=std::clamp<int>(GetPrivateProfileIntA("Test","Frames",0,ini),0,150);testButtons=GetPrivateProfileIntA("Test","Buttons",0,ini);testX=std::clamp<int>(GetPrivateProfileIntA("Test","X",0,ini),-1,1);testY=std::clamp<int>(GetPrivateProfileIntA("Test","Y",0,ini),-1,1);logf("test command=%d mode=%d frames=%d buttons=%d",serial,mode,testFrames,testButtons);}}}
+ static DWORD configTime=0;static int command=0;if(GetTickCount()-configTime>200){configTime=GetTickCount();int serial=GetPrivateProfileIntA("Test","Serial",0,ini);if(serial!=command){command=serial;if(!focus||!harnessIdentity()){logf("test command rejected: focus/identity guard");}else{int mode=GetPrivateProfileIntA("Test","Mode",0,ini);if(mode==5)qaMeleeArsenal();if(mode==6)qaPyromancyKit();if(mode==3)graphFrames=2;if(mode==1&&!characterOwned()){if(nativeActionOwned())releaseControl();activate();}if(mode==2&&characterPresented()){classSelection.manual(player);releaseControl(false);}if(mode==4&&characterOwned())beginInteraction(pad.slot);testFrames=std::clamp<int>(GetPrivateProfileIntA("Test","Frames",0,ini),0,150);testButtons=GetPrivateProfileIntA("Test","Buttons",0,ini);testX=std::clamp<int>(GetPrivateProfileIntA("Test","X",0,ini),-1,1);testY=std::clamp<int>(GetPrivateProfileIntA("Test","Y",0,ini),-1,1);logf("test command=%d mode=%d frames=%d buttons=%d",serial,mode,testFrames,testButtons);}}}
  static DWORD lastLog=0;if(GetTickCount()-lastLog>2000){lastLog=GetTickCount();combatSettings();renderMode=GetPrivateProfileIntA("MarioSouls","RenderMode",1,ini);depthTest=GetPrivateProfileIntA("MarioSouls","DepthTest",1,ini);combatEnabled=GetPrivateProfileIntA("MarioSouls","EnableCombat",0,ini)!=0;Vec p=read<Vec>(posData+0x10),c=cameraEye();logf("state active=%d focus=%d player=%08x cam=%08x xyz=%.3f %.3f %.3f eye=%.3f %.3f %.3f action=%08x tris=%u",characterOwned(),focus,(unsigned)player,(unsigned)cam,p.x,p.y,p.z,c.x,c.y,c.z,state.rawAction,geo.numTrianglesUsed);}
  InterlockedExchange(&controllerOwnedSlot,(characterOwned()||nativeActionOwned())?pad.slot:-1);
  if(!nativeActionOwned())InterlockedExchange(&actionRoute,LONG(characterOwned()?ActionRoute::Character:ActionRoute::Free));
@@ -341,13 +352,14 @@ static void update(){
  if(stepped&&!worldSubmit(stepFrom,p)){logf("WORLD rejected movement request; native controls restored");releaseControl();return;}
  if(hideNative){put(player+0x258,0.f);put(player+0x1fc,read<uint32_t>(player+0x1fc)&~0x800000u);}
 }
+static void update(){updateGameplay();presentationTick();}
 static D3DMATRIX identity(){D3DMATRIX m={};m._11=m._22=m._33=m._44=1;return m;}
 static D3DMATRIX viewMatrix(Vec eye,Vec at){Vec z=unit(at-eye),x=unit(cross({0,1,0},z)),y=cross(z,x);D3DMATRIX m={};m._11=x.x;m._12=y.x;m._13=z.x;m._21=x.y;m._22=y.y;m._23=z.y;m._31=x.z;m._32=y.z;m._33=z.z;m._41=-dot(x,eye);m._42=-dot(y,eye);m._43=-dot(z,eye);m._44=1;return m;}
 struct Vertex{float x,y,z;DWORD color,shade;float u,v;};
 #include "launcher_render.h"
 static bool draw(IDirect3DDevice9* d,bool preview=false){
  if(preview?!classPreviewActive:!renderWanted())return false;
- bool drawCharacter=(preview||characterOwned()||nativeActionOwned())&&geo.numTrianglesUsed;
+ bool drawCharacter=(preview||characterPresented())&&geo.numTrianglesUsed;
  if(!tex){if(FAILED(d->CreateTexture(profile->textureWidth,profile->textureHeight,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&tex,NULL)))return false;D3DLOCKED_RECT lr;if(SUCCEEDED(tex->LockRect(0,&lr,NULL,0))){for(int y=0;y<profile->textureHeight;y++){auto row=(uint32_t*)((BYTE*)lr.pBits+y*lr.Pitch);for(int x=0;x<profile->textureWidth;x++){auto p=&texture[(y*profile->textureWidth+x)*4];row[x]=(p[3]<<24)|(p[0]<<16)|(p[1]<<8)|p[2];}}tex->UnlockRect(0);}}
  IDirect3DStateBlock9* saved=nullptr;if(FAILED(d->CreateStateBlock(D3DSBT_ALL,&saved)))return false;
  D3DVIEWPORT9 vp;d->GetViewport(&vp);Vec eye=cameraEye();Vec at=eye+cameraForward();

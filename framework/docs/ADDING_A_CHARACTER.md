@@ -222,3 +222,12 @@ invisible boundary or freeze horizontal motion. Verify freefall remains airborne
 public floor probes remain empty, and native contact corrections restore support.
 Keep guest-specific action invariants in the adapter; do not import disabled
 native event geometry to hide this failure.
+
+
+Starting-class adapters must support create/pose/destroy while cached terrain is
+absent: the host can display them before locomotion is safe. Test neutral, walking,
+rest and supported death poses without gameplay ticks, then destroy/recreate for
+movement. The host uses the same mesh/visibility path during native-driven
+presentation and clears outgoing combat flags. There is no new SDK ABI or guest
+memory access. Verify load, death/respawn, same-pointer map changes, explicit off,
+late/unreadable class data and switching to an unrelated save.

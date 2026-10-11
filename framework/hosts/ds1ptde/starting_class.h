@@ -21,10 +21,11 @@ static bool classCreationMenu(){
  int phase=read<int>(menu+0x94);
  return classEnabled&&classHooksReady&&menu&&!chain(playerSlot,{0,4,0})&&(phase==2||phase==3||phase==5||phase==7||(read<int>(menu+0xb4)==1&&read<int>(menu+0xb0)>0&&read<int>(menu+0xb0)<16));
 }
-static bool classSelected(){
+static bool classRead(bool& matches){
  uintptr_t stats=chain(0x1378700,{0,8});uint8_t slot=255;
- return stats&&get(stats+0xc6,slot)&&slot==classNativeSlot();
+ bool known=stats&&get(stats+0xc6,slot)&&slot<10;matches=known&&slot==classNativeSlot();return known;
 }
+static bool classSelected(){bool matches=false;return classRead(matches)&&matches;}
 extern "C" {void* classOriginalText=nullptr;}
 extern "C" __attribute__((used,noinline)) uintptr_t classText(int id,uintptr_t fmg){
  if(!classEnabled||!classHooksReady)return 0;
@@ -69,7 +70,12 @@ static void classTick(){
    if(!classPreviewActive)classPreviewRelease();
   }
  }
- if(classEnabled&&classHooksReady&&classSelection.observe(player,classSelected())){
-  characterSession.request(true);logf("CLASS native saved class selected character=%s",profile->id);
- }
+ // Saved-class identity must not depend on the cosmetic class-name text hook.
+ bool matches=false,known=classRead(matches);
+ auto decision=classSelection.observe(player,known,classEnabled&&matches,currentMap(),player&&read<int>(player+0x2d4)>0);
+ if(decision==SCClass::Decision::Enable){
+  if(!characterSession.requested())logf("CLASS saved identity restored character=%s",profile->id);
+  characterSession.request(true);
+ }else if(decision==SCClass::Decision::Disable){characterSession.request(false);}
+
 }

@@ -29,7 +29,7 @@ static void harnessEvent(const char* type,const char* fields=""){
 static void harnessStop(const char* why,bool restore=true){
  if(!harness.armed)return;char fields[200];snprintf(fields,sizeof(fields),",\"reason\":\"%s\"",why);harnessEvent("stopped",fields);
  harness.armed=false;harness.remaining=0;harness.buttons=0;harness.x=harness.y=0;testFrames=0;testButtons=0;testX=testY=0;harness.closedSession=harness.session;
- if(restore&&(characterOwned()||nativeActionOwned()))releaseControl();
+ if(restore&&characterPresented()){classSelection.manual(player);releaseControl(false);}
  if(harness.events){fclose(harness.events);harness.events=nullptr;}
  logf("harness stopped session=%lu reason=%s",harness.session,why);
 }
@@ -76,7 +76,7 @@ static void harnessTick(bool focus,bool padConnected){
     harness.remaining=0;harness.buttons=0;harness.buttonDelay=0;harness.x=harness.y=0;
     if(mode==4){harnessStop("cancelled");return;}
     if(mode==1){if(characterOwned()||nativeActionOwned())releaseControl();if(!activate()){harnessStop("unsafe_activation");return;}}
-    else if(mode==2){if(characterOwned()||nativeActionOwned())releaseControl();}
+    else if(mode==2){classSelection.manual(player);releaseControl(false);}
     else if(mode==5){int height=GetPrivateProfileIntA("Harness","Frames",0,harness.config);if(!combatTestDrop(height)){harnessStop("invalid_test_drop");return;}}
     else if(mode==3){
      int frames=GetPrivateProfileIntA("Harness","Frames",0,harness.config),buttons=GetPrivateProfileIntA("Harness","Buttons",0,harness.config);char sx[40],sy[40];GetPrivateProfileStringA("Harness","X","0",sx,sizeof(sx),harness.config);GetPrivateProfileStringA("Harness","Y","0",sy,sizeof(sy),harness.config);float x=strtof(sx,nullptr),y=strtof(sy,nullptr);

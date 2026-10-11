@@ -1,0 +1,7 @@
+Mario-class identity update
+
+Mario now stays the selected appearance while native loading, death, respawn or scripted actions own movement. The framework retries movement recovery automatically.
+
+F6/manual toggle still works. A deliberate switch to human lasts for this life/area; respawning, reloading or changing area restores the saved class.
+
+Installed and backed up. Offline lifecycle/appearance regressions and the live Mario QA death/respawn check passed. Full restart and cross-area travel still need completion of the live checks.

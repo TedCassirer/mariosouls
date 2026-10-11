@@ -46,7 +46,7 @@ audio thread. The current process-lifetime host does not hot-unload an adapter.
 
 ## Movement ownership (ABI 2)
 
-ABI 1–3 adapters are rejected; rebuild both host and adapter. `resolveMotion` is a
+ABI 1â€“3 adapters are rejected; rebuild both host and adapter. `resolveMotion` is a
 required callback. `SC_MotionResolution` contains the native capsule position in
 local centimetres, an ownership generation, a movement sequence (zero for an
 unsolicited correction), and up to four unit contact normals. Copy the corrected
@@ -69,9 +69,14 @@ movement. Focus loss clears queued intent. Requests time out; invalid output or
 an unsupported bridge restores native controls. A central session owns the
 actor/physics/movement/map binding. Native actions suspend guest locomotion and
 resume the same character after 100 ms of stable idle state. Loads, actor changes
-and death discard the old instance and all queued work; a requested character
-may be recreated only after a living, safe native actor is stable for 500 ms.
-An explicit toggle-off cancels that request. Faults require explicit reactivation.
+and death discard stale ownership and all queued work. Movement may resume only
+once a living, safe native identity has settled for 500 ms. Appearance is separate:
+a validated pose-only guest follows the native actor during spawn, recovery and
+streaming, without motion submissions, body mutation, input filtering or combat.
+Transient faults preserve the request and retry; an explicit toggle-off cancels
+it for this life/area. Saved-class intent is restored on death/respawn, area change
+or actor reload. Unreadable actor/camera data clears stale meshes, while an invalid
+replacement mesh does not hide the native actor.
 
 ## Coordinates and geometry
 
@@ -107,7 +112,7 @@ native pointers or memory access. This clarification keeps ABI 3 unchanged.
 Mesh arrays are unindexed triangles. Position/normal/color each have
 `capacityTriangles * 9` floats; UV has `capacityTriangles * 6`. Do not write beyond
 capacity. Set `numTrianglesUsed` on every successful step/pose. The descriptor
-allows at most 16,384 triangles and a 4096×4096 atlas. Frame validation rejects
+allows at most 16,384 triangles and a 4096Ã—4096 atlas. Frame validation rejects
 non-finite output, invalid attack IDs and excess mesh counts and restores native
 control. Rendering uses the native camera/depth and composites before Dark Souls UI.
 Character meshes use one atlas and vertex colors, without a general material
@@ -128,7 +133,7 @@ interaction. `SC_GROUNDED` describes actual ground support, not an idle animatio
 The host checks native prompts and state as well. Native action scripts perform
 the item/door/menu/ladder operation; the adapter receives semantic poses:
 neutral, climb, drink, rest, door, walk, downed and talk. A phase of -1 means a
-free-running pose; otherwise phase is 0–1. Climb travelCm is cumulative signed
+free-running pose; otherwise phase is 0â€“1. Climb travelCm is cumulative signed
 vertical travel. Unsupported optional poses should fall back to a stable neutral
 pose, not fail the entire interaction. Talk currently falls back to neutral on Mario.
 
@@ -182,7 +187,7 @@ airtime even when exhausted; landing rearms them. `probeContact` must be read-on
 only `commitContact` may trigger the guest's bounce/hit response after a paid hit.
 
 Guest/unarmed attack power is independent of equipped weapons. Shared scaling
-uses base + upgradeStep × level + strengthBonus + dexterityWeight × strengthBonus(dex).
+uses base + upgradeStep Ã— level + strengthBonus + dexterityWeight Ã— strengthBonus(dex).
 The bonus awards 3/stat over 10 to 20, 2/stat over 20 to 40, then 0.5/stat to 99.
 The native host inserts attack power before native defenses. Range, vertical bounds,
 target count, multiplier, stamina cost and poise are manifest-driven; shared stagger
@@ -431,7 +436,7 @@ Pyromancy Flame in either hand. Other spells and other casters remain native.
 The adapter declares cast-speed multiplier, horizontal projectile speed, gravity,
 upward bounce speed, lifetime and initial height above feet. Distances use cm;
 timing uses seconds. Adapters supply policy only and cannot access game memory.
-Mario requests 3.5x casting, 1200 cm/s flight, 2400 cm/s² gravity, 600 cm/s bounce,
+Mario requests 3.5x casting, 1200 cm/s flight, 2400 cm/sÂ² gravity, 600 cm/s bounce,
 a three-second lifetime and 75 cm initial height. Native aim supplies horizontal
 direction; the custom projectile does not home vertically onto locked targets.
 
@@ -512,8 +517,9 @@ Adapters supply neither native class IDs nor memory addresses.
 
 Creation uses a temporary pose-only guest instance isolated from world ownership.
 The host destroys it before entering gameplay. The native saved class requests
-the character once per loaded actor, preserving manual overrides during that
-actor lifetime. No retroactive inventory is granted to existing saves.
+the character continuously, independent of the cosmetic text hook. Manual
+overrides last for the current life/area, and late class reads remain eligible.
+Known class mismatch or actor removal clears the previous class's request. No retroactive inventory is granted to existing saves.
 See STARTING_CLASSES.md for PTDE mapping, activation and validation.
 
 

@@ -29,16 +29,23 @@ Adapters continue to have no memory or inventory access.
   Native UI owns placement, clipping and composition. GPU resources restore
   device state and release on reset. Appearance controls still describe the
   fallback human; they do not reshape or recolor the guest mesh.
-- Native saved class requests the adapter once per loaded actor. The manual
-  toggle remains available and is not overwritten every frame. This replacement
-  also applies to existing Pyromancer-class saves when loaded; no inventory is
-  retroactively granted to them. Other classes retain their normal defaults.
-  An actor appearing before its saved class data does not consume the decision.
-  An explicit manual toggle consumes it, including while class data is loading.
-  Activation settles the actor/physics/map identity for 500 ms, independently
-  of idle animations, focus and menus, then waits for a safe native frame.
-  Pressing the toggle while still human enables the guest even if an automatic
-  request was pending; it does not silently cancel that request.
+- Saved class is persistent identity, not a one-shot activation event. Class
+  detection remains active even if the cosmetic name hook is unavailable.
+  This also applies to existing Pyromancer saves; no items or stats are granted.
+  Other classes retain native defaults and do not inherit the previous save's
+  class request. Unknown class reads during streaming retain a confirmed class.
+- Manual toggle-off remains available for the current life/area. Death/respawn,
+  a map change or actor reload restores the saved-class default, including when
+  the engine reuses actor pointers. Recovery/failure paths preserve pending intent.
+- Movement acquisition settles identity for 500 ms and still waits for a living,
+  safe native frame. Separate pose-only presentation supplies the guest model
+  immediately when actor/camera/pose data are valid, even while spawn/menu/death
+  or recovery keeps physics native. No movement, input filtering or combat runs
+  in this presentation path. Host visibility suppression starts only after a
+  validated replacement mesh exists, and restores on explicit off/teardown.
+- Cached guest floor proximity is not an activation condition. Native Havok
+  remains authoritative at airborne spawns and event-owned floors. A guest must
+  support pose-only creation without terrain (verified for Mario).
 
 Set `[Framework] StartingClass=0` before launching to disable the class replacement
 while retaining the existing manual character toggle.

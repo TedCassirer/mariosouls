@@ -10,13 +10,22 @@ int main(){
  p.previewHeightCm=0;assert(!SCClass::valid(&p));p.previewHeightCm=160;
  p.previewYaw=std::numeric_limits<float>::quiet_NaN();assert(!SCClass::valid(&p));p.previewYaw=0;
  p.archetype=99;assert(!SCClass::valid(&p));p.archetype=SC_CLASS_FIRECASTER;
- SCClass::Selection s;
- assert(!s.observe(0,true));assert(s.observe(100,true));
- assert(!s.observe(100,true)); // manual off must not be overwritten next frame
- assert(!s.observe(0,true));assert(s.observe(100,true)); // recycled pointer after load
- assert(!s.observe(200,false));assert(s.observe(200,true)); // saved stats can arrive after the actor
- assert(!s.observe(200,true));
- assert(!s.observe(250,false));s.manual(250);assert(!s.observe(250,true));
- assert(s.observe(300,true));
- puts("PASS starting class: profile bounds, per-actor activation, manual override, native classes and recycled identity");
+ SCClass::Selection s;using D=SCClass::Decision;
+ assert(s.observe(0,false,false,-1,false)==D::None);
+ assert(s.observe(100,true,true,1801,true)==D::Enable);
+ assert(s.observe(100,true,true,1801,true)==D::Enable); // persistent, not one-shot
+ assert(s.observe(100,false,false,-1,true)==D::Enable); // class unreadable while streaming
+ s.manual(100);assert(!s.required());
+ assert(s.observe(100,true,true,1801,true)==D::None); // deliberate off remains for this life
+ assert(s.observe(100,true,true,1801,false)==D::None);
+ assert(s.observe(100,true,true,1801,true)==D::Enable); // same-pointer respawn resets override
+ s.manual(100);assert(s.observe(100,true,true,1002,true)==D::Enable); // same-pointer zone change
+ assert(s.observe(0,false,false,-1,false)==D::Disable);
+ assert(s.observe(100,false,false,1801,true)==D::None); // recycled actor waits for class
+ assert(s.observe(100,true,true,1801,true)==D::Enable);
+ assert(s.observe(200,true,false,1801,true)==D::Disable); // another save must not inherit Mario
+ assert(s.observe(200,true,false,1801,true)==D::None);
+ assert(s.observe(200,true,true,1801,true)==D::Enable); // saved stats arriving late
+ assert(s.observe(200,true,false,1801,true)==D::Disable); // same-pointer different class
+ puts("PASS starting class: persistent identity, transient reads, same-pointer respawn/zone, manual override and save isolation");
 }

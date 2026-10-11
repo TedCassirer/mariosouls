@@ -49,7 +49,7 @@ static void __fastcall characterVisibilityHook(uintptr_t actor,uintptr_t){
  characterOriginalVisibility(actor);
  AcquireSRWLockExclusive(&characterVisibilityLock);
  const auto& v=characterVisibility;
- if(v.armed&&hideNative&&(characterOwned()||nativeActionOwned())&&actor==v.actor&&visibilityIdentity(actor)){
+ if(v.armed&&hideNative&&characterPresented()&&actor==v.actor&&visibilityIdentity(actor)){
   // Read current model identities after the native call. Equipment reloads can
   // replace models; never write a saved pointer after it leaves this actor.
   uintptr_t body=read<uint32_t>(actor+0x24),assembly=read<uint32_t>(actor+0x658);

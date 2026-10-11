@@ -49,6 +49,16 @@ int main(int argc,char**argv){
    for(int frame=0;frame<90;frame++){SC_Pose pose={};pose.phase=-1;pose.yaw=frame*.03f;assert(a->pose(preview,&pose,&ps,&pm));assert(SC::frame(ps,pm,*d));assert(pm.numTrianglesUsed>0);}
    a->destroy(preview);
   }
+  if(!strcmp(d->id,"mario64")){
+   a->surfaces(nullptr,0,0);a->surfaces(nullptr,0,1);
+   int actor=a->create(0,0,0,0);assert(actor>=0);
+   for(int phase:{SC_POSE_NEUTRAL,SC_POSE_DEATH,SC_POSE_REST,SC_POSE_WALK}){
+    for(int tick=0;tick<40;tick++){SC_Pose pose={};pose.kind=phase;pose.phase=-1;pose.position[0]=tick*10.f;
+     assert(a->pose(actor,&pose,&ps,&pm));assert(SC::frame(ps,pm,*d));assert(pm.numTrianglesUsed>0);}
+   }
+   a->destroy(actor);a->surfaces(floor,2,0);
+   puts("PASS real appearance without cached floor: load/death/rest/walk and teardown");
+  }
   puts("PASS class preview: real animated mesh, rotation, repeated teardown then gameplay create");
  }
  int id=a->create(0,30,0,0);assert(id>=0);assert(a->create(0,30,0,0)<0);

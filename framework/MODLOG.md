@@ -347,3 +347,44 @@ Installed while the game was closed under the user's existing installation
 authorization. Backup: work/checkpoints/before-framework-20261011-191254-239738.
 Read-back hashes matched all three binaries and all 15 collision caches; every
 previously existing file in the backup manifest is present. No live game test.
+
+
+## 2026-10-11: persistent class identity and native-driven appearance
+
+User reported human fallback on game start, death and map changes. Root causes:
+class selection consumed its single activation decision, transient release paths
+cancelled intent, appearance depended on movement ownership, and activation
+rejected missing/far cached floors even when native terrain was authoritative.
+
+Core selection now continuously requests the saved class, retains it across
+unreadable class reads, and resets explicit manual override at new life/area or
+actor replacement. Confirmed other classes do not inherit its request. Host
+class identity no longer depends on the cosmetic FMG hook. Transient handbacks
+preserve intent; explicit toggle/QA-off remains deliberate. Cached floor proximity
+no longer vetoes native-collision-backed activation.
+
+New generic host presentation follows native position with guest poses during
+spawn/loading/death/recovery while locomotion remains native. It does not capture
+body shapes, filter input, submit motion or issue combat; output attack flags are
+cleared. It hides native assembly/opacity only after validating a replacement
+mesh, restores visibility on teardown, rejects stale identities and retries failed
+creation/poses with backoff. Same SDK, no Mario branches added to the host.
+
+Build, full offline suite and doctor passed. Added production presentation tests
+with bounded memory fixtures (only opacity writes permitted), persistent class
+policy lifecycle tests and real Mario no-terrain create/pose/destroy checks.
+Installed with backup work/checkpoints/before-framework-20261011-202310-724990.
+Saves/config backed up before launch at
+work/checkpoints/before-class-lifecycle-20261011-202308.
+
+Live Mario QA was originally Deprived (class 9), level 13 exact melee fixture.
+For this test only, changed its saved-class byte to 7; inventory/stats unchanged.
+Observed automatic appearance and movement acquisition. Triggered QA death by
+setting native HP to zero; native game performed death, bloodstain and respawn.
+158 samples: 80 dead, 15 loading, 63 alive; all readable actor opacity samples
+were zero, class 7. Inspected recorded death/respawn frames: Mario throughout,
+then automatic Mario at Firelink bonfire. Evidence is private under
+work/lifecycle-death. A subsequent menu sequence accidentally loaded the level-65
+save; the guard rejected testing before any gameplay checks or mutations. Closed
+that session immediately; it is not counted as validation. Use individual
+observed menu steps, not a batch of confirmations, for further reload checks.

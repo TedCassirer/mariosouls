@@ -21,7 +21,7 @@ static bool debugVisible(){
  return debugEnabled&&player&&posData&&cam&&currentMap()>=0&&chain(playerSlot,{0,4,0})==player&&
         chain(player+0x28,{0,0x1c})==posData&&read<int>(player+0x2d4)>0;
 }
-static bool renderWanted(){return ((characterOwned()||nativeActionOwned())&&geo.numTrianglesUsed)||debugVisible()||launcherVisible();}
+static bool renderWanted(){return (characterPresented()&&geo.numTrianglesUsed)||debugVisible()||launcherVisible();}
 static void debugContact(Vec at,bool confirmed){
  if(!debugEnabled||!SCContact::finite(debugPoint(at)))return;
  if(debugContacts.size()>=32)debugContacts.erase(debugContacts.begin());

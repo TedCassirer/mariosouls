@@ -11,9 +11,10 @@
 #include "../core/camera.h"
 #include "../core/projectile.h"
 #include "../core/impact.h"
+#include "../sdk/launcher_api.h"
 static void log(const char*s){printf("adapter: %s\n",s);}
 int main(int argc,char**argv){
- if(argc<2)return 2;HMODULE dll=LoadLibraryA(argv[1]);if(!dll){printf("LoadLibrary failed %lu\n",GetLastError());return 3;}
+ setvbuf(stdout,nullptr,_IONBF,0);if(argc<2)return 2;HMODULE dll=LoadLibraryA(argv[1]);if(!dll){printf("LoadLibrary failed %lu\n",GetLastError());return 3;}
  auto entry=(SC_GetAPI)GetProcAddress(dll,"SoulsCharacterGetAPI");assert(entry);assert(!entry(99,sizeof(SC_CharacterAPI)));assert(!entry(1,sizeof(SC_CharacterAPI)));assert(!entry(SC_ABI_VERSION,0));
  const auto*a=entry(SC_ABI_VERSION,sizeof(SC_CharacterAPI));assert(SC::api(a));const auto*d=a->describe();assert(SC::descriptor(d));
  if(auto camera=(SC_GetCameraProfile)GetProcAddress(dll,"SoulsCharacterGetCameraProfile")){
@@ -36,7 +37,7 @@ int main(int argc,char**argv){
  int id=a->create(0,30,0,0);assert(id>=0);assert(a->create(0,30,0,0)<0);
  std::vector<float> pos(d->maxTriangles*9),normal(pos.size()),color(pos.size()),uv(d->maxTriangles*6);
  SC_Mesh m={pos.data(),normal.data(),color.data(),uv.data(),d->maxTriangles,0};SC_State state{};SC_Input input={0,1,0,0,0,0,0,0};
- auto step=[&](){assert(a->step(id,&input,&state,&m));assert(SC::frame(state,m,*d));assert(m.numTrianglesUsed);};
+ auto step=[&](){assert(a->step(id,&input,&state,&m));assert(SC::frame(state,m,*d));assert(m.numTrianglesUsed||(!strcmp(d->id,"mario64")&&state.rawAction==0x1371));};
  for(int i=0;i<30;i++)step();assert(state.flags&SC_GROUNDED);float ground=state.position[1],top=ground;
  for(int i=0;i<70;i++){input.jump=i<8;step();top=std::max(top,state.position[1]);}assert(top-ground>10);assert(fabsf(state.position[1]-ground)<5);
  printf("%s: mesh=%u jump=%.2f cm\n",d->id,m.numTrianglesUsed,top-ground);
@@ -79,6 +80,26 @@ int main(int argc,char**argv){
   assert(ceilingTop<=120-d->body.heightCm+1);
   printf("body tunnel: walks under 120 cm ceiling, jump peak %.2f cm\n",ceilingTop);
   a->surfaces(floor,2,0);input={0,1,0,0,0,0,0,0};
+ }
+
+ if(auto getLauncher=(SC_GetLauncherAPI)GetProcAddress(dll,"SoulsCharacterGetLauncherAPI")){
+  assert(!getLauncher(99,sizeof(SC_LauncherAPI)));
+  const auto*l=getLauncher(SC_LAUNCHER_VERSION,sizeof(SC_LauncherAPI));assert(l);
+  std::vector<uint8_t> lt(l->textureWidth*l->textureHeight*4);SC_Texture tx={lt.data(),uint32_t(lt.size())};assert(l->texture(&tx));
+  for(unsigned part=1;part<=4;part++){assert(l->mesh(part,12,0,&m));assert(m.numTrianglesUsed>0);printf("launcher prop %u triangles %u\n",part,m.numTrianglesUsed);}
+  for(int frame=0;frame<150;frame++){assert(l->mesh(SC_LAUNCHER_OPERATOR,float(frame),frame*.04f,&m));assert(m.numTrianglesUsed<=m.capacityTriangles);for(unsigned v=0;v<m.numTrianglesUsed*9;v++)assert(std::isfinite(m.position[v])&&fabsf(m.position[v])<200);}
+  SC_Mesh small=m;small.capacityTriangles=1;assert(!l->mesh(SC_LAUNCHER_OPERATOR,0,0,&small));assert(!l->mesh(99,0,0,&m));assert(!l->mesh(1,NAN,0,&m));
+  a->resume(id,0,0,0,0);input={0,1,0,0,0,0,0,0};step();float at[3]={0,0,0};assert(l->begin(id,at,0));assert(!l->begin(id,at,0));
+  SC_LauncherState ls={sizeof(ls)};input.jump=1;
+  for(int i=0;i<160;i++){step();assert(l->query(id,&ls));assert(ls.phase!=SC_LAUNCHER_FLIGHT);}
+  assert(ls.phase==SC_LAUNCHER_AIMING);float initialYaw=ls.yaw;input.jump=0;step();
+  input.moveY=1;for(int i=0;i<60;i++)step();assert(l->query(id,&ls));printf("launcher pitch %.5f\n",ls.pitch);assert(fabsf(ls.pitch-0x38e3*3.14159265359f/32768)<.001f);
+  input.moveY=0;input.moveX=1;for(int i=0;i<70;i++)step();assert(l->query(id,&ls));printf("launcher yaw %.5f\n",ls.yaw);assert(fabsf(fabsf(ls.yaw-initialYaw)-1.5707963f)<.001f);
+  input.moveX=0;input.jump=1;step();assert(l->query(id,&ls)&&ls.phase==SC_LAUNCHER_FLIGHT);
+  assert(fabsf(state.velocity[1]-3000*sinf(ls.pitch))<2);input.jump=0;float vy=state.velocity[1];step();assert(fabsf(state.velocity[1]-(vy-30))<.1f);
+  l->cancel(id);a->resume(id,0,0,0,0);step();assert(m.numTrianglesUsed>0);
+  assert(l->begin(id,at,0));step();a->nativeDamage(id,1);step();assert(l->query(id,&ls)&&!ls.phase);assert(m.numTrianglesUsed>0);
+  printf("PASS real cannon opening/aim limits/held-A gate/launch speed/gravity/hurt cancellation\n");
  }
  for(int kind=SC_POSE_NEUTRAL;kind<=SC_POSE_STAGGER;kind++)for(int frame=0;frame<20;frame++){
   SC_Pose p={uint32_t(kind),{100,50,200},.75f,frame/19.f,float(frame*3)};assert(a->pose(id,&p,&state,&m));assert(SC::frame(state,m,*d));assert(fabsf(state.position[1]-50)<.01f);

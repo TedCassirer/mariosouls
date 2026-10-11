@@ -471,3 +471,29 @@ later reject it. Target identity and actor reference are checked on reuse.
 
 Mario opts in for combo kick, jump kick and slide kick. Other guest attacks,
 equipped weapons, criticals and projectiles keep their existing impact paths.
+
+## Optional world launcher (version 1)
+
+`SoulsCharacterGetLauncherAPI(version, size)` returns the exact bounded
+`SC_LauncherAPI` in `sdk/launcher_api.h`; incompatible requests return null.
+ABI4 remains unchanged. Adapters without this export have no launcher objects.
+Local positions and meshes use centimetres, Y up; yaw/pitch use radians.
+`begin` requires an eligible consumed interaction close to the player. `step`
+alone advances opening, aiming and flight; `query`, `texture` and `mesh` are
+read-only observations. `cancel` is idempotent and restores guest visibility.
+Mesh buffers and atlas are host-owned, with explicit capacities. No native
+pointers, addresses, HP, quest, inventory or enemy writes cross this API.
+
+The host owns placement, verified ground and line-of-sight, interaction priority,
+input arbitration, native collision and scripted camera submission. Original
+native prompts win over custom objects. Opening/aiming consume equipment input;
+the entry press cannot fire. Damage, death, native takeover, focus loss, map or
+character changes revoke the session. The camera request is actor/camera-bound,
+expires after 150 ms without refresh, and is applied only during native render
+submission; the normal follow-camera transform is restored in the same call.
+Flight still uses the shared motion bridge, native HP and fall-damage policy.
+
+The host currently supports one launcher/operator pair at a Firelink placement
+and an opt-in Asylum QA placement. Operator unlock state is stored per placement
+in local mod configuration and shared between saves; it is not a native quest
+flag. This is a bounded launcher capability, not a general imported NPC engine.

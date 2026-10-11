@@ -6,6 +6,7 @@
 #include <cstring>
 #include <vector>
 #include "../../sdk/character_api.h"
+#include "../../sdk/launcher_api.h"
 #include "../../core/motion.h"
 #include "../../../work/libsm64/src/libsm64.h"
 #include "profile.generated.h"
@@ -18,6 +19,11 @@ static std::vector<uint8_t> rom;
 static SM64MarioState raw{};
 static uint32_t previousAction=0;
 static int32_t active=-1;
+static uint32_t (*libCannonBegin)(int32_t,const float*,float);
+static void (*libCannonCancel)(int32_t);
+static uint32_t (*libCannonQuery)(int32_t,float*);
+static bool cannonAssetsReady=false;
+#include "cannon_assets.h"
 static decltype(&sm64_global_init) libInit;
 static decltype(&sm64_global_terminate) libShutdown;
 static decltype(&sm64_audio_init) libAudioInit;
@@ -78,6 +84,7 @@ static void state(SC_State*out){
     if(!(raw.action&0x800)){out->flags|=SC_CAN_INTERACT;if(raw.position[1]<=raw.floorHeight+5)out->flags|=SC_GROUNDED;}
     if((out->flags&SC_GROUNDED)&&equipmentActionEligible(raw.action))out->flags|=SC_CAN_EQUIP_ACTION;
     if(!(raw.action&0x20000))out->flags|=SC_AUTO_ATTACK_ELIGIBLE;
+    if(raw.action==0x00001371||raw.action==0x00880898)out->flags=0;
     bool hitting=false;
     switch(out->attackId){
         case Punch1:case Punch2:hitting=raw.flags&0x00100000;break;
@@ -133,12 +140,14 @@ static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
     LOAD(libPosition,sm64_set_mario_position);LOAD(libAction,sm64_set_mario_action);LOAD(libFace,sm64_set_mario_faceangle);LOAD(libHealth,sm64_mario_host_health);
     LOAD(libFloor,sm64_surface_find_floor_height);LOAD(libProbe,sm64_mario_probe_attack);LOAD(libContact,sm64_mario_attack);
     LOAD(libBody,sm64_host_body);
+    LOAD(libCannonBegin,sm64_mario_cannon_begin);LOAD(libCannonCancel,sm64_mario_cannon_cancel);LOAD(libCannonQuery,sm64_mario_cannon_query);
 #undef LOAD
     FILE*f=init->assetPath?fopen(init->assetPath,"rb"):nullptr;
     if(!f){if(report)report("Owned US Mario 64 ROM is missing");shutdown();return 0;}
     fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);bool ok=n==8388608;
     if(ok){rom.resize(n);ok=fread(rom.data(),1,n,f)==size_t(n);}fclose(f);
     if(!ok||rom[0]!=0x80||rom[1]!=0x37||rom[2]!=0x12||rom[3]!=0x40){if(report)report("Expected a big-endian US Mario 64 ROM");shutdown();return 0;}
+    cannonAssetsReady=MarioCannonAssets::initialize(rom);
     libInit(rom.data(),texture->rgba);libAudioInit(rom.data());libBody(characterProfile.body.radiusCm,characterProfile.body.heightCm);initialized=true;return 1;
 }
 static int32_t create(float x,float y,float z,float yaw){
@@ -150,7 +159,7 @@ static uint32_t step(int32_t id,const SC_Input*in,SC_State*out,SC_Mesh*mesh){
     if(id!=active||id<0||!in||!out)return 0;SM64MarioGeometryBuffers g;
     if(!geometry(mesh,g))return 0;
     SM64MarioInputs input={in->camLookX,in->camLookZ,-in->moveX,-in->moveY,in->jump,in->attack,in->crouch};
-    libTick(id,&input,&raw,&g);mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);captureEquipment(id);firePresentation(*mesh,true);return 1;
+    libTick(id,&input,&raw,&g);mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);captureEquipment(id);firePresentation(*mesh,true);if(raw.action==0x00001371)mesh->numTrianglesUsed=0;return 1;
 }
 
 struct Vec{float x,y,z;Vec operator+(Vec b)const{return{x+b.x,y+b.y,z+b.z};}Vec operator-(Vec b)const{return{x-b.x,y-b.y,z-b.z};}Vec operator*(float s)const{return{x*s,y*s,z*s};}};
@@ -177,6 +186,7 @@ static void flask(SC_Mesh&mesh){
 #include "fire_flower.h"
 static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
     if(id!=active||id<0||!p||!out)return 0;SM64MarioGeometryBuffers g;if(!geometry(mesh,g))return 0;
+    libCannonCancel(id);
     if(p->kind!=SC_POSE_NATIVE_COMBAT)clearEquipment(id);
     int anim=0xc3,style=0;float phase=-1;
     switch(p->kind){
@@ -197,10 +207,10 @@ static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
     if(p->kind==SC_POSE_DRINK&&p->phase>.02f)flask(*mesh);
     return 1;
 }
-static void resume(int32_t id,float x,float y,float z,float yaw){if(id==active&&id>=0){clearEquipment(id);libResume(id,x,y,z,yaw);raw.position[0]=x;raw.position[1]=y;raw.position[2]=z;raw.velocity[0]=raw.velocity[1]=raw.velocity[2]=raw.forwardVelocity=0;raw.faceAngle=yaw;previousAction=0;}}
+static void resume(int32_t id,float x,float y,float z,float yaw){if(id==active&&id>=0){libCannonCancel(id);clearEquipment(id);libResume(id,x,y,z,yaw);raw.position[0]=x;raw.position[1]=y;raw.position[2]=z;raw.velocity[0]=raw.velocity[1]=raw.velocity[2]=raw.forwardVelocity=0;raw.faceAngle=yaw;previousAction=0;}}
 static void position(int32_t id,float x,float y,float z){if(id==active&&id>=0){libPosition(id,x,y,z);shiftEquipment(x-raw.position[0],y-raw.position[1],z-raw.position[2]);raw.position[0]=x;raw.position[1]=y;raw.position[2]=z;}}
 static void command(int32_t id,uint32_t c){if(id==active&&id>=0)libAction(id,c==SC_COMMAND_FALL?0x0100088c:0x0c400201);}
-static void damage(int32_t id,uint32_t severity){if(id==active&&id>=0){if(severity)clearEquipment(id);libHealth(id,std::min(severity,2u));}}
+static void damage(int32_t id,uint32_t severity){if(id==active&&id>=0){if(severity){libCannonCancel(id);clearEquipment(id);}libHealth(id,std::min(severity,2u));}}
 static void surfaces(const SC_Surface*s,uint32_t n,uint32_t dynamic){
     if(!initialized||(!s&&n)||n>2000000||dynamic&&n>48)return;
     std::vector<SM64Surface> dest(n);for(uint32_t i=0;i<n;i++)memcpy(dest[i].vertices,s[i].vertices,sizeof(s[i].vertices));
@@ -247,3 +257,19 @@ extern "C" __declspec(dllexport) const SC_CameraProfile* SoulsCharacterGetCamera
 static const SC_ProjectileProfile flowerProjectile={sizeof(SC_ProjectileProfile),SC_PROJECTILE_PROFILE_VERSION,SC_PROJECTILE_FIREBALL,3.5f,1200,2400,600,3,75};
 extern "C" __declspec(dllexport) const SC_ImpactProfile* SoulsCharacterGetImpactProfile(uint32_t version,uint32_t size){return version==SC_IMPACT_PROFILE_VERSION&&size==sizeof(SC_ImpactProfile)?&characterImpactProfile:nullptr;}
 extern "C" __declspec(dllexport) const SC_ProjectileProfile* SoulsCharacterGetProjectileProfile(uint32_t version,uint32_t size){return version==SC_PROJECTILE_PROFILE_VERSION&&size==sizeof(SC_ProjectileProfile)?&flowerProjectile:nullptr;}
+
+static uint32_t launcherBegin(int32_t id,const float*p,float yaw){
+ if(id!=active||id<0||!cannonAssetsReady)return 0;clearEquipment(id);return libCannonBegin(id,p,yaw);
+}
+static void launcherCancel(int32_t id){if(id==active&&id>=0&&initialized)libCannonCancel(id);}
+static uint32_t launcherQuery(int32_t id,SC_LauncherState*out){
+ if(!out||out->size!=sizeof(*out)||id!=active||id<0)return 0;
+ float data[7]={};out->phase=libCannonQuery(id,data);out->ticks=uint32_t(data[6]);
+ memcpy(out->position,data,12);out->yaw=data[3];out->pitch=data[4];out->propLift=data[5];return 1;
+}
+static uint32_t launcherTexture(SC_Texture*out){
+ if(!cannonAssetsReady||!out||!out->rgba||out->capacityBytes<MarioCannonAssets::atlas.size())return 0;
+ memcpy(out->rgba,MarioCannonAssets::atlas.data(),MarioCannonAssets::atlas.size());return 1;
+}
+static const SC_LauncherAPI launcherAPI={sizeof(SC_LauncherAPI),SC_LAUNCHER_VERSION,1024,MarioCannonAssets::width,MarioCannonAssets::height,"Cannon","Bob-omb Buddy",launcherBegin,launcherCancel,launcherQuery,launcherTexture,MarioCannonAssets::mesh};
+extern "C" __declspec(dllexport) const SC_LauncherAPI* SoulsCharacterGetLauncherAPI(uint32_t version,uint32_t size){return version==SC_LAUNCHER_VERSION&&size==sizeof(SC_LauncherAPI)?&launcherAPI:nullptr;}

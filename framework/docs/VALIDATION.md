@@ -1,5 +1,9 @@
 # Poise-aware kick knockback (2026-10-11)
 
+Framework 0.9.0: see [the cannon record](CANNON.md) for original guest behavior,
+Firelink/Asylum live checks, exact scope and remaining gaps. The launcher is an
+optional SDK capability; native HP/collision and the QA identity guard remain.
+
 Framework 0.8.3: see [the kick impact record](KICK_IMPACTS.md) for measured
 combo/slide/jump reactions, Asylum Demon exclusion, native damage, test setup
 failures and coverage limits. Full framework tests and doctor passed. Native

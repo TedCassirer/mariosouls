@@ -61,3 +61,21 @@ def prepare(repo):
         ('    if(hostAnimAttributes && gCurrAnimAttribute-hostAnimAttributes==78)memcpy(sm64_host_right_hand,gMatStack[gMatStackIndex],sizeof(sm64_host_right_hand));',
          '    if(hostAnimAttributes)sc_mario_equipment_hand((int)(gCurrAnimAttribute-hostAnimAttributes),&gMatStack[gMatStackIndex][0][0]);\n    if(hostAnimAttributes && gCurrAnimAttribute-hostAnimAttributes==78)memcpy(sm64_host_right_hand,gMatStack[gMatStackIndex],sizeof(sm64_host_right_hand));',1),
     ])
+
+    # Import only the original cannon opening actions. Their object helpers are
+    # supplied by runtime_cannon.h; the rest of SM64's object scheduler is absent.
+    import re
+    original=(Path(__file__).resolve().parents[3]/'work/cannon-research/sm64/src/game/behaviors/cannon.inc.c').read_text()
+    actions=[]
+    for number in [4,6,5]:
+        match=re.search(r'void opened_cannon_act_'+str(number)+r'\(void\) \{.*?^\}',original,re.M|re.S)
+        if not match:raise RuntimeError('Pinned cannon action not found')
+        actions.append(match.group(0))
+    (repo/'src/sc_cannon_actions.h').write_text('\n'.join(actions))
+    (repo/'src/sc_cannon.h').write_bytes(Path(__file__).with_name('runtime_cannon.h').read_bytes())
+    staged('libsm64.c',[
+        ('struct GlobalState *globalState;', 'struct GlobalState *globalState;\n    struct Object cannon;uint32_t cannonActive,cannonTicks,cannonRelease;',1),
+        ('#include "host_pose.h"','#include "sc_cannon.h"\n#include "host_pose.h"',1),
+        ('    update_button( inputs->buttonA, A_BUTTON );',
+         '    struct MarioInstance *ci=s_mario_instance_pool.objects[marioId];\n    sc_cannon_before_tick(ci);\n    bool fire=inputs->buttonA;\n    if(ci->cannonActive && gMarioState->action==ACT_IN_CANNON){\n        if(gMarioState->actionState!=2)ci->cannonRelease=0;\n        else if(!fire)ci->cannonRelease=1;\n        if(!ci->cannonRelease)fire=false;\n    }\n    update_button( fire, A_BUTTON );',1),
+    ])

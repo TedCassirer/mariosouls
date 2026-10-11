@@ -4,10 +4,15 @@
 #include "../core/camera.h"
 #include "../core/projectile.h"
 #include "../core/impact.h"
+#include "../core/launcher.h"
 #include <cassert>
 #include <cstdio>
 #include <limits>
 int main(){
+ SC_LauncherState launch={sizeof(launch),SC_LAUNCHER_AIMING,0,{0,0,0},0,0,0};assert(SCLauncher::valid(launch));
+ launch.phase=4;assert(!SCLauncher::valid(launch));launch.phase=1;launch.position[0]=NAN;assert(!SCLauncher::valid(launch));launch.position[0]=30001;assert(!SCLauncher::valid(launch));launch.position[0]=0;launch.pitch=INFINITY;assert(!SCLauncher::valid(launch));assert(!SCLauncher::valid((const SC_LauncherAPI*)nullptr));
+ float feet[3]={0,0,0},object[3]={0,0,1};assert(SCLauncher::withinReach(feet,object,1.1f,1));object[1]=2;assert(!SCLauncher::withinReach(feet,object,1.1f,1));object[1]=NAN;assert(!SCLauncher::withinReach(feet,object,1.1f,1));
+ puts("PASS launcher: finite/bounded state, phase rejection and vertical reach");
  SC_ImpactProfile impact={sizeof(impact),SC_IMPACT_PROFILE_VERSION,8,1200,80,{0,0,140,115,0,160}};assert(SCImpact::valid(&impact,8));
  auto badImpact=impact;badImpact.knockbackCm[2]=NAN;assert(!SCImpact::valid(&badImpact,8));badImpact=impact;badImpact.version=99;assert(!SCImpact::valid(&badImpact,8));assert(!SCImpact::valid(&impact,7));
  assert(fabsf(SCImpact::distance(140,0,0,30,80,.3f,1.8f)-1.4f)<.001f);

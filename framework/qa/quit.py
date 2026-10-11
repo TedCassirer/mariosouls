@@ -6,10 +6,12 @@ w=Path(__file__).resolve().parents[2]/'work'
 from host import Host
 from bridge import command
 from um.win import Drive,shot
-pid=int(sys.argv[1]);h=Host(pid);s=h.snapshot();assert not s['menu'] and not s['interaction']
-command(pid,mode=2);time.sleep(.5)
+pid=int(sys.argv[1]);firelink='--firelink' in sys.argv[2:];h=Host(pid,maps=(1002,) if firelink else (1801,));s=h.snapshot();assert not s['menu'] and not s['interaction']
+if not firelink:command(pid,mode=2);time.sleep(.5)
 d=Drive('DARKSOULS');assert d.focus();time.sleep(.6)
 try:
+ if firelink and s['player']['flags2']&0x100:
+  assert h.focused();d.hold('0x75',140);time.sleep(.6)
  for key in ['0x23','0x27','0x27','0x27','0x0D','0x28','0x28','0x28','0x28','0x0D']:
   assert h.focused();d.hold(key,140);time.sleep(.3)
  shot(str(w/'progression/quit-check.png'),exe='DARKSOULS.exe',scale=.5)

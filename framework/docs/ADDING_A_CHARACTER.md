@@ -182,3 +182,20 @@ using the SDK version/size handshake to opt in. Custom adapters may author a
 bounded profile directly. Keep poise attack power in the existing attack entry.
 The host applies native impacts and immunity; adapters must not move enemy bodies.
 Verify light and resistant targets, attack chains, guarding and map collision.
+
+## Optional world launcher
+
+Implement `sdk/launcher_api.h` and export `SoulsCharacterGetLauncherAPI` with the
+exact version/size handshake. Keep guest action IDs, object lifetime, original
+simulation and asset decoding inside your character directory. Supply four
+prop meshes (base, barrel, operator, lid), a bounded texture atlas, a state query,
+and begin/cancel callbacks. Only `step` advances time. Preserve one character
+instance and one authoritative native health pool throughout launch/landing.
+
+See Mario's `runtime_cannon.h` and `cannon_assets.h` for an implemented guest.
+Those files cannot serve as implementations of other games' launchers without
+their own guest rules/assets. Test held entry input, aim clamps, launch speed,
+gravity, repeated entry, cancelled visibility, damage/pose interruption and
+all animation-frame mesh bounds. Then verify the complete native scene camera,
+terrain contacts, landing and reload in the game. Details and current coverage
+are in [CANNON.md](CANNON.md).

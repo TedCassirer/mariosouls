@@ -1,4 +1,10 @@
-# Souls Character Framework 0.8.3
+# Souls Character Framework 0.9.0
+
+Mario's optional world-launcher capability adds a pink Bob-omb Buddy and cannon
+to Firelink Shrine. The adapter uses original cannon opening actions, libsm64
+aiming/flight and user-ROM meshes, textures and Buddy animation. The host handles
+interaction prompts, native collision and the complete scene's aiming camera.
+See [controls, fidelity and validation](docs/CANNON.md).
 
 Mario's combo finisher, jump kick and slide kick now request stronger native
 knockback on small enemies whose poise can be broken. Push decreases with poise;

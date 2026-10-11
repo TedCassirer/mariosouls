@@ -23,6 +23,9 @@
 #include "../../core/session.h"
 #include "../../core/context_action.h"
 static void combatReset();
+static void launcherConfigure();
+static void launcherCancel();
+static bool launcherVisible();
 static void equipmentReset();
 static void feedbackReset();
 static void feedbackSettings();
@@ -134,8 +137,9 @@ using DamageFn=int(WINAPI*)(int,int,int,float,float,float);
 static DamageFn nativeDamage=nullptr;
 #include "equipment_native.h"
 #include "native_combat.h"
-static Vec cameraEye(){return read<Vec>(cam+0x40);}
-static Vec cameraForward(){return read<Vec>(cam+0x30);}
+#include "aim_camera.h"
+static Vec cameraEye(){return cameraFrameVector(false);}
+static Vec cameraForward(){return cameraFrameVector(true);}
 #include "camera.h"
 #include "projectile.h"
 
@@ -155,6 +159,7 @@ static void rebuildSurfaces(){
 }
 #include "loader.h"
 static void releaseControl(bool preserveRequest=false){
+ launcherCancel();
  projectileRateRelease();
  cameraRelease();
  nativeReaction=false;nativeReactionIncomingUntil=0;equipmentActionOwned=false;
@@ -210,6 +215,7 @@ static bool lineClear(Vec a,Vec b){
 #include "equipment_actions.h"
 #include "death.h"
 #include "debug_view.h"
+#include "launcher.h"
 static void update(){
  static LARGE_INTEGER freq={},prev={};if(!freq.QuadPart)QueryPerformanceFrequency(&freq);LARGE_INTEGER now;QueryPerformanceCounter(&now);double dt=prev.QuadPart?double(now.QuadPart-prev.QuadPart)/freq.QuadPart:0;prev=now;static double acc=0;acc=std::min(acc+std::min(dt,.1),.1);
  player=chain(playerSlot,{0,4,0});cam=chain(cameraSlot,{0,0x3c,0x60});uintptr_t mp=read<uint32_t>(player+0x28);posData=read<uint32_t>(mp+0x1c);
@@ -223,7 +229,7 @@ static void update(){
  SCSession::Identity identity={player,posData,mp,currentMap()};
  if(characterOwned()&&(!characterSession.matches(identity)||!cam)){logf("SESSION native actor changed; clearing pending work");releaseControl(true);}
  if(characterOwned()&&read<int>(player+0x2d4)<=0&&!characterSession.death()){
-  if(!deathBegin(acc))releaseControl(true);
+  launcherCancel();if(!deathBegin(acc))releaseControl(true);
  }
  if(characterSession.death()&&read<int>(player+0x2d4)>0){logf("Death presentation complete: native respawn");releaseControl(true);acc=0;}
  if((focus&&pressed(VK_F6))||padToggle){if(characterOwned()||characterSession.requested()){characterSession.request(false);releaseControl();}else{characterSession.request(true);if(!activate())characterSession.failed(inputTime);}}
@@ -246,14 +252,17 @@ static void update(){
  if(characterOwned()&&!nativeActionOwned()&&!equipmentActionOwned){
   auto native=nativeInteractionState();if(native.valid&&(native.menu||native.ladder||native.event))beginInteraction(pad.slot,false);
  }
+ launcherObserve(focus);
  static SCContext::Button contextA;
  auto context=contextA.update(controller.jump,focus&&pad.connected,player,pad.slot,
-  characterOwned()&&!nativeActionOwned()&&!nativeReaction,actionEligible(1));
+  characterOwned()&&!nativeActionOwned()&&!nativeReaction,!launcherBusy()&&(actionEligible(1)||launcherTarget));
  InterlockedExchange(&actionBlockHeldA,context.blockNative);
  controller.jump=context.jump;
- if(context.interact)requestAction(1,true);
+ if(context.interact){if(!launcherInteract())requestAction(1,true);}
+ else if(interactPressed&&launcherBusy())launcherCancel();
+ else if(interactPressed&&launcherInteract()){}
  else if(interactPressed){if(characterOwned()&&!nativeActionOwned())requestAction(1,padInteract);else if(nativeActionOwned()&&actionCurrentRoute()==ActionRoute::Menu)actionQueue(1,inputTime,padInteract);}
- if(itemPressed&&characterOwned()&&!nativeActionOwned())requestAction(2,padItem);
+ if(itemPressed&&!launcherBusy()&&characterOwned()&&!nativeActionOwned())requestAction(2,padItem);
  if(characterOwned()&&!nativeActionOwned()&&!actionPending()&&actionRequestKind){logf("Action request unanswered; Character retained");actionRequestKind=0;}
  static DWORD configTime=0;static int command=0;if(GetTickCount()-configTime>200){configTime=GetTickCount();int serial=GetPrivateProfileIntA("Test","Serial",0,ini);if(serial!=command){command=serial;if(!focus||!harnessIdentity()){logf("test command rejected: focus/identity guard");}else{int mode=GetPrivateProfileIntA("Test","Mode",0,ini);if(mode==5)qaMeleeArsenal();if(mode==6)qaPyromancyKit();if(mode==3)graphFrames=2;if(mode==1&&!characterOwned()){if(nativeActionOwned())releaseControl();activate();}if(mode==2&&(characterOwned()||nativeActionOwned()))releaseControl();if(mode==4&&characterOwned())beginInteraction(pad.slot);testFrames=std::clamp<int>(GetPrivateProfileIntA("Test","Frames",0,ini),0,150);testButtons=GetPrivateProfileIntA("Test","Buttons",0,ini);testX=std::clamp<int>(GetPrivateProfileIntA("Test","X",0,ini),-1,1);testY=std::clamp<int>(GetPrivateProfileIntA("Test","Y",0,ini),-1,1);logf("test command=%d mode=%d frames=%d buttons=%d",serial,mode,testFrames,testButtons);}}}
  static DWORD lastLog=0;if(GetTickCount()-lastLog>2000){lastLog=GetTickCount();combatSettings();renderMode=GetPrivateProfileIntA("MarioSouls","RenderMode",1,ini);depthTest=GetPrivateProfileIntA("MarioSouls","DepthTest",1,ini);combatEnabled=GetPrivateProfileIntA("MarioSouls","EnableCombat",0,ini)!=0;Vec p=read<Vec>(posData+0x10),c=cameraEye();logf("state active=%d focus=%d player=%08x cam=%08x xyz=%.3f %.3f %.3f eye=%.3f %.3f %.3f action=%08x tris=%u",characterOwned(),focus,(unsigned)player,(unsigned)cam,p.x,p.y,p.z,c.x,c.y,c.z,state.rawAction,geo.numTrianglesUsed);}
@@ -279,7 +288,7 @@ static void update(){
  SC_Input specialInput=input;
  if(testFrames>0){specialInput.attack=!!(testButtons&2);specialInput.guard=!!(testButtons&8);specialInput.jump=!!(testButtons&1);specialInput.crouch=!!(testButtons&4);}
  bool parry=focus&&((pad.connected&&pad.pad.bRightTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD)||!!(GetAsyncKeyState(VK_TAB)&0x8000)||(testFrames>0&&(testButtons&16)));
- if(equipmentActionsInput(specialInput,parry,focus,pad.slot)){acc=1./SC_FIXED_HZ;equipmentActionsTick(acc,focus);return;}
+ if(!launcherBusy()&&equipmentActionsInput(specialInput,parry,focus,pad.slot)){acc=1./SC_FIXED_HZ;equipmentActionsTick(acc,focus);return;}
  if(equipmentActionButtons.suppressAttack())input.attack=0;
  static int lastPadInput=-1;static DWORD padLogTime=0;int padInput=(fabsf(controller.x)+fabsf(controller.y)>.01f?8:0)|(controller.jump?1:0)|(controller.attack?2:0)|(controller.crouch?4:0);if(padInput!=lastPadInput&&DWORD(inputTime-padLogTime)>=100){logf("controller input stick=%.2f %.2f buttons=%d%d%d",controller.x,controller.y,controller.jump,controller.attack,controller.crouch);lastPadInput=padInput;padLogTime=inputTime;}
  // Capture short taps even on render frames without a simulation tick. Consume
@@ -288,9 +297,11 @@ static void update(){
  if(!focus){characterInput.clear();characterClock.clear();testFrames=0;}
  else if(SCFeedback::pending(feedbackPause.until,GetTickCount())){feedbackPause.filter(input,GetTickCount());characterClock.clear();pumpAudio();}
  else if(characterClock.take(worldReady())){
-  input=characterInput.take(GetTickCount());if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);input.guard=!!(testButtons&8);--testFrames;}harnessInput(input);if(equipmentActionButtons.suppressAttack())input.attack=0;feedbackPause.filter(input,GetTickCount());combatInput(input);equipmentInput(input);uint32_t old=state.rawAction;
+  input=characterInput.take(GetTickCount());if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);input.guard=!!(testButtons&8);--testFrames;}harnessInput(input);if(equipmentActionButtons.suppressAttack())input.attack=0;feedbackPause.filter(input,GetTickCount());if(!launcherBusy()){combatInput(input);equipmentInput(input);}uint32_t old=state.rawAction;
   guest->nativeDamage(character,pendingNativeHurt);pendingNativeHurt=0;
   if(!guestStep(character,&input,&state,&geo)){logf("Adapter frame rejected; restoring native controls");releaseControl();return;}stepped=true;harnessAfterStep(old,input);pumpAudio();
+  if(launcherApi)launcherApi->query(character,&launcherState);
+  launcherCameraTick();
   if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);
  }
  Vec p=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;
@@ -303,6 +314,7 @@ static void update(){
 static D3DMATRIX identity(){D3DMATRIX m={};m._11=m._22=m._33=m._44=1;return m;}
 static D3DMATRIX viewMatrix(Vec eye,Vec at){Vec z=unit(at-eye),x=unit(cross({0,1,0},z)),y=cross(z,x);D3DMATRIX m={};m._11=x.x;m._12=y.x;m._13=z.x;m._21=x.y;m._22=y.y;m._23=z.y;m._31=x.z;m._32=y.z;m._33=z.z;m._41=-dot(x,eye);m._42=-dot(y,eye);m._43=-dot(z,eye);m._44=1;return m;}
 struct Vertex{float x,y,z;DWORD color,shade;float u,v;};
+#include "launcher_render.h"
 static void draw(IDirect3DDevice9* d){
  if(!renderWanted())return;
  bool drawCharacter=(characterOwned()||nativeActionOwned())&&geo.numTrianglesUsed;
@@ -315,7 +327,7 @@ static void draw(IDirect3DDevice9* d){
  d->SetVertexShader(NULL);d->SetPixelShader(NULL);d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_SPECULAR|D3DFVF_TEX1);d->SetTransform(D3DTS_WORLD,&world);d->SetTransform(D3DTS_VIEW,&view);d->SetTransform(D3DTS_PROJECTION,&proj);
  d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_ZENABLE,depthTest?TRUE:FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,TRUE);d->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,(profile->capabilities&SC_CAP_ALPHA_TEST)?TRUE:FALSE);d->SetRenderState(D3DRS_ALPHAREF,127);d->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);d->SetRenderState(D3DRS_FOGENABLE,FALSE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_COLORWRITEENABLE,15);d->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);d->SetRenderState(D3DRS_CLIPPLANEENABLE,0);d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE);d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
  d->SetTexture(0,tex);d->SetTextureStageState(0,D3DTSS_COLOROP,(profile->capabilities&SC_CAP_TEXTURE_MODULATE)?D3DTOP_MODULATE:D3DTOP_BLENDTEXTUREALPHA);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,(profile->capabilities&SC_CAP_ALPHA_TEST)?D3DTA_TEXTURE:D3DTA_DIFFUSE);d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(1,D3DTSS_COLORARG1,D3DTA_CURRENT);d->SetTextureStageState(1,D3DTSS_COLORARG2,D3DTA_SPECULAR);d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(1,D3DTSS_ALPHAARG1,D3DTA_CURRENT);d->SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_CLAMP);d->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_CLAMP);
- HRESULT hr=drawCharacter?d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex)):S_OK;static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}if(drawCharacter){equipmentDraw(d,renderOrigin);feedbackDraw(d);}debugDraw(d);saved->Apply();saved->Release();
+ HRESULT hr=drawCharacter?d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex)):S_OK;static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}if(drawCharacter){equipmentDraw(d,renderOrigin);feedbackDraw(d);}debugDraw(d);launcherDraw(d);saved->Apply();saved->Release();
 }
 typedef HRESULT (WINAPI *EndSceneFn)(IDirect3DDevice9*);
 static EndSceneFn originalEnd;
@@ -353,13 +365,13 @@ static HRESULT WINAPI setRenderTarget(IDirect3DDevice9*d,DWORD index,IDirect3DSu
  return originalRenderTarget(d,index,target);
 }
 static DWORD WINAPI start(void*){
- GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.6.0 host ds1ptde starting");
+ GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.9.0 host ds1ptde starting");
  if(read<uint32_t>(0x400080)!=0xfc293654){logf("Unsupported executable; inactive");return 0;}
  playerSlot=scan("8B 15 ? ? ? ? F3 0F 10 44 24 30 52",2);cameraSlot=scan("D9 45 08 A1 ? ? ? ? 51 D9 1C 24 50",4);if(!playerSlot||!cameraSlot)return 0;
  mapSlot=scan("8B 48 04 8B 11 50 8B 42 34 FF D0 C7 46 2C 00 00 00 00 C3 8B 0D ? ? ? ? 8B 89 50 0B 00 00 32 C0 83 79 28 00",0x15);if(!mapSlot)return 0;eventFlagsSlot=scan("56 8B F1 8B 46 1C 50 A1 ? ? ? ? 32 C9",8);ready=initCharacter();if(!ready){logf("initialization failed");return 0;}
  logf("initializing graphics probe");WNDCLASSA wc={};wc.lpfnWndProc=DefWindowProcA;wc.hInstance=selfModule;wc.lpszClassName="SoulsCharacterProbe";RegisterClassA(&wc);HWND win=CreateWindowA(wc.lpszClassName,"",WS_OVERLAPPED,0,0,64,64,NULL,NULL,selfModule,NULL);logf("probe window=%08x",(unsigned)(uintptr_t)win);
  IDirect3D9*d3d=Direct3DCreate9(D3D_SDK_VERSION);if(!d3d)return 0;D3DPRESENT_PARAMETERS pp={};pp.Windowed=TRUE;pp.SwapEffect=D3DSWAPEFFECT_DISCARD;pp.hDeviceWindow=win;IDirect3DDevice9*d=nullptr;HRESULT hr=d3d->CreateDevice(0,D3DDEVTYPE_HAL,win,D3DCREATE_SOFTWARE_VERTEXPROCESSING,&pp,&d);
- if(SUCCEEDED(hr)){void**table=*(void***)d;MH_Initialize();installVisibility();if(nativeDamage)characterInstallDamage();worldInstall();projectileInstall();installControllerHooks();installActionInput();installActionEffects();installStartupHooks(table);MH_STATUS s=MH_CreateHook(table[42],(void*)endScene,(void**)&originalEnd);logf("hook create=%d",s);if(s==MH_OK)MH_EnableHook(table[42]);s=MH_CreateHook(table[16],(void*)reset,(void**)&originalReset);if(s==MH_OK)MH_EnableHook(table[16]);s=MH_CreateHook(table[17],(void*)present,(void**)&originalPresent);if(s==MH_OK)MH_EnableHook(table[17]);s=MH_CreateHook(table[37],(void*)setRenderTarget,(void**)&originalRenderTarget);if(s==MH_OK)MH_EnableHook(table[37]);logf("scene hooks ready");d->Release();}else logf("D3D probe failed %08lx",hr);d3d->Release();DestroyWindow(win);return 0;
+ if(SUCCEEDED(hr)){void**table=*(void***)d;MH_Initialize();aimCameraInstall();installVisibility();if(nativeDamage)characterInstallDamage();worldInstall();projectileInstall();installControllerHooks();installActionInput();installActionEffects();installStartupHooks(table);MH_STATUS s=MH_CreateHook(table[42],(void*)endScene,(void**)&originalEnd);logf("hook create=%d",s);if(s==MH_OK)MH_EnableHook(table[42]);s=MH_CreateHook(table[16],(void*)reset,(void**)&originalReset);if(s==MH_OK)MH_EnableHook(table[16]);s=MH_CreateHook(table[17],(void*)present,(void**)&originalPresent);if(s==MH_OK)MH_EnableHook(table[17]);s=MH_CreateHook(table[37],(void*)setRenderTarget,(void**)&originalRenderTarget);if(s==MH_OK)MH_EnableHook(table[37]);logf("scene hooks ready");d->Release();}else logf("D3D probe failed %08lx",hr);d3d->Release();DestroyWindow(win);return 0;
 }
 extern "C" __declspec(dllexport) HRESULT WINAPI DirectInput8Create(HINSTANCE h,DWORD v,REFIID r,LPVOID*out,LPUNKNOWN unk){
  static HMODULE real=nullptr;if(!real){char p[MAX_PATH];GetSystemDirectoryA(p,MAX_PATH);strcat(p,"\\dinput8.dll");real=LoadLibraryA(p);}using Fn=HRESULT(WINAPI*)(HINSTANCE,DWORD,REFIID,LPVOID*,LPUNKNOWN);auto fn=(Fn)GetProcAddress(real,"DirectInput8Create");HRESULT hr=fn?fn(h,v,r,out,unk):E_FAIL;logf("DirectInput forward real=%08x version=%x hr=%08lx",(unsigned)(uintptr_t)real,(unsigned)v,hr);return hr;

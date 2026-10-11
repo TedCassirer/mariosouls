@@ -16,7 +16,9 @@ k.WriteProcessMemory.argtypes=k.ReadProcessMemory.argtypes;k.CloseHandle.argtype
 user.GetForegroundWindow.restype=wt.HWND;user.GetWindowThreadProcessId.argtypes=[wt.HWND,c.POINTER(wt.DWORD)]
 class StateError(RuntimeError):pass
 class Host:
- def __init__(self,pid,write=False):
+ def __init__(self,pid,write=False,maps=(1801,)):
+  if not maps or any(m not in (1801,1002) for m in maps):raise StateError('Unsupported QA map allowlist')
+  self.maps=maps
   self.pid=pid;self.write_enabled=write;self.h=k.OpenProcess(0x1038 if write else 0x1010,False,pid)
   if not self.h:raise StateError('Cannot open game process')
   if self.u(0x400080)!=0xfc293654:raise StateError('Unexpected executable version')
@@ -64,7 +66,7 @@ class Host:
   if require_test and (name!='Mario QA' or not (1<=level<=10 or melee_fixture)):raise StateError('Requires Mario QA low-level or exact melee fixture: '+name)
   world=self.u(0x137e204);raw=self.read(world+0xa12,2);mapid=raw[1]*100+raw[0]
   if raw==b'\xff\xff':raise StateError('Loading/map transition')
-  if require_test and mapid!=1801:raise StateError('Unexpected map: '+str(mapid))
+  if require_test and mapid not in self.maps:raise StateError('Unexpected map: '+str(mapid))
   root=self.u(0x137dc70);begin=self.u(root+4);end=self.u(root+8)
   if not begin or not 4<=end-begin<=16384:raise StateError('Loading/invalid character table')
   p=self.u(begin);a=self.actor(p);a.update(name=name,script_id=10000)
@@ -97,12 +99,18 @@ class Host:
   if not k.WriteProcessMemory(self.h,a,b,len(b),c.byref(n)) or n.value!=len(b):raise StateError('Native warp write failed')
  def warp(self,xyz,heading,target_id=1810101):
   if not all(math.isfinite(v) for v in [*xyz,heading]) or not(-60<xyz[0]<100 and 180<xyz[1]<230 and -100<xyz[2]<100):raise StateError('Outside Asylum test bounds')
+  return self._warp(xyz,heading,target_id,1801)
+ def warp_firelink_fixture(self,xyz,heading):
+  if self.maps!=(1002,) or not all(math.isfinite(v) for v in [*xyz,heading]) or not(-62<xyz[1]<-58 and math.hypot(xyz[0]+48,xyz[2]-55)<8):raise StateError('Outside explicit Firelink QA fixture')
+  return self._warp(xyz,heading,1810101,1002)
+ def _warp(self,xyz,heading,target_id,expected_map):
   s=self.snapshot(target_id)
+  if s['map']!=expected_map:raise StateError('Warp map mismatch')
   if not s['focus'] or s['menu'] or s['interaction'] or s['player']['hp']<=0 or s['player']['flags2']&0x300:raise StateError('Warp requires focused, living native player outside interactions')
   ref=s['player']['reference']
   for _ in range(10):
    fresh=self.snapshot(target_id)
-   if fresh['player']['reference']!=ref or not fresh['focus'] or fresh['player']['hp']<=0 or fresh['menu'] or fresh['interaction'] or fresh['player']['flags2']&0x300:raise StateError('Player state changed during warp')
+   if fresh['map']!=expected_map or fresh['player']['reference']!=ref or not fresh['focus'] or fresh['player']['hp']<=0 or fresh['menu'] or fresh['interaction'] or fresh['player']['flags2']&0x300:raise StateError('Player state changed during warp')
    p=int(ref,16);m=self.u(p+0x28)
    self.put(m+0xd0,struct.pack('<fff',*xyz));self.put(m+0xe4,struct.pack('<f',heading));self.put(m+0xc8,b'\1');time.sleep(1/30)
   return self.snapshot(target_id)

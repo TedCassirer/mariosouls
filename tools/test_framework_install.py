@@ -19,7 +19,7 @@ class Installation(unittest.TestCase):
   (self.build/'dinput8.dll').write_bytes(b'new-host');(self.build/'characters/fixture/character.dll').write_bytes(b'adapter')
   self.profile={'status':'implemented','assets':{'required':False,'runtime':'runtime.dll'}};(self.folder/'character.json').write_text(json.dumps(self.profile))
   expected={'adapter_sha256':f.sha(self.build/'characters/fixture/character.dll'),'host_sha256':f.sha(self.build/'dinput8.dll')}
-  (self.build/'characters/fixture/build.json').write_text(json.dumps({**expected,'source_sha256':{}}))
+  (self.build/'characters/fixture/build.json').write_text(json.dumps({**expected,'framework_version':'0.9.0','source_sha256':{}}))
   (self.build/'test-report.json').write_text(json.dumps({**expected,'status':'passed','character':'fixture','runtime_sha256':f.sha(self.runtime)}))
   (self.root/'checkpoints/mariosouls-v0.7.json').write_text(json.dumps({'game_exe_sha256':f.sha(self.game/'DARKSOULS.exe')}))
   self.patches=[patch.object(f,'ROOT',self.root),patch.object(f,'GAME',self.game),patch.object(f,'BUILD',self.build),patch.object(f,'load_profile',return_value=(self.folder,self.profile)),patch.object(installer,'require_closed')]
@@ -33,6 +33,7 @@ class Installation(unittest.TestCase):
   self.assertEqual(before,{str(p):f.sha(p) for p in self.root.rglob('*') if p.is_file()})
  def test_reinstall_runtime_at_destination(self):
   self.call();self.assertEqual((self.game/'dinput8.dll').read_bytes(),b'new-host');self.assertEqual(self.runtime.read_bytes(),b'runtime')
+  self.assertEqual(json.loads((self.game/'SoulsCharacterFramework/install.json').read_text())['framework_version'],'0.9.0')
   self.assertIn('Armed = 0',(self.game/'MarioSouls/harness.ini').read_text())
   backups=list((self.root/'work/checkpoints').glob('before-framework-*'));self.assertEqual((backups[0]/'dinput8.dll').read_bytes(),b'old-host')
  def test_process_guard(self):

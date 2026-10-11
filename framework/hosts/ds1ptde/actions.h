@@ -11,13 +11,13 @@ static void actionFlags(bool nativeMotion){
  if(!player||player!=lastPlayer)return;
  auto f1=read<uint32_t>(player+0x1fc),f2=read<uint32_t>(player+0x3c4);
  put(player+0x1fc,nativeMotion?(f1&~0x4000u)|(savedFlags1&0x4000u):f1|0x4000u);
- bool allowAction=nativeMotion||actionPending();
+ bool allowAction=nativeMotion||actionPending()||InterlockedCompareExchange(&equipmentGuardInput,0,0);
  // Input filtering blocks native locomotion. Do not set NoMove: the native
  // interaction evaluator needs its ordinary movement update to refresh prompts.
  put(player+0x3c4,(f2&~0x300u)|(savedFlags2&0x300u)|(allowAction?0:0x100u));
 }
 static void requestAction(int kind,bool fromPad=false){
- if(!characterOwned()||nativeActionOwned()||character<0||!actionInputReady)return;
+ if(!characterOwned()||nativeActionOwned()||nativeReaction||character<0||!actionInputReady)return;
  auto o=nativeInteractionState();
  if(!o.valid||!o.grounded||!(state.flags&SC_CAN_INTERACT)||!o.idle)return;
  if(kind==1&&!read<uint32_t>(read<uint32_t>(0x13786d0)+0x58)){logf("Action request rejected: no native prompt; Character retained");return;}

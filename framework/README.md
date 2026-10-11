@@ -1,9 +1,17 @@
-# Souls Character Framework 0.4.1
+# Souls Character Framework 0.5.0
 
-0.4.1 fixes large-enemy contact by querying the native capsule surface and removes
-event-controlled colliders from guest static caches. Native Havok still owns those
-barriers. Mario's reduced body and fall policy are retained. See VALIDATION.md for
-the reproduced Asylum doorway and boss regression results.
+0.5.0 adds optional equipped combat through ABI 4. Mario can hold a native
+one-handed straight sword and a small or medium shield while retaining his own
+locomotion and fitted arm animations. Ground sword swings use the selected
+weapon's native power, reinforcement, stat scaling and attack stamina cost.
+An empty right hand retains Mario's original moves and independent attack power.
+The host owns damage and guard rules; adapters own their arm poses and sockets.
+
+This first equipment implementation covers two alternating grounded light swings
+and held blocking. Parrying, two-handing and other weapon families are not
+implemented. Temporary weapon-buff parity is not verified. Props are suppressed during hurt
+reactions and native interactions. Wind Waker Link does not yet opt into equipment
+fitting. See [verification](docs/VALIDATION.md) for measured in-game coverage.
 
 Wind Waker Link is the second real adapter, using an authored controller and
 privately extracted original assets. Shared skeletal asset loading, offline
@@ -22,7 +30,7 @@ importer for arbitrary game models or ROMs.
 | `sdk/` | Versioned C interface between the host and each character |
 | `core/` | Movement ownership, lifecycle, input buffering, combat, feedback and validation |
 | `hosts/ds1ptde/` | Native collision, rendering before UI, input, interactions, health, stamina and damage |
-| `characters/mario64/` | Mario's engine, action IDs, animations, sounds and procedural flask |
+| `characters/mario64/` | Mario's engine, action IDs, animations, sounds, flask and equipment fitting |
 | `templates/` | Compilable starting adapter for a future character |
 | `tests/` | Shared policy and real DLL conformance tests |
 | `qa/` | Guarded observation and controls for Mario QA, level 1–10, Asylum only |
@@ -57,6 +65,38 @@ The installer still requires an exact tested build and the configured owned asse
 It verifies and backs up the cache with the runtime. Unprepared maps fall back to
 the existing legacy caches; only the Asylum was regenerated and checked in 0.4.1.
 
+Prepare the equipment models from the installed game into a new private directory:
+
+```powershell
+python tools/framework.py prepare-equipment --output work/my-new-equipment-cache
+python tools/framework.py install --character mario64 --equipment-directory work/my-new-equipment-cache
+```
+
+Supply the usual asset/runtime arguments when they are not already configured.
+Preparation reads native parts and textures, producing 13 straight-sword models
+and 34 small/medium-shield models. These are local game assets, never repository
+content. The installer checks their manifest, hashes, geometry and supported game
+executable, then installs them under `DATA/SoulsCharacterFramework/equipment/`
+within the normal backup/rollback transaction. Later installs preserve the
+configured `EquipmentDirectory`. Preparing all models does not establish live
+combat coverage for every weapon, reinforcement path or shield.
+
+With supported equipment selected in the native inventory:
+
+| Action | Controller | Keyboard/mouse |
+| --- | --- | --- |
+| Attack | B or RB | Left mouse |
+| Hold shield guard | LB | Right mouse |
+| Jump | A | Space |
+| Crouch | LT | Left Ctrl |
+| Interact | Y | Q |
+| Use selected item | X | E |
+
+Sword swings commit Mario briefly; holding attack does not repeat swings.
+Pressing again near the end queues the next swing. Insufficient stamina prevents
+the swing. Guarding slows ground movement and uses native shield defenses and
+stamina; jumping, crouching, attacking or interacting releases it.
+
 Installed adapters live under `DATA/SoulsCharacterFramework/characters/<id>/`.
 `[Framework] Character` selects one adapter on startup; live swapping is not
 supported. The existing `mariosouls.ini`, `mariosouls.log` and `MarioSouls/collision`
@@ -64,11 +104,13 @@ names are retained for compatibility with the user's controls and private caches
 The host does not interpret Mario engine actions. Those names are storage
 compatibility, not separate implementations.
 
-Balance overrides use `[Combat.<id>]`, including `BasePower`, `UpgradePower`,
-`UpgradeLevel`, `FixedPower`, `StatScaling`, `<attack>_multiplier` and `<attack>_cost`.
+Independent guest-attack balance overrides use `[Combat.<id>]`, including
+`BasePower`, `UpgradePower`, `UpgradeLevel`, `FixedPower`, `StatScaling`,
+`<attack>_multiplier` and `<attack>_cost`.
 Installation migrates the existing Mario `[Combat]` values once. Another character
 starts with its manifest defaults. Upgrades remain configurable test values;
-this refactor does not add an inventory/titanite upgrade shop.
+this refactor does not add an inventory/titanite upgrade shop. Equipped straight
+swords use their native weapon data instead of those independent power settings.
 
 Version 0.2 introduces a single-use native movement mailbox and explicit ownership
 for character locomotion, native actions and loading/death recovery. Each guest
@@ -97,3 +139,7 @@ Version 0.3 adds independent model/body sizing and a landing damage policy to th
 shared descriptor (ABI 3). Mario's body profile reduces collision dimensions and
 landing damage without changing his movement speed or jump height. See the
 contract and validation report for exact dimensions and measured coverage.
+
+Version 0.4.1 fixed large-enemy contact by querying the native capsule surface and
+removed event-controlled colliders from guest static caches. Native Havok still
+owns those barriers. Mario's reduced body and fall policy are retained.

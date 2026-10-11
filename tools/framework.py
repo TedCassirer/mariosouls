@@ -19,7 +19,7 @@ BUILD=ROOT/'work/framework-build'
 ZIG=ROOT/'work/tools/zig-windows-x86_64-0.13.0/zig.exe'
 GAME=Path(r'C:\Program Files (x86)\Steam\steamapps\common\Dark Souls Prepare to Die Edition\DATA')
 FLAGS={'automatic':1,'radial':2,'no_objects':4}
-CAPS={'audio':1,'item_prop':2,'texture_modulate':4,'alpha_test':8}
+CAPS={'audio':1,'item_prop':2,'texture_modulate':4,'alpha_test':8,'equipment':16}
 BODY_DEFAULTS=dict(model_scale=1.,radius_cm=0.,height_cm=0.,hurt_radius_cm=0.,hurt_height_cm=0.,fall_damage_scale=1.,fall_damage_max_hp_fraction=1.,nonlethal_falls=False)
 
 
@@ -108,7 +108,7 @@ def build(character,adapter_only=False,with_runtime=False):
             run([ZIG,'cc','-target','x86-windows-gnu','-O2','-c',source,'-o',obj]);objects.append(obj)
         compile_cpp(FRAMEWORK/'hosts/ds1ptde/runtime.cpp',BUILD/'dinput8.dll',extra=['-shared',FRAMEWORK/'hosts/ds1ptde/proxy.def',*objects,'-ld3d9','-ldxguid','-luser32','-lwinmm','-lgdi32'])
     source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.c','.cpp','.def','.py','.json','.in'])
-    receipt={'framework_version':'0.4.2','abi':3,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
+    receipt={'framework_version':'0.5.0','abi':4,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
         'adapter_sha256':sha(out/'character.dll'),'source_sha256':{f.relative_to(ROOT).as_posix():sha(f) for f in source_paths}}
     if not adapter_only:receipt['host_sha256']=sha(BUILD/'dinput8.dll')
     (out/'build.json').write_text(json.dumps(receipt,indent=2))
@@ -167,13 +167,15 @@ def main():
         if name=='build':
             p.add_argument('--adapter-only',action='store_true');p.add_argument('--with-runtime',action='store_true')
         if name=='test':p.add_argument('--asset');p.add_argument('--runtime')
-        if name=='install':p.add_argument('--asset');p.add_argument('--runtime');p.add_argument('--check-only',action='store_true');p.add_argument('--collision-directory')
+        if name=='install':p.add_argument('--asset');p.add_argument('--runtime');p.add_argument('--check-only',action='store_true');p.add_argument('--collision-directory');p.add_argument('--equipment-directory')
     p=commands.add_parser('new-character');p.add_argument('id');p.add_argument('--name',required=True)
     p=commands.add_parser('prepare-assets');p.add_argument('--character',required=True);p.add_argument('--input',required=True);p.add_argument('--output',required=True)
     p=commands.add_parser('prepare-collision');p.add_argument('--map',required=True);p.add_argument('--output',required=True)
+    p=commands.add_parser('prepare-equipment');p.add_argument('--game',default=str(GAME));p.add_argument('--output',required=True)
     args=parser.parse_args()
     if args.command=='new-character':scaffold(args.id,args.name)
     elif args.command=='prepare-collision':run([sys.executable,FRAMEWORK/'hosts/ds1ptde/prepare_collision.py','--game',GAME,'--map',args.map,'--output',args.output])
+    elif args.command=='prepare-equipment':run([sys.executable,FRAMEWORK/'hosts/ds1ptde/prepare_equipment.py','--game',args.game,'--output',args.output])
     elif args.command=='prepare-assets':
         folder,profile=load_profile(args.character)
         recipe=folder/'prepare_assets.py'
@@ -186,7 +188,7 @@ def main():
         test(args.character,args.asset,args.runtime)
     elif args.command=='install':
         from framework_install import install
-        install(args.character,args.asset,args.runtime,args.check_only,args.collision_directory)
+        install(args.character,args.asset,args.runtime,args.check_only,args.collision_directory,args.equipment_directory)
 
 
 if __name__=='__main__':main()

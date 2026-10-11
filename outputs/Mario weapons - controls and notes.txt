@@ -1,0 +1,47 @@
+MARIO WEAPONS - FRAMEWORK 0.5.0
+
+Installed: one-handed straight swords and small/medium shields.
+Equip items through the ordinary Dark Souls Equipment menu. The selected right
+and left slots determine what Mario holds. F6 still toggles Mario mode.
+
+Attack: B or RB on controller; left mouse on keyboard/mouse.
+Block: hold LB on controller; hold right mouse on keyboard/mouse.
+Jump: A / Space. Crouch: LT / Ctrl.
+Interact: Y / Q. Use selected item: X / E.
+Choose an empty right-hand slot to restore Mario punches, kicks and other moves.
+
+Sword damage and attack stamina come from the actual equipped weapon, including
+its native upgrade and stat calculation. Empty-hand attacks keep Mario's own
+power and moves. Swords have grounded light swings, limited combo buffering,
+one hit per enemy per swing, and cannot start without enough stamina. Holding
+attack does not repeat endlessly. Ordinary navigation jumps remain free.
+
+Shield protection, chip damage and stamina drain are native Dark Souls rules.
+The displayed shield is not a separate collision mesh. Native HP is authoritative.
+Mario keeps his locomotion and has fitted sword/shield arm poses.
+
+First implementation limits: no parrying, two-handed moves, ranged weapons,
+magic attacks or other weapon families. Use supported gear in one-handed stance.
+Unsupported gear falls back to Mario attacks. Props can briefly disappear during
+hurt reactions and scripted interactions. Temporary weapon buffs and every
+upgrade/elemental/status combination have not been validated.
+
+Verified on Mario QA only: sword hit, normal unarmed kill, native blocking and
+chip damage, rear damage, exhausted attack rejection, correct rendered hands,
+bonfire healing/leave, and free jumps. Hilt hit: 44 to 31 HP, cost20 stamina.
+Unarmed punch: 44 to0 HP, cost9 stamina. These are individual test results.
+Actual guard break is implemented and tested with isolated native packet cases;
+it has not yet been forced in a live fight. No physical controller was connected
+for this final pass; controller mapping/routing passed the executable tests.
+
+Mario QA is saved at the bonfire with the Straight Sword Hilt and Plank Shield.
+The level-65 character was never loaded. Game closed normally after testing.
+
+RESTORE THIS VERSION
+Close Dark Souls, then run Restore Mario weapons checkpoint.cmd in this folder.
+It verifies the private runtime archive and backs up overwritten files first.
+It does not change saves. Keep the project folder and your owned ROM in place.
+The earlier debug checkpoint and all earlier checkpoint tags remain unchanged.
+
+Source tag: checkpoint-2026-10-11-framework-v0.5.0-equipment
+Native models/textures, ROMs, binaries, saves and recordings are excluded from Git.

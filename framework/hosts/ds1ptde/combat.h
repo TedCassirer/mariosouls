@@ -8,9 +8,11 @@ static float characterArmorPenalty=0;
 static bool characterFalling=false;
 static float characterPeakY=0;
 static int characterRecoveryDelay=500;
-static int combatNativeStamina(uintptr_t actor,int value,uintptr_t caller){
+static int combatNativeStamina(uintptr_t actor,int value,uintptr_t caller,uintptr_t packet){
  if(!characterOwned()||nativeActionOwned()||actor!=player||actor!=lastPlayer)return value;
  int current=read<int>(actor+0x2e4);
+ equipmentObserveNativeBlock(actor,current,value,caller,packet);
+ if(value<current&&InterlockedCompareExchange(&equipmentGuardInput,0,0))logf("Equipment guard stamina before=%d after=%d caller=%08x native_guard=%d",current,value,unsigned(caller),equipmentNativeGuard());
  // The native character-state command1001 (FE024A ->46D550 ->E67960)
  // debits20 after the character's injected hit. Character owns attack/movement costs
  // while active. Incoming hit/block drain and effect routines still pass.
@@ -46,7 +48,7 @@ static void combatSettings(){
 
  for(unsigned i=0;i<profile->attackCount;i++){char key[80];snprintf(key,sizeof(key),"%s_multiplier",attackName(i));characterBalance.multiplier[i]=combatFloat(key,profile->attacks[i].multiplier,0,3);snprintf(key,sizeof(key),"%s_cost",attackName(i));characterBalance.poise[i]=profile->attacks[i].poise;characterBalance.cost[i]=std::clamp<int>(GetPrivateProfileIntA(combatConfigSection,key,profile->attacks[i].staminaCost,ini),0,100);}
 }
-static void combatReset(){feedbackReset();characterWindow.reset();characterRecoveryUntil=0;characterStaminaCeiling=0;characterLandingRecovery=0;characterLastStagger.clear();characterFalling=false;}
+static void combatReset(){equipmentClearNativeBlock();equipmentReset();feedbackReset();characterWindow.reset();characterRecoveryUntil=0;characterStaminaCeiling=0;characterLandingRecovery=0;characterLastStagger.clear();characterFalling=false;}
 static bool combatTestDrop(int height){
  if(!harness.armed||!harnessIdentity()||!characterOwned()||nativeActionOwned()||height<1||height>25||state.position[1]>state.floorHeight+5)return false;
  state.position[1]+=height*100;guest->setPosition(character,state.position[0],state.position[1],state.position[2]);guest->command(character,SC_COMMAND_FALL);state.flags=0;

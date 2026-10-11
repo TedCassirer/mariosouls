@@ -1,0 +1,240 @@
+{
+  "name": "Framework 0.5.0 equipped Mario sword and shield",
+  "tag": "checkpoint-2026-10-11-framework-v0.5.0-equipment",
+  "created": "2026-10-11T10:19:25.256858+02:00",
+  "archive": "work/checkpoints/framework-v0.5.0-equipment-runtime.zip",
+  "archive_sha256": "fab79ff6e977b041a585feab86fcb2f0d51c2f2046401e05193187d428f803e4",
+  "requires_owned_rom": true,
+  "game_directory": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Dark Souls Prepare to Die Edition\\DATA",
+  "game_exe_sha256": "67bcab513c8f0ed6164279d85f302e06b1d8a53abff5df7f3d10e1d4dfd81459",
+  "files": {
+    "MarioSouls/harness.ini": {
+      "sha256": "0273dc8baef37a66166fa72d8bc4e03b83e813f91a9a486625c765e131aba7f1",
+      "bytes": 179
+    },
+    "MarioSouls/install.json": {
+      "sha256": "09384c3836a098a6e53ae20f9691ec3fab8007a6d1a582367a4dea9c438051da",
+      "bytes": 8090
+    },
+    "SoulsCharacterFramework/characters/mario64/character.dll": {
+      "sha256": "11cc6d0b6b8b3e62b241870e305388530bcdb9b660e19b0831cc76be49d5fe37",
+      "bytes": 389632
+    },
+    "SoulsCharacterFramework/characters/mario64/character.json": {
+      "sha256": "b09aca969cde1fe4ffe545ab063080cbce769c607c102ee010cc78e91e041fe1",
+      "bytes": 3158
+    },
+    "SoulsCharacterFramework/characters/mario64/sm64.dll": {
+      "sha256": "59efedb4da65fba4e66943d6032ceafc3320854f59693979602ea187b94631f4",
+      "bytes": 817152
+    },
+    "SoulsCharacterFramework/collision/m18_01_00_00.bin": {
+      "sha256": "4255e6733e99bb37869465f633d848c1bf3fe8676b70820db1fc9cf31ea1c4b9",
+      "bytes": 2366360
+    },
+    "SoulsCharacterFramework/equipment/manifest.json": {
+      "sha256": "d58b769e1bde6fe37621e59952ba3ffe9fbd138e93697ff5343562f65479f0c3",
+      "bytes": 77940
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0200.scprop": {
+      "sha256": "a97d5dd961dab789fcecf1f0a79b96878911a2386475730b627b97cf0e131bea",
+      "bytes": 536128
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0201.scprop": {
+      "sha256": "2b6cf9dd6ed1f3f8d6b1e8935116c3e8a5b94ca258ccb3987310e4b3ee83f378",
+      "bytes": 533864
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0202.scprop": {
+      "sha256": "0a74127cb68a9af3fb88de46edd153b396c1254cd72faf6d1c6507a752a79585",
+      "bytes": 1060584
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0203.scprop": {
+      "sha256": "a276abc71b66bb5625cb56aa7fa30a853257c35afb3b98419f551886e3d6be23",
+      "bytes": 1112296
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0204.scprop": {
+      "sha256": "c331fc9ab3cb7232647e5c37ce471d305ad0e0ec5812e272b7e5643851302b52",
+      "bytes": 531664
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0207.scprop": {
+      "sha256": "db7818b05f9e8f647614dac9b913669241ed7a144b0e2b5d140f64d21eb9b5a4",
+      "bytes": 537040
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0212.scprop": {
+      "sha256": "79fd9a4e37230ae6b0570884dfe985bef234adb644a3e17e6f7f3fa219b76f91",
+      "bytes": 1081832
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0231.scprop": {
+      "sha256": "3eda6ecfbb6c2c175c4546941be27d22609bdc70d41e4755ba5fb554c5a0e2bb",
+      "bytes": 1065792
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0260.scprop": {
+      "sha256": "7328aaf98067ab789edcf708b53e631e849b4fc2be9eae058de3b46f3553730f",
+      "bytes": 544752
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0264.scprop": {
+      "sha256": "20e57b80de7443389d24a09e0c1905f632bff2f8da1e17df24b9f8ac2143a0ee",
+      "bytes": 546816
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0271.scprop": {
+      "sha256": "4f34f728df1e076f21308f382052078841ee7b294e96ba5bd7c380adbcffb1bb",
+      "bytes": 1088352
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0272.scprop": {
+      "sha256": "8454d750742c8add6a4780c1368312771f0454f3f3433d291f7f80f510bb5be8",
+      "bytes": 532872
+    },
+    "SoulsCharacterFramework/equipment/wp_a_0291.scprop": {
+      "sha256": "a1d9bbc54008b82b3aeebadb5c7239339a311f2ccf01358838c44253433eecb3",
+      "bytes": 1067136
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1501.scprop": {
+      "sha256": "eef87f28fd391a20edd61d7299cf1bd9035607c81786eed34f39f3e2c18ee863",
+      "bytes": 1064256
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1502.scprop": {
+      "sha256": "c19a66950e49581d604d759653eb808049a726238942116793e601a4b1dc1b68",
+      "bytes": 1058744
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1503.scprop": {
+      "sha256": "1dba412acf869b75b660883f421c3115befee6d6b41e283e4ca1b22ddd69ce8b",
+      "bytes": 1062688
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1504.scprop": {
+      "sha256": "4cb4dc31c2e5e38abe503dad8b22c7e95bf20a03761831218d40610a1e7c23ba",
+      "bytes": 1068384
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1507.scprop": {
+      "sha256": "e9fee37c769ee0eb9354c3cd7cc0bc1988b0acf5e9b80e956aec0408ea111c46",
+      "bytes": 1070532
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1509.scprop": {
+      "sha256": "087fe025852f18d6940a4b9a5fc2939c07ce4bdbff47a7526c0ff12e7759a9bc",
+      "bytes": 1106860
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1511.scprop": {
+      "sha256": "ebad12ca35b69df2aca4ed88a90053e6dbbd9bd4006f3fb00788c86d096c570e",
+      "bytes": 1079696
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1513.scprop": {
+      "sha256": "2f3f8c5112bdf1f18757664cd8f06ad4c7bd605b5dcbd65282ac1ec5bb4544a6",
+      "bytes": 1075184
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1514.scprop": {
+      "sha256": "67e029d3803240314deb380e1c34905f6a24eff9eafaa48530abb3896aa9714f",
+      "bytes": 1065576
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1515.scprop": {
+      "sha256": "90d768fcc6723a99a2c9a814e1131e3d7f1975f70352b20a00d120ec5bbf8e49",
+      "bytes": 1056880
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1516.scprop": {
+      "sha256": "7dc2a0b3f1c25a1902c44d5287a63d765a0979ad58d37ebc4cde9666dfeac7eb",
+      "bytes": 1080416
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1517.scprop": {
+      "sha256": "865859bc29ffd8ed88452058d4b94c0e8ab74b84fc0dea01a8406144d2d492b7",
+      "bytes": 1063880
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1518.scprop": {
+      "sha256": "54b9fe6ec33c568a0002d6c60939b7f89f457670e7b680cc1e6ed5e49544ec3d",
+      "bytes": 1070336
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1519.scprop": {
+      "sha256": "29d345eceab5c574b239f3d86beb2758ba69a1b2d41a217b6a5780d59f2fa4b1",
+      "bytes": 1069200
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1520.scprop": {
+      "sha256": "d62be55543bcc7961b5d6bf2d1ae2fb733f9357a57812de4a2644c833d8c6e97",
+      "bytes": 1065544
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1521.scprop": {
+      "sha256": "4c9c81d19ad20ba39ee943fadd61df8e0277ce618eeacbac85ba9db3c950fb11",
+      "bytes": 1061552
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1522.scprop": {
+      "sha256": "da7e3aaced8d8096ac8be6333da27cac6c29dac9de32e3e9a7d5c4d93f5f4335",
+      "bytes": 1062736
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1523.scprop": {
+      "sha256": "e9162109cd6020fc66b99bff8e8d17641164d6785d39be15cf852fee798bd479",
+      "bytes": 1090560
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1524.scprop": {
+      "sha256": "5e0463b1560e9a528cb53464334fd02d19ce65bc05e8eb61085e3d99c4a8fab0",
+      "bytes": 1072008
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1525.scprop": {
+      "sha256": "05ec2f46e0c5bd327db4e8f2cf83ddf191a2996b8f2b25acb72aaea4ce6827d6",
+      "bytes": 1072544
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1526.scprop": {
+      "sha256": "0abe03ddb99c3cdedcf280fe8af49b7a4b9d756cc369be0178a36f3c5eb9d017",
+      "bytes": 1065568
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1528.scprop": {
+      "sha256": "abd583999ab243f76a706ca3b8340bed1530b6bc6883a3ce2339ed1e1800a41b",
+      "bytes": 1069800
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1530.scprop": {
+      "sha256": "904ee18e566505ca8a45ae8fad92ddb8721722edcb2bee086b00be785f3e9117",
+      "bytes": 1068112
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1531.scprop": {
+      "sha256": "d865c0ec4b19097bde79940f10d409d5ce5064b7af52b57d56194eda0577becf",
+      "bytes": 1109088
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1533.scprop": {
+      "sha256": "56b8ec6be21a31f4b31afcf220509c6b8d43f57111b15499c40b2181f172fa54",
+      "bytes": 1106008
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1535.scprop": {
+      "sha256": "2bb3d4c5b69a15b9fd34652d1fb03ba45ec6bafa7e4589b96539947141b30d0f",
+      "bytes": 1074248
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1536.scprop": {
+      "sha256": "e3af22930d36e7edd8a8ee2500e25e6e201b110ba39d3957c0eeb1be52cc2d55",
+      "bytes": 1066048
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1537.scprop": {
+      "sha256": "55bf4394fa6ad26ff1cf4423cd47c7dc8eb538da7c662bf507216af769b959d1",
+      "bytes": 1075184
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1538.scprop": {
+      "sha256": "132714db841354ba36bb4155fa5d00d404e5499a822ff05c9129d7ba30a3ec86",
+      "bytes": 1068800
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1539.scprop": {
+      "sha256": "6cf722adc20e6e70bc5906f1f1928011f8bcbfc9d60c051739fe72b2e9427eb0",
+      "bytes": 1077288
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1541.scprop": {
+      "sha256": "17db080da2505ae48afe61d7c1c3ccaaaa1e4f2aa106ff70a2d58383f9aa5694",
+      "bytes": 1073832
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1542.scprop": {
+      "sha256": "dbe3cc9a525aa8f8b07b1bc9b9bdd13156af22290b83dde68ab80a4a711a7b1a",
+      "bytes": 1102216
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1543.scprop": {
+      "sha256": "f7b93856877014e0590139a4d140d426617bfd7b03c03ff0787d5c2c27fa7b23",
+      "bytes": 1082096
+    },
+    "SoulsCharacterFramework/equipment/wp_a_1544.scprop": {
+      "sha256": "ed4753d6faeb8ba8a0811b06c721c34a20b0a41632664626af60c8931d5b6751",
+      "bytes": 1118824
+    },
+    "SoulsCharacterFramework/install.json": {
+      "sha256": "cb450f2d9ea8bc3b5e5acaec254a95235baed18217382317fe484d645640962a",
+      "bytes": 15251
+    },
+    "dinput8.dll": {
+      "sha256": "9ffbaaa4f216197797353b697d81ce6d3685fed711df1114b4cdd7fcb218bc9a",
+      "bytes": 607744
+    },
+    "mariosouls.ini": {
+      "sha256": "5de0f3a8ec29d705025173fe2c6743225f6afc26bfe1d1683fd02429f48a2c8c",
+      "bytes": 1871
+    }
+  }
+}

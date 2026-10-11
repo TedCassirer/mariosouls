@@ -1,0 +1,63 @@
+# Framework equipment work, 2026-10-11
+
+Baseline: 0.4.2, d3f03f6, immutable checkpoint runtime archive and tag retained.
+User approved a first one-handed sword and shield implementation, preserving
+Mario's existing moves when unarmed. All shared integration remains in framework.
+
+Route: keep the embedded guest as locomotion owner. Extend the SDK with render-only
+equipment poses and rigid hand sockets from the same frame as the mesh. Host owns
+equipped item selection, native weapon damage, stamina and shield guard. The Mario
+adapter owns arm fitting; no host branch on character ID. Existing item-use/full
+body pose handoff is unsuitable for weapons because it resets movement/action.
+
+Implemented in 0.5.0 / ABI4: optional equipment presentation and same-frame hand
+sockets, shared swing windows and swept blade contact, and the PTDE native item,
+reinforcement, behavior, stamina and damage route. The host validates the packet's
+weapon/hand so prior shield state cannot silently substitute the off-hand item.
+The initial scope is one-handed straight swords, small/medium shields, two
+alternating ground light swings and blocking. Empty right hand retains Mario's
+independent attacks. Parry, two-handed moves, other weapon families and temporary
+buff parity are not verified.
+
+Mario layers fitted arms onto the normal guest animation without an extra physics
+tick. The host commits movement during a sword swing and slows movement while
+guarding. Native block rules remain native: no post-hit healing or invented
+protection flags. Hurt and native interactions invalidate equipment sockets, so
+props may temporarily disappear in those poses.
+
+The private asset pipeline applies bone rest transforms and converts installed
+PTDE parts/textures with Soulstruct/Pillow. It prepared 47 models (13 straight
+swords and 34 small/medium shields), mapped from 304 native equipment rows.
+Generated geometry, textures and captures remain outside Git. The supported
+prepare-equipment/install workflow validates manifest hashes, executable identity
+and bounded binary geometry, copies transactionally, and retains the configured
+equipment directory on later installs.
+
+Offline checks cover shared swing/contact policy, asset layout and rejection of
+malformed inputs, transactional installation, and Mario's paired movement/action
+timing with and without the render overlay. Mario-specific checks include visible
+arm-pose changes, finite rigid sockets, correction/rebasing, interaction/hurt
+invalidation and armed idle/wake behavior. These checks do not prove native
+blocking or damage by themselves.
+
+Initial Mario QA observations: Straight Sword Hilt reduced a 44-HP target to 31
+(13 actual HP damage), with 20 stamina charged and native packet physical power
+20.26. An empty-hand Mario attack killed a 44-HP target with 9 stamina charged.
+Shield checks measured 33 HP chip and 32 stamina drain from the front, versus 65 HP
+damage per rear hit without guard stamina drain. These are individual observed
+cases, not general balance values. The blocked-chip hurt/pause presentation still
+needed correction at this checkpoint; final regressions and their evidence belong
+in docs/VALIDATION.md.
+
+Final correction: read current saved-options keyboard bindings, observe exact
+resolved native block/guard-break packets, and require incoming evidence before
+native passive ownership. Corrected rendered handedness in the Mario adapter.
+Final live guard, chip, rear hit, sword, exhaustion and unarmed checks passed;
+see docs/VALIDATION.md for the measurements and explicitly unverified cases.
+
+Final live regression scope: guest movement with/without equipment overlay;
+actual right-hand weapon visible and swung; native target HP/stamina traces;
+front shield block and rear/unblocked damage; exhaustion/guard break; unarmed
+attack restore; equipment change and native interaction lifecycle; debug view;
+Mario QA only, backed-up saves and current user control handoff. Failure to prove
+native guard or weapon ownership is not a functioning feature.

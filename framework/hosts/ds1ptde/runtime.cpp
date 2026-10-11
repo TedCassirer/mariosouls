@@ -22,12 +22,13 @@
 #include "../../core/motion.h"
 #include "../../core/session.h"
 static void combatReset();
+static void equipmentReset();
 static void feedbackReset();
 static void feedbackSettings();
 static void actionReset();
 static void combatSettings();
 static bool combatTestDrop(int height);
-static int combatNativeStamina(uintptr_t actor,int value,uintptr_t caller);
+static int combatNativeStamina(uintptr_t actor,int value,uintptr_t caller,uintptr_t packet);
 
 static HMODULE selfModule;
 static char root[MAX_PATH],ini[MAX_PATH];
@@ -62,7 +63,8 @@ static int renderMode=1;
 static int depthTest=1,testFrames=0,testButtons=0,graphFrames=0;
 static bool combatEnabled=false;
 static float testX=0,testY=0;
-static bool ready=false,showCharacter=true;
+static bool ready=false,showCharacter=true,nativeReaction=false;
+static DWORD nativeReactionIncomingUntil=0;
 static SCSession::Session characterSession;
 static SCMotion::Clock characterClock;
 static SCMotion::InputLatch characterInput;
@@ -126,8 +128,10 @@ static bool guestStep(int id,const SC_Input*input,SC_State*s,SC_Mesh*m){return g
 static bool guestPose(int id,const SC_Pose*p,SC_State*s,SC_Mesh*m){return guest->pose(id,p,s,m)&&SC::frame(*s,*m,*profile);}
 #include "body.h"
 #include "world.h"
+#include "character_visibility.h"
 using DamageFn=int(WINAPI*)(int,int,int,float,float,float);
 static DamageFn nativeDamage=nullptr;
+#include "equipment_native.h"
 #include "native_combat.h"
 static Vec cameraEye(){return read<Vec>(cam+0x40);}
 static Vec cameraForward(){return read<Vec>(cam+0x30);}
@@ -148,8 +152,9 @@ static void rebuildSurfaces(){
 }
 #include "loader.h"
 static void releaseControl(bool preserveRequest=false){
+ nativeReaction=false;nativeReactionIncomingUntil=0;
  characterSession.request(preserveRequest&&characterSession.requested());
- bodyRelease();worldRelease();characterClock.clear();characterInput.clear();pendingNativeHurt=0;
+ visibilityRelease();bodyRelease();worldRelease();characterClock.clear();characterInput.clear();pendingNativeHurt=0;
  combatReset();
  actionReset();
  if(guest)guest->surfaces(nullptr,0,1);
@@ -169,7 +174,7 @@ static bool activate(){
  character=guest->create(0,40,0,read<float>(posData+4)-3.14159265f);if(character<0)return false;combatReset();guest->nativeDamage(character,0);state={};state.attackId=state.interruptedAttackId=-1;state.position[1]=40;
  savedFlags1=read<uint32_t>(player+0x1fc);savedFlags2=read<uint32_t>(player+0x3c4);lastPlayer=player;lastMap=read<uint32_t>(player+0x28);savedMapFlags=read<uint32_t>(lastMap+0xc4);savedOpacity=read<float>(player+0x258);
  hideNative=GetPrivateProfileIntA("MarioSouls","HideNative",0,ini)!=0&&savedOpacity>=0&&savedOpacity<=1;disableMapHit=GetPrivateProfileIntA("MarioSouls","DisableMapHit",1,ini)!=0;
- logf("native opacity=%.3f mapflags=%08x",savedOpacity,savedMapFlags);lastHP=read<int>(player+0x2d4);characterSession.activate({player,posData,lastMap,loadedMap});if(!bodyCapture()){logf("BODY validation failed; native handback");releaseControl();return false;}worldActivate();characterClock.clear();characterInput.clear();SC_Pose initial={};initial.yaw=read<float>(posData+4)-3.14159265f;initial.phase=-1;if(!guestPose(character,&initial,&state,&geo)){releaseControl();return false;}if(hideNative){put(player+0x258,0.f);put(player+0x1fc,read<uint32_t>(player+0x1fc)&~0x800000u);}return true;
+ logf("native opacity=%.3f mapflags=%08x",savedOpacity,savedMapFlags);lastHP=read<int>(player+0x2d4);characterSession.activate({player,posData,lastMap,loadedMap});if(!bodyCapture()){logf("BODY validation failed; native handback");releaseControl();return false;}worldActivate();visibilityCapture();characterClock.clear();characterInput.clear();SC_Pose initial={};initial.yaw=read<float>(posData+4)-3.14159265f;initial.phase=-1;if(!guestPose(character,&initial,&state,&geo)){releaseControl();return false;}if(hideNative){put(player+0x258,0.f);put(player+0x1fc,read<uint32_t>(player+0x1fc)&~0x800000u);}return true;
 }
 static bool pressed(int key){static bool prev[256]={};bool down=(GetAsyncKeyState(key)&0x8000)!=0;bool hit=down&&!prev[key];prev[key]=down;return hit;}
 static HostInteraction::Observation nativeInteractionState(){
@@ -179,8 +184,9 @@ static HostInteraction::Observation nativeInteractionState(){
  o.valid=true;o.idle=id>=0&&id%100000==0&&token!=0xffffffff;
  for(int i=0;i<29;i++){if(!get(tracks+i*0x9c,id)||!get(tracks+i*0x9c+4,token)){o.valid=false;return o;}if(token==0xffffffff||id<0)continue;int anim=id%100000;if(anim>=7000&&anim<7100){o.ladder=true;o.animation=anim;}else if(anim>=7000&&anim<9000){o.event=true;if(!o.ladder)o.animation=anim;}}
  // Same MenuMan fields inspected by native IsShowMenu (0xC2ABE0).
+ // ItemGetMenuManImpl (C22780/C22910) owns +118 while its item queue popup is open.
  // Exclude action prompts (+58) and banner messages (+F0), which do not own controls.
- const unsigned menuFields[]={0x24,0x28,0x3c,0x40,0x48,0x4c,0x50,0x5c,0x60,0x64,0x68,0x70,0x78,0x80,0x84,0x88,0x98,0x9c,0xa0,0xac,0xbc,0xc4,0xd8,0xe8,0xec,0xfc,0x108,0x11c,0x120,0x210,0x2c4};
+ const unsigned menuFields[]={0x24,0x28,0x3c,0x40,0x48,0x4c,0x50,0x5c,0x60,0x64,0x68,0x70,0x78,0x80,0x84,0x88,0x98,0x9c,0xa0,0xac,0xbc,0xc4,0xd8,0xe8,0xec,0xfc,0x108,0x118,0x11c,0x120,0x210,0x2c4};
  for(auto offset:menuFields)if(read<uint32_t>(menu+offset)){o.menu=true;break;}
  Vec local=(read<Vec>(posData+0x10)-origin)*100;float floor=guest->floorHeight(local.x,local.y+30,local.z);o.grounded=isfinite(floor)&&fabsf(floor-local.y)<35;
  return o;
@@ -193,6 +199,8 @@ static bool lineClear(Vec a,Vec b){
 #include "feedback.h"
 #include "combat.h"
 #include "object_combat.h"
+#include "equipment.h"
+#include "native_reaction.h"
 #include "debug_view.h"
 static void update(){
  static LARGE_INTEGER freq={},prev={};if(!freq.QuadPart)QueryPerformanceFrequency(&freq);LARGE_INTEGER now;QueryPerformanceCounter(&now);double dt=prev.QuadPart?double(now.QuadPart-prev.QuadPart)/freq.QuadPart:0;prev=now;static double acc=0;acc=std::min(acc+std::min(dt,.1),.1);
@@ -219,7 +227,7 @@ static void update(){
  bool padInteract=padEdgeReady&&yDown&&!previousInteract,padItem=padEdgeReady&&xDown&&!previousItem;
  bool interactPressed=focus&&previousActionFocus&&(padInteract||qPressed),itemPressed=focus&&previousActionFocus&&(padItem||ePressed);
  previousInteract=yDown;previousItem=xDown;previousActionFocus=focus;previousActionSlot=pad.slot;
- if(!focus)actionCancelPulse();
+ if(!focus){actionCancelPulse();equipmentReset();}
  if(characterOwned()&&!nativeActionOwned()){
   auto native=nativeInteractionState();if(native.valid&&(native.menu||native.ladder||native.event))beginInteraction(pad.slot,false);
  }
@@ -235,6 +243,7 @@ static void update(){
  if(!characterOwned()){acc=0;return;}
  if(arenaRefresh())rebuildSurfaces();
  if(focus&&pressed(VK_F7)){releaseControl();if(!activate())return;}
+ if(nativeReactionTick(acc,focus))return;
  worldPause(!focus);
  Vec host=read<Vec>(posData+0x10),expected=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;if(dot(host-expected,host-expected)>64){logf("native warp/load detected");releaseControl(true);return;}
  worldHostSurfaces();bool resolvedTick=false;
@@ -242,9 +251,9 @@ static void update(){
  if(fabsf(state.position[0])>4000||fabsf(state.position[2])>4000||fabsf(state.position[1])>5000){Vec shift={state.position[0],state.position[1],state.position[2]};origin=origin+shift*.01f;rebuildSurfaces();guest->setPosition(character,0,0,0);for(size_t i=0;i<geo.numTrianglesUsed*3;i++){gpos[i*3]-=shift.x;gpos[i*3+1]-=shift.y;gpos[i*3+2]-=shift.z;}state.position[0]=state.position[1]=state.position[2]=0;logf("collision origin rebased");}
  feedbackPoll();
  int hp=read<int>(player+0x2d4);bool hurt=hp<lastHP&&hp>0;if(hurt){feedbackPause.clear();combatReset();int lost=lastHP-hp;pendingNativeHurt=std::max(pendingNativeHurt,lost>=read<int>(player+0x2d8)/5?2u:1u);logf("native damage %d -> %d; host-confirmed hurt, no extra i-frames",lastHP,hp);}lastHP=hp;
- if(resolvedTick&&!pendingNativeHurt){if(!combatEnvironment())return;combat();combatObjects();feedbackPoll();}
+ if(resolvedTick&&!pendingNativeHurt){if(!combatEnvironment())return;combat();combatObjects();equipmentContact();feedbackPoll();}
  SC_Input input={};Vec look=cameraForward();input.camLookX=look.x;input.camLookZ=look.z;
- if(focus){input.moveX=((GetAsyncKeyState('D')&0x8000)?1.f:0)-((GetAsyncKeyState('A')&0x8000)?1.f:0);input.moveY=((GetAsyncKeyState('W')&0x8000)?1.f:0)-((GetAsyncKeyState('S')&0x8000)?1.f:0);if(input.moveX==0&&input.moveY==0){input.moveX=controller.x;input.moveY=controller.y;}float n=sqrtf(input.moveX*input.moveX+input.moveY*input.moveY);if(n>1){input.moveX/=n;input.moveY/=n;}input.jump=controller.jump||!!(GetAsyncKeyState(VK_SPACE)&0x8000);input.attack=controller.attack||!!(GetAsyncKeyState(VK_LBUTTON)&0x8000);input.crouch=controller.crouch||!!(GetAsyncKeyState(VK_CONTROL)&0x8000);}
+ if(focus){input.moveX=((GetAsyncKeyState('D')&0x8000)?1.f:0)-((GetAsyncKeyState('A')&0x8000)?1.f:0);input.moveY=((GetAsyncKeyState('W')&0x8000)?1.f:0)-((GetAsyncKeyState('S')&0x8000)?1.f:0);if(input.moveX==0&&input.moveY==0){input.moveX=controller.x;input.moveY=controller.y;}float n=sqrtf(input.moveX*input.moveX+input.moveY*input.moveY);if(n>1){input.moveX/=n;input.moveY/=n;}input.jump=controller.jump||!!(GetAsyncKeyState(VK_SPACE)&0x8000);input.attack=controller.attack||!!(GetAsyncKeyState(VK_LBUTTON)&0x8000);input.crouch=controller.crouch||!!(GetAsyncKeyState(VK_CONTROL)&0x8000);input.guard=controller.guard||(actionKeyboardGuardReady&&!!(GetAsyncKeyState(VK_RBUTTON)&0x8000));}
  static int lastPadInput=-1;static DWORD padLogTime=0;int padInput=(fabsf(controller.x)+fabsf(controller.y)>.01f?8:0)|(controller.jump?1:0)|(controller.attack?2:0)|(controller.crouch?4:0);if(padInput!=lastPadInput&&DWORD(inputTime-padLogTime)>=100){logf("controller input stick=%.2f %.2f buttons=%d%d%d",controller.x,controller.y,controller.jump,controller.attack,controller.crouch);lastPadInput=padInput;padLogTime=inputTime;}
  // Capture short taps even on render frames without a simulation tick. Consume
  // paused time instead of accumulating a catch-up burst. The host keeps running.
@@ -252,7 +261,7 @@ static void update(){
  if(!focus){characterInput.clear();characterClock.clear();testFrames=0;}
  else if(SCFeedback::pending(feedbackPause.until,GetTickCount())){feedbackPause.filter(input,GetTickCount());characterClock.clear();pumpAudio();}
  else if(characterClock.take(worldReady())){
-  input=characterInput.take(GetTickCount());if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);--testFrames;}harnessInput(input);feedbackPause.filter(input,GetTickCount());combatInput(input);uint32_t old=state.rawAction;
+  input=characterInput.take(GetTickCount());if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);input.guard=!!(testButtons&8);--testFrames;}harnessInput(input);feedbackPause.filter(input,GetTickCount());combatInput(input);equipmentInput(input);uint32_t old=state.rawAction;
   guest->nativeDamage(character,pendingNativeHurt);pendingNativeHurt=0;
   if(!guestStep(character,&input,&state,&geo)){logf("Adapter frame rejected; restoring native controls");releaseControl();return;}stepped=true;harnessAfterStep(old,input);pumpAudio();
   if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);
@@ -279,7 +288,7 @@ static void draw(IDirect3DDevice9* d){
  d->SetVertexShader(NULL);d->SetPixelShader(NULL);d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_SPECULAR|D3DFVF_TEX1);d->SetTransform(D3DTS_WORLD,&world);d->SetTransform(D3DTS_VIEW,&view);d->SetTransform(D3DTS_PROJECTION,&proj);
  d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_ZENABLE,depthTest?TRUE:FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,TRUE);d->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,(profile->capabilities&SC_CAP_ALPHA_TEST)?TRUE:FALSE);d->SetRenderState(D3DRS_ALPHAREF,127);d->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);d->SetRenderState(D3DRS_FOGENABLE,FALSE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_COLORWRITEENABLE,15);d->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);d->SetRenderState(D3DRS_CLIPPLANEENABLE,0);d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE);d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
  d->SetTexture(0,tex);d->SetTextureStageState(0,D3DTSS_COLOROP,(profile->capabilities&SC_CAP_TEXTURE_MODULATE)?D3DTOP_MODULATE:D3DTOP_BLENDTEXTUREALPHA);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,(profile->capabilities&SC_CAP_ALPHA_TEST)?D3DTA_TEXTURE:D3DTA_DIFFUSE);d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(1,D3DTSS_COLORARG1,D3DTA_CURRENT);d->SetTextureStageState(1,D3DTSS_COLORARG2,D3DTA_SPECULAR);d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(1,D3DTSS_ALPHAARG1,D3DTA_CURRENT);d->SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_CLAMP);d->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_CLAMP);
- HRESULT hr=drawCharacter?d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex)):S_OK;static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}if(drawCharacter)feedbackDraw(d);debugDraw(d);saved->Apply();saved->Release();
+ HRESULT hr=drawCharacter?d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex)):S_OK;static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}if(drawCharacter){equipmentDraw(d,renderOrigin);feedbackDraw(d);}debugDraw(d);saved->Apply();saved->Release();
 }
 typedef HRESULT (WINAPI *EndSceneFn)(IDirect3DDevice9*);
 static EndSceneFn originalEnd;
@@ -317,13 +326,13 @@ static HRESULT WINAPI setRenderTarget(IDirect3DDevice9*d,DWORD index,IDirect3DSu
  return originalRenderTarget(d,index,target);
 }
 static DWORD WINAPI start(void*){
- GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.4.2 host ds1ptde starting");
+ GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.5.0 host ds1ptde starting");
  if(read<uint32_t>(0x400080)!=0xfc293654){logf("Unsupported executable; inactive");return 0;}
  playerSlot=scan("8B 15 ? ? ? ? F3 0F 10 44 24 30 52",2);cameraSlot=scan("D9 45 08 A1 ? ? ? ? 51 D9 1C 24 50",4);if(!playerSlot||!cameraSlot)return 0;
  mapSlot=scan("8B 48 04 8B 11 50 8B 42 34 FF D0 C7 46 2C 00 00 00 00 C3 8B 0D ? ? ? ? 8B 89 50 0B 00 00 32 C0 83 79 28 00",0x15);if(!mapSlot)return 0;eventFlagsSlot=scan("56 8B F1 8B 46 1C 50 A1 ? ? ? ? 32 C9",8);ready=initCharacter();if(!ready){logf("initialization failed");return 0;}
  logf("initializing graphics probe");WNDCLASSA wc={};wc.lpfnWndProc=DefWindowProcA;wc.hInstance=selfModule;wc.lpszClassName="SoulsCharacterProbe";RegisterClassA(&wc);HWND win=CreateWindowA(wc.lpszClassName,"",WS_OVERLAPPED,0,0,64,64,NULL,NULL,selfModule,NULL);logf("probe window=%08x",(unsigned)(uintptr_t)win);
  IDirect3D9*d3d=Direct3DCreate9(D3D_SDK_VERSION);if(!d3d)return 0;D3DPRESENT_PARAMETERS pp={};pp.Windowed=TRUE;pp.SwapEffect=D3DSWAPEFFECT_DISCARD;pp.hDeviceWindow=win;IDirect3DDevice9*d=nullptr;HRESULT hr=d3d->CreateDevice(0,D3DDEVTYPE_HAL,win,D3DCREATE_SOFTWARE_VERTEXPROCESSING,&pp,&d);
- if(SUCCEEDED(hr)){void**table=*(void***)d;MH_Initialize();if(nativeDamage)characterInstallDamage();worldInstall();installControllerHooks();installActionInput();installActionEffects();installStartupHooks(table);MH_STATUS s=MH_CreateHook(table[42],(void*)endScene,(void**)&originalEnd);logf("hook create=%d",s);if(s==MH_OK)MH_EnableHook(table[42]);s=MH_CreateHook(table[16],(void*)reset,(void**)&originalReset);if(s==MH_OK)MH_EnableHook(table[16]);s=MH_CreateHook(table[17],(void*)present,(void**)&originalPresent);if(s==MH_OK)MH_EnableHook(table[17]);s=MH_CreateHook(table[37],(void*)setRenderTarget,(void**)&originalRenderTarget);if(s==MH_OK)MH_EnableHook(table[37]);logf("scene hooks ready");d->Release();}else logf("D3D probe failed %08lx",hr);d3d->Release();DestroyWindow(win);return 0;
+ if(SUCCEEDED(hr)){void**table=*(void***)d;MH_Initialize();installVisibility();if(nativeDamage)characterInstallDamage();worldInstall();installControllerHooks();installActionInput();installActionEffects();installStartupHooks(table);MH_STATUS s=MH_CreateHook(table[42],(void*)endScene,(void**)&originalEnd);logf("hook create=%d",s);if(s==MH_OK)MH_EnableHook(table[42]);s=MH_CreateHook(table[16],(void*)reset,(void**)&originalReset);if(s==MH_OK)MH_EnableHook(table[16]);s=MH_CreateHook(table[17],(void*)present,(void**)&originalPresent);if(s==MH_OK)MH_EnableHook(table[17]);s=MH_CreateHook(table[37],(void*)setRenderTarget,(void**)&originalRenderTarget);if(s==MH_OK)MH_EnableHook(table[37]);logf("scene hooks ready");d->Release();}else logf("D3D probe failed %08lx",hr);d3d->Release();DestroyWindow(win);return 0;
 }
 extern "C" __declspec(dllexport) HRESULT WINAPI DirectInput8Create(HINSTANCE h,DWORD v,REFIID r,LPVOID*out,LPUNKNOWN unk){
  static HMODULE real=nullptr;if(!real){char p[MAX_PATH];GetSystemDirectoryA(p,MAX_PATH);strcat(p,"\\dinput8.dll");real=LoadLibraryA(p);}using Fn=HRESULT(WINAPI*)(HINSTANCE,DWORD,REFIID,LPVOID*,LPUNKNOWN);auto fn=(Fn)GetProcAddress(real,"DirectInput8Create");HRESULT hr=fn?fn(h,v,r,out,unk):E_FAIL;logf("DirectInput forward real=%08x version=%x hr=%08lx",(unsigned)(uintptr_t)real,(unsigned)v,hr);return hr;

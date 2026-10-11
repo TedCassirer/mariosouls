@@ -1,3 +1,78 @@
+# Framework 0.5.0: equipped combat (2026-10-11)
+
+Installed ABI 4 host, Mario adapter and runtime after the supported build/test
+workflow. All installed hashes match the passing report and source receipt.
+Prepared 47 private native sword/shield models; no game assets entered Git.
+The 0.4.2 checkpoint and corrected Asylum collision cache remain unchanged.
+Only Mario QA, level 6, was loaded. The level-65 character was never loaded.
+Saves were backed up before testing; Mario QA was saved normally at the bonfire.
+
+Measured in the final installed build:
+
+- Straight Sword Hilt, right hand, with Plank Shield in the left: one sword hit
+  changed hollow 1810101 HP 44 -> 31. Native packet selected weapon 212000 and
+  right-hand context -1, physical power 20.26, poise 20. Stamina cost was 20 once.
+  The hit followed a shield guard, proving the shield did not redirect the
+  sword packet to the left-hand item. Confirmed-hit feedback arrived after 31 ms.
+- A subsequent swing missed after native knockback moved the enemy out of reach.
+  The first combined recording therefore did not prove an unarmed kill. A fresh
+  bonfire reset and close-range unarmed test did: HP 44 -> 0, 9 stamina, native
+  soul reward, no player HP loss and no false native hurt handoff.
+- Rapid ground sword inputs alternated native behaviors 102301000/102301010.
+  Stamina fell 93 -> 73 -> 53 -> 33 -> 13; the next attempt was rejected at 13.
+  A second exhausted attempt was rejected at 12. No negative attack-cost debit.
+- Held guard became the actual native guard state and released cleanly. A real
+  right-mouse hold also confirmed native guard without changing stance. Jumping
+  from guard retained all 93 stamina and the normal approximately 2.42 m jump.
+- Final front-facing shield checks resolved two native blocks, each with 5 HP
+  chip and 10 stamina drain. Exact resolved packet observations retained the
+  shield pose without triggering SM64 knockback or changing native HP. An earlier
+  front attack measured 33 chip/32 stamina; different enemy attacks are not
+  treated as a single balance value. Setup/retreat included unguarded hits and
+  is excluded from the per-block measurements.
+- Rear hits penetrated held guard, cost HP (65 per hit in the observed sequence),
+  and did not consume guard stamina. Native passive movement ownership recovered
+  after the actual reaction; no health refund or protection flag was added.
+- Native bonfire menus, healing to 594 HP, Leave, and subsequent Mario movement
+  worked with equipped items. The Plank Shield had been obtained through its
+  ordinary pickup earlier in this session. Item-popup field +0x118 was added to
+  modal ownership after that pickup exposed a missed popup route.
+- The mirrored guest/native coordinate conventions initially put equipment in
+  opposite rendered hands. Authored poses and graph sockets were corrected;
+  the final screenshot and adapter handedness assertions agree.
+
+The first guard implementation read INI bindings, but native saved options override
+them. Live input proved Shift guard versus the INI's Alt value. The final host
+reads and validates the active native keyboard configuration each poll. All six
+modifier bindings, rebinding, missing config and input route regressions pass.
+
+The first passive-state implementation also paused after an outgoing hit. Native
+active-action disable is not sufficient evidence of incoming damage. The final
+gate additionally requires an observed HP decrease or an exact native guard-break
+receipt. Final sword and unarmed hits caused no such false handoff. Chip suppression
+requires the exact resolved block packet, HP interval and one-shot observation;
+holding the shield alone cannot suppress a rear hit.
+
+Offline checks passed: installer rollback/asset validation, collision ownership,
+shared combat/body/motion/input, swept sword windows, resolved native block packets,
+actual ROM-backed Mario movement and animation parity, correct-hand sockets,
+6000 armed idle ticks, and an unrelated generated adapter. Controller routing
+passes executable tests; no physical XInput controller was connected in this pass.
+
+Not live-verified: actual exhausted guard break (including zero-chip break),
+every weapon/upgrade/infusion/status effect, temporary buffs, destructible-object
+sword contact, and every incoming hazard. Guard-break packet classification is
+implemented and covered by isolated tests, not an observed live guard-break claim.
+The incoming HP observation uses a 200 ms latch; unrelated HP loss followed by an
+outgoing native action in that interval is a remaining reaction-classification
+edge case. Props may disappear during hurt and scripted interaction poses.
+Only grounded straight-sword light attacks and small/medium shield blocking are
+implemented; parry, two-hand moves and other weapon families need further work.
+
+Private evidence: work/equipment-qa/{safe,front,rear}-trace.json and corresponding
+logs, final-attacks-*, final-unarmed-*, final-exhaustion-*, and recorded game clips.
+The repeatable guarded input/observation helper is framework/qa/equipment_smoke.py.
+
 # Framework 0.4.2: diagnostic overlay (2026-10-11)
 
 Built and installed the shared F8/F9/F10 debug overlay, then verified it on Mario

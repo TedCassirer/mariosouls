@@ -10,7 +10,7 @@ extern "C" {
  * Velocity is centimetres/second. Yaw is radians: 0 faces +Z, positive toward +X.
  * Fixed simulation callbacks are 30 Hz; adapters resample their own engine if needed.
  * Input X is right, Y is forward relative to camera. No host pointers are exposed. */
-#define SC_ABI_VERSION 3u
+#define SC_ABI_VERSION 4u
 #define SC_FIXED_HZ 30u
 #define SC_MAX_ATTACKS 32u
 #define SC_MAX_TRIANGLES 16384u
@@ -18,10 +18,12 @@ extern "C" {
 #define SC_CAP_ITEM_PROP 2u
 #define SC_CAP_TEXTURE_MODULATE 4u
 #define SC_CAP_ALPHA_TEST 8u
+#define SC_CAP_EQUIPMENT 16u
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u
 #define SC_ATTACK_ACTIVE 8u
+#define SC_CAN_EQUIP_ACTION 16u
 #define SC_ATTACK_AUTOMATIC 1u
 #define SC_ATTACK_RADIAL 2u
 #define SC_ATTACK_NO_OBJECTS 4u
@@ -30,7 +32,7 @@ extern "C" {
 
 typedef struct SC_Input {
     float camLookX, camLookZ, moveX, moveY;
-    uint8_t jump, attack, crouch, reserved;
+    uint8_t jump, attack, crouch, guard;
 } SC_Input;
 typedef struct SC_Surface { int32_t vertices[3][3]; uint32_t material; } SC_Surface;
 typedef struct SC_Mesh {
@@ -82,7 +84,7 @@ typedef struct SC_Init {
     SC_Log log;
 } SC_Init;
 enum SC_PoseKind { SC_POSE_NEUTRAL, SC_POSE_CLIMB, SC_POSE_DRINK, SC_POSE_REST,
-    SC_POSE_DOOR, SC_POSE_WALK, SC_POSE_DOWNED, SC_POSE_TALK };
+    SC_POSE_DOOR, SC_POSE_WALK, SC_POSE_DOWNED, SC_POSE_TALK, SC_POSE_STAGGER };
 typedef struct SC_Pose {
     uint32_t kind;
     float position[3], yaw, phase, travelCm;
@@ -98,6 +100,22 @@ typedef struct SC_MotionResolution {
     uint32_t normalCount;
     float normals[4][3];
 } SC_MotionResolution;
+
+/* Host-owned equipment action, presentation only; never advance simulation.
+ * Kind values carry no native inventory pointers or addresses. The host retains
+ * native equipment rules, stamina, damage and guard state. */
+enum SC_EquipmentKind { SC_EQUIPMENT_NONE, SC_EQUIPMENT_SWORD, SC_EQUIPMENT_SHIELD };
+typedef struct SC_EquipmentPose {
+    uint32_t size, rightKind, leftKind, swing;
+    float swingPhase, guard;
+} SC_EquipmentPose;
+/* Column-major rigid transforms: orthonormal basis, local-centimetre translation.
+ * +Z is sword blade direction / shield front, +Y is up. They describe the SAME
+ * mesh frame returned by step/pose/resolveMotion. valid bits: 1 right, 2 left. */
+typedef struct SC_Attachments {
+    uint32_t size, valid;
+    float right[16], left[16];
+} SC_Attachments;
 
 typedef struct SC_CharacterAPI {
     uint32_t size, abiVersion;
@@ -119,6 +137,8 @@ typedef struct SC_CharacterAPI {
     /* Return stereo sample FRAMES, never bytes. capacityFrames is a hard bound. */
     uint32_t (*audio)(uint32_t queuedFrames,uint32_t desiredFrames,int16_t *stereo,uint32_t capacityFrames);
     uint32_t (*resolveMotion)(int32_t,const SC_MotionResolution *,SC_State *,SC_Mesh *);
+    uint32_t (*equipment)(int32_t,const SC_EquipmentPose *);
+    uint32_t (*attachments)(int32_t,SC_Attachments *);
 } SC_CharacterAPI;
 typedef const SC_CharacterAPI *(*SC_GetAPI)(uint32_t hostAbi,uint32_t hostApiSize);
 

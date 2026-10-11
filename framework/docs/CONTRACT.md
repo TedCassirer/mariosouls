@@ -1,4 +1,4 @@
-# Character ABI version 3
+# Character ABI version 4
 
 Framework 0.4 adds opt-in rendering capabilities without changing ABI structure
 layout: `SC_CAP_TEXTURE_MODULATE` multiplies atlas RGB by vertex RGB;
@@ -46,7 +46,7 @@ audio thread. The current process-lifetime host does not hot-unload an adapter.
 
 ## Movement ownership (ABI 2)
 
-ABI 1 and 2 adapters are rejected; rebuild both host and adapter. `resolveMotion` is a
+ABI 1–3 adapters are rejected; rebuild both host and adapter. `resolveMotion` is a
 required callback. `SC_MotionResolution` contains the native capsule position in
 local centimetres, an ownership generation, a movement sequence (zero for an
 unsolicited correction), and up to four unit contact normals. Copy the corrected
@@ -110,8 +110,10 @@ capacity. Set `numTrianglesUsed` on every successful step/pose. The descriptor
 allows at most 16,384 triangles and a 4096×4096 atlas. Frame validation rejects
 non-finite output, invalid attack IDs and excess mesh counts and restores native
 control. Rendering uses the native camera/depth and composites before Dark Souls UI.
-The current renderer uses one atlas and vertex colors, without a general material
+Character meshes use one atlas and vertex colors, without a general material
 or skeleton system. Large/multi-material characters require a shared SDK extension.
+The optional equipment layer draws separately textured native props through the
+same before-UI rendering path; it does not expand the character mesh material API.
 
 ## Health and interactions
 
@@ -140,8 +142,9 @@ in the adapter, never in host code.
 does not change behavior. Attack index/name pairs identify moves. Report -1 when
 no attack is underway. Distinct combo punches and finishing kicks need separate
 IDs. Repeated instances of the same move must include an intervening idle sample;
-v3 does not have an explicit attack-instance token. If a future engine can chain
-identical attacks without that boundary, extend the SDK and shared window logic.
+the guest attack contract has no explicit attack-instance token. If a future
+engine can chain identical attacks without that boundary, extend the SDK and
+shared window logic.
 
 `SC_ATTACK_ACTIVE` marks only the actual contact phase. `activeTicks` adds an
 upper bound measured from attack start; zero means the semantic phase determines
@@ -156,13 +159,14 @@ navigation jumps are free. Automatic contact attacks consume an attempt once per
 airtime even when exhausted; landing rearms them. `probeContact` must be read-only;
 only `commitContact` may trigger the guest's bounce/hit response after a paid hit.
 
-Power is independent of equipped weapons. Shared scaling currently uses base +
-upgradeStep × level + strengthBonus + dexterityWeight × strengthBonus(dex).
+Guest/unarmed attack power is independent of equipped weapons. Shared scaling
+uses base + upgradeStep × level + strengthBonus + dexterityWeight × strengthBonus(dex).
 The bonus awards 3/stat over 10 to 20, 2/stat over 20 to 40, then 0.5/stat to 99.
 The native host inserts attack power before native defenses. Range, vertical bounds,
 target count, multiplier, stamina cost and poise are manifest-driven; shared stagger
 limits and equipment-weight costs apply downstream. The current host supplies
-physical melee/area contact attacks. Projectiles, magic, shields and target-lock
+physical melee/area contact attacks. Equipped sword attacks use the separate native
+weapon path described below. Projectiles, magic and target-lock
 abilities need new shared capabilities, not hidden character-specific hooks.
 
 `rawAction`, `rawFlags` and related fields are opaque diagnostics only. No host
@@ -187,7 +191,8 @@ smaller human capsules (radius 10-40cm, height up to150cm; secondary radius up t
 height up to160cm). Larger bodies require additional host support.
 
 The renderer scales vertices around the character's feet, including held props;
-this does not change movement velocity, jumps, or outgoing attack reach. Adapters
+this does not change movement velocity, jumps, or manifest-defined guest attack
+reach. Equipped blade contacts follow the scaled rendered prop. Adapters
 must also adapt their own wall/ceiling queries to the declared body dimensions.
 Mario's runtime builder applies bounded source transformations to a generated
 copy of the pinned dependency; it never edits the preserved dependency checkout.
@@ -216,3 +221,86 @@ window changes, bounce, damage, random-state consumption, or contact side effect
 Only `commitContact` may apply an accepted contact reaction. The shared diagnostic
 overlay uses descriptor ranges, current state and this predicate for every adapter;
 it contains no character-ID branches. See DEBUG_VIEW.md for view semantics and limits.
+
+## Equipped melee and guard (ABI 4)
+
+The current PTDE implementation supports right-hand straight swords with the
+native straight-sword animation family and left-hand small/medium shields, in
+one-handed stance. It supplies two alternating ground light swings and held
+guard. It does not implement parry or two-handed moves; other weapon families
+and temporary weapon-buff parity are outside the verified scope. Mario provides
+the first fitted adapter. Other adapters must opt in and implement their own fit.
+
+`SC_CAP_EQUIPMENT` opts into two required callbacks: `equipment` accepts a
+host-owned presentation snapshot and `attachments` returns hand/socket matrices
+from the same rendered mesh frame. Neither callback advances simulation. The
+capability is optional; adapters without it provide null callbacks. All adapters
+must rebuild for ABI4. `SC_Input.guard` is a held input, never buffered as a press.
+
+`SC_CAN_EQUIP_ACTION` advertises safe grounded locomotion states in which a host
+may begin equipped attacks or guarding. The adapter must exclude pain, burning,
+intangible, cutscene, climbing and special attack states. This is distinct from
+interaction eligibility. The host additionally requires native state, stamina,
+ownership and supported gear; the flag grants no damage protection.
+
+`SC_EquipmentPose` has right/left kinds (none, sword, shield), swing 0/1/2, normalized
+phase and native-confirmed guard 0..1. The adapter fits arm poses to its skeleton
+while its ordinary engine retains locomotion. No forced idle ticks or extra
+animation advancement. Unsupported states may invalidate the sockets.
+
+`SC_Attachments` contains column-major rigid matrices. Translation is in local
+centimetres; basis vectors must be finite, unit and orthogonal. The +Z axis points
+along the sword blade or shield front. Asset-specific fitting belongs to the
+adapter, with no native pointers. The host converts canonical metre-sized props
+through the matrix and applies the descriptor's model scale. It uses the same
+blade endpoints for presentation and swept contact. `resolveMotion` and
+`setPosition` shift sockets with the mesh. Destroy/resume/native interactions and
+damage clear pending poses and sockets; stale matrices must never survive a new
+character or origin.
+
+PTDE owns equipment selection, supported item family, native behavior lookup,
+one stamina charge per swing, per-target attack windows, native weapon packet,
+guard input filtering and actual guard observation. Empty right hand still uses
+the adapter's independent attack profile. The equipped ID is resolved to its
+native parameter row and reinforcement level, retaining its upgrade path. Native
+behavior selects attack data and stamina cost; the native damage routine builds
+weapon power and scaling before enemy defenses. The host checks the resulting
+packet's selected weapon and hand, and stops equipped damage if validation fails.
+Item stats, defenses, elemental powers, native status and rewards are not replaced
+by direct HP writes. Data-path support is not live validation of every upgrade,
+elemental/status effect or temporary buff.
+
+Current authored sword timing is 24 ticks: windup 0..4, contact 5..12, recovery 13..23.
+Late recovery accepts one new press; holding attack cannot repeat forever. Gear
+change, damage, ownership loss or ineligible state cancels without refund. No
+stamina means no swing. Guarding routes only the native guard button, slows guest
+ground movement, and displays a raised shield only after native guard confirms.
+Jump/crouch/attack/interaction release guard. Blocking never refunds HP or sets
+NoDamage; native guard stamina, shield defenses and guard breaks remain native.
+
+Blade contact sweeps between consecutive valid hand poses against native actor
+capsules, checks occlusion, and accepts each target once per swing. Contacts use
+the same canonical blade endpoints as rendering; they do not use a generic
+Mario punch range. Warps, stale sockets and unsupported gear cancel the work.
+The shield mesh is presentation only: native guard state and native hit resolution
+decide protection, not overlap against the displayed polygon surface. Props may
+temporarily disappear while hurt or native interaction poses invalidate sockets.
+
+`prepare-equipment` converts the user's installed PTDE models and textures into
+private `SCPROP1` packs. Canonical prop coordinates are metres, with +Z along the
+sword blade or out of the shield front. The native grip remains the origin and
+bone rest transforms are applied during preparation. Each pack contains the
+8-byte `SCPROP1\0` magic, four little-endian uint32 fields (vertex count, triangle
+count, texture width, texture height), six float32 bounds, 32-byte vertices
+(position3, normal3, UV2), uint32 triangle indices and RGBA8 texture pixels.
+The manifest maps native equipment rows to model IDs and records file hashes,
+bounds, blade length and source executable identity. The installer validates
+counts, lengths, indices, finite bounds and hashes before a rollback-backed copy.
+No generated pack or native texture belongs in Git.
+
+Native passive reactions (including a guard break with zero HP loss) take
+temporary movement ownership before any outgoing contact is evaluated. The host
+follows native displacement using `SC_POSE_STAGGER`, cancels equipment work and
+waits for the verified native active-action flag to recover. Adapters fit that
+pose to their own hurt animation; it is not a guest physics tick. No attack input
+or residual guest velocity is submitted during the native reaction.

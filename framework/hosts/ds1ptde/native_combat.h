@@ -5,11 +5,11 @@ static unsigned char characterAttacks[SC_MAX_ATTACKS][128],characterBehaviors[SC
 static bool characterDamageReady=false;
 extern "C" { void* characterOriginalAttackLookup=nullptr; void* characterOriginalBehaviorLookup=nullptr; }
 extern "C" { void* characterOriginalStamina=nullptr; }
-extern "C" __attribute__((used,noinline)) int characterTraceStamina(uintptr_t actor,int value,uintptr_t caller){
- return combatNativeStamina(actor,value,caller);
+extern "C" __attribute__((used,noinline)) int characterTraceStamina(uintptr_t actor,int value,uintptr_t caller,uintptr_t packet){
+ return combatNativeStamina(actor,value,caller,packet);
 }
 __attribute__((naked)) static void characterStaminaHook(){__asm__ volatile(
- "pushfl\n pushal\n movl 36(%esp),%eax\n movl 40(%esp),%ecx\n pushl %eax\n pushl %ecx\n pushl %edx\n call _characterTraceStamina\n addl $12,%esp\n movl %eax,40(%esp)\n popal\n popfl\n jmp *_characterOriginalStamina\n");}
+ "pushfl\n pushal\n movl 36(%esp),%eax\n movl 40(%esp),%ecx\n pushl %ebx\n pushl %eax\n pushl %ecx\n pushl %edx\n call _characterTraceStamina\n addl $16,%esp\n movl %eax,40(%esp)\n popal\n popfl\n jmp *_characterOriginalStamina\n");}
 extern "C" __attribute__((used,noinline)) uintptr_t characterLookup(int id,int kind,uintptr_t out,int behavior){
  if(id<990050||id>=990050+int(profile->attackCount))return 0;
  logf("Character lookup id=%d kind=%d behavior=%d",id,kind,behavior);
@@ -30,7 +30,16 @@ static thread_local int characterPacketMove=-1;
 static thread_local float characterPacketPower=0,characterPacketPoise=0;
 static thread_local bool characterPacketBuilt=false;
 static bool __cdecl characterBuildPacket(uintptr_t out,int id,uintptr_t effects,uintptr_t context,int a,int b,float c){
+ // Native guard selects the left item for its attack context. A guest right-hand
+ // swing has a frozen, explicitly verified right weapon. Preserve all other
+ // native context fields, then let the game's ordinary weapon builder run.
+ alignas(16) unsigned char equipmentContext[0x68]={};
+ if(equipmentPacket.expected&&id==equipmentPacket.behavior&&read<uintptr_t>(context)==player){
+  if(!get(context,equipmentContext))return false;
+  int hand=-1;memcpy(equipmentContext+0x48,&hand,4);memcpy(equipmentContext+0x4c,&equipmentPacket.weapon,4);context=(uintptr_t)equipmentContext;
+ }
  bool ok=characterOriginalPacket(out,id,effects,context,a,b,c);
+ if(ok)equipmentObservePacket(out,id,context);
  if(ok&&characterPacketMove>=0&&read<uintptr_t>(context)==player&&read<int>(context+4)==990050+characterPacketMove){
   // D1FE20 constructs pre-defense attack data. EA6CC0 writes the four
   // elemental powers at 0..12; EA6850 writes poise at 0x28. Native target

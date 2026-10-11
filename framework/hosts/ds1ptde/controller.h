@@ -7,7 +7,7 @@
 namespace SCController {
 struct Input {
     float x=0, y=0;
-    bool jump=false, attack=false, crouch=false;
+    bool jump=false, attack=false, crouch=false, guard=false;
 };
 
 // Framework axes: positive X right, positive Y forward.
@@ -22,7 +22,8 @@ inline Input map(const XINPUT_GAMEPAD& pad) {
         result.y=y/length*speed;
     }
     result.jump=(pad.wButtons&XINPUT_GAMEPAD_A)!=0;
-    result.attack=(pad.wButtons&XINPUT_GAMEPAD_B)!=0;
+    result.attack=(pad.wButtons&(XINPUT_GAMEPAD_B|XINPUT_GAMEPAD_RIGHT_SHOULDER))!=0;
+    result.guard=(pad.wButtons&XINPUT_GAMEPAD_LEFT_SHOULDER)!=0;
     result.crouch=pad.bLeftTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
     return result;
 }

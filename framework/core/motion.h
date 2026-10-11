@@ -47,6 +47,7 @@ public:
  void sample(const SC_Input&i,uint32_t now){
   if(buffered&&uint32_t(now-pressedAt)>150)clear();
   stored.camLookX=i.camLookX;stored.camLookZ=i.camLookZ;stored.moveX=i.moveX;stored.moveY=i.moveY;
+  stored.guard=i.guard; // Held state, never buffered as a press after release.
   if(i.jump||i.attack||i.crouch){if(!buffered)pressedAt=now;buffered=true;stored.jump|=i.jump;stored.attack|=i.attack;stored.crouch|=i.crouch;}
  }
  SC_Input take(uint32_t now){if(buffered&&uint32_t(now-pressedAt)>150){stored.jump=stored.attack=stored.crouch=0;}auto out=stored;clear();return out;}

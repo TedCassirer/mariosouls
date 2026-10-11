@@ -65,7 +65,7 @@ int main(int argc,char**argv){
   printf("body tunnel: walks under 120 cm ceiling, jump peak %.2f cm\n",ceilingTop);
   a->surfaces(floor,2,0);input={0,1,0,0,0,0,0,0};
  }
- for(int kind=SC_POSE_NEUTRAL;kind<=SC_POSE_TALK;kind++)for(int frame=0;frame<20;frame++){
+ for(int kind=SC_POSE_NEUTRAL;kind<=SC_POSE_STAGGER;kind++)for(int frame=0;frame<20;frame++){
   SC_Pose p={uint32_t(kind),{100,50,200},.75f,frame/19.f,float(frame*3)};assert(a->pose(id,&p,&state,&m));assert(SC::frame(state,m,*d));assert(fabsf(state.position[1]-50)<.01f);
  }
  a->resume(id,0,0,0,0);input={0,1,0,0,0,0,0,0};step();input.jump=1;step();assert(state.position[1]>0);input.jump=0;

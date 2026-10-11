@@ -100,6 +100,7 @@ static void debugGather(){
    debugLines.capsule(cap,hostile?0xffff6666:0xffb794ff);++debugActors;
   }
   debugAttackGather(feet,now);
+  if(equipmentSwing.running()&&equipmentPreviousBlade){debugLines.line(debugPoint(equipmentBladeA),debugPoint(equipmentBladeB),equipmentSwing.active()?0xff90ff57:0xffffbd46);debugLines.marker(debugPoint(equipmentBladeB),.09f,0xff90ff57);}
   debugContacts.erase(std::remove_if(debugContacts.begin(),debugContacts.end(),[now](const DebugContact& c){return DWORD(now-c.time)>1500;}),debugContacts.end());
   for(const auto&c:debugContacts)debugLines.marker(debugPoint(c.point),c.confirmed?.16f:.1f,c.confirmed?0xffffffff:0xffffbd46);
  }
@@ -152,7 +153,7 @@ static void debugDraw(IDirect3DDevice9*d){
  };
  auto line=[&](float y,DWORD color,const char*s){float x=590;for(;*s&&x<1000;s++,x+=7){unsigned c=(unsigned char)*s;if(c<32||c>126)c='?';quad(x,y,16,16,color,(c%16)/16.f,(c/16)/8.f,1/16.f,1/8.f);}};
  d->SetRenderState(D3DRS_ZENABLE,FALSE);d->SetFVF(D3DFVF_XYZRHW|D3DFVF_DIFFUSE|D3DFVF_TEX1);
- quad(581,17,431,242,0xff101b24,0,0,0,0);d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,2,text.data(),sizeof(V));text.clear();
+ quad(581,17,431,258,0xff101b24,0,0,0,0);d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,2,text.data(),sizeof(V));text.clear();
  const char* layers[]={"COMBAT","TERRAIN","OBJECTS","ALL"};char s[160];
  snprintf(s,sizeof(s),"FRAMEWORK DEBUG / %s / %s",layers[debugLayer],debugXray?"THROUGH WALLS":"DEPTH TEST");line(24,0xffffffff,s);
  line(43,0xffb8c5cf,"F8 ON/OFF   F9 VIEW   F10 THROUGH WALLS");
@@ -165,6 +166,7 @@ static void debugDraw(IDirect3DDevice9*d){
  snprintf(s,sizeof(s),"ATTACK %s / %s",attackState,debugAttackName);line(166,0xffffffff,s);
  snprintf(s,sizeof(s),"HP %d   STAMINA %d   ACTORS %d   OBJECTS %d",read<int>(player+0x2d4),read<int>(player+0x2e4),debugActors,debugObjects);line(182,0xffffffff,s);
  snprintf(s,sizeof(s),"TERRAIN %d%s   RADIUS %.0fM   SAMPLE GRID APPROX.",debugHas(1)?debugTriangles:0,debugTerrainCapped&&debugHas(1)?" (CAPPED)":"",debugRadius);line(198,0xffb8c5cf,s);
+ snprintf(s,sizeof(s),"EQUIP R:%d L:%d  SWING:%d/%d  NATIVE GUARD:%s",equipmentCurrent.right.id,equipmentCurrent.left.id,equipmentSwing.combo+1,equipmentSwing.age,equipmentConfirmedGuard?"YES":"NO");line(251,0xffb8c5cf,s);
  line(219,0xffffd38c,"BODY CAPSULES ARE NOT PER-BONE HURTBOXES.");line(235,0xffb8c5cf,"ENEMY WEAPON BOXES / OBJECT BOUNDS NOT MAPPED.");
  d->SetTexture(0,debugFont);d->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
  d->SetRenderState(D3DRS_ALPHATESTENABLE,TRUE);d->SetRenderState(D3DRS_ALPHAREF,100);d->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);

@@ -12,7 +12,8 @@
   "audio_rate": 32000,
   "capabilities": [
     "audio",
-    "item_prop"
+    "item_prop",
+    "equipment"
   ],
   "automatic_attack": "stomp",
   "base_power": 100,

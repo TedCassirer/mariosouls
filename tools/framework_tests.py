@@ -13,6 +13,7 @@ def test(character,asset,runtime):
     f.architecture_check()
     f.run([sys.executable,f.ROOT/'tools/test_framework_install.py'])
     f.run([sys.executable,f.FRAMEWORK/'tests/collision_test.py'])
+    f.run([sys.executable,f.FRAMEWORK/'tests/equipment_assets_test.py'])
     f.BUILD.mkdir(parents=True,exist_ok=True)
     f.compile_cpp(f.FRAMEWORK/'tests/core_test.cpp',f.BUILD/'core-test.exe')
     f.run([f.BUILD/'core-test.exe'])
@@ -26,9 +27,11 @@ def test(character,asset,runtime):
     f.run([f.BUILD/'kinematic-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/contact_test.cpp',f.BUILD/'contact-test.exe')
     f.run([f.BUILD/'contact-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/equipment_test.cpp',f.BUILD/'equipment-test.exe')
+    f.run([f.BUILD/'equipment-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/debug_geometry_test.cpp',f.BUILD/'debug-geometry-test.exe')
     f.run([f.BUILD/'debug-geometry-test.exe'])
-    for name in ['controller','action_input']:
+    for name in ['controller','action_input','native_block']:
         f.compile_cpp(f.FRAMEWORK/f'tests/{name}_test.cpp',f.BUILD/f'{name}-test.exe',extra=['-luser32','-ldxguid'])
         f.run([f.BUILD/f'{name}-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/adapter_test.cpp',f.BUILD/'adapter-test.exe')
@@ -43,6 +46,12 @@ def test(character,asset,runtime):
     if character_test.is_file():
         f.compile_cpp(character_test,f.BUILD/(character+'-test.exe'))
         f.run([f.BUILD/(character+'-test.exe'),f.BUILD/'characters'/character/'character.dll',asset or ''])
+    character_equipment_test=folder/'equipment_test.cpp';character_checks=[]
+    if character_equipment_test.is_file():
+        equipment_test=f.BUILD/(character+'-equipment-test.exe')
+        f.compile_cpp(character_equipment_test,equipment_test)
+        f.run([equipment_test,f.BUILD/'characters'/character/'character.dll',asset or '',runtime or ''])
+        character_checks.append(character+' equipment movement/action parity, rendered poses, sockets and lifecycle')
     # Generate a second, unrelated adapter in an isolated scaffold tree, then
     # load it through precisely the same SDK runner without compiling host edits.
     sandbox=f.BUILD/'scaffold-test';sandbox.mkdir(exist_ok=True)
@@ -56,5 +65,5 @@ def test(character,asset,runtime):
     profile=json.loads((generated/'character.json').read_text());f.profile_header(profile,generated/'profile.generated.h')
     f.compile_cpp(generated/'adapter.cpp',generated/'character.dll',[generated],['-shared'])
     f.run([f.BUILD/'adapter-test.exe',generated/'character.dll'])
-    (f.BUILD/'test-report.json').write_text(json.dumps({'character':character,'checks':['installer transactions (7 tests)','core policies','event collision ownership (3 tests)','target capsule contact geometry','confirmed-hit feedback','motion mailbox, clock, input latch and ownership lifecycle','native body lifecycle and restoration','controller mapping','native input routes','real character adapter','generated unrelated adapter','architecture boundaries'],'status':'passed','live_game_test':False,'host_sha256':f.sha(f.BUILD/'dinput8.dll'),'adapter_sha256':f.sha(f.BUILD/'characters'/character/'character.dll'),'asset_sha256':f.sha(Path(asset)) if asset else None,'runtime_sha256':f.sha(Path(runtime)) if runtime else None},indent=2))
+    (f.BUILD/'test-report.json').write_text(json.dumps({'character':character,'checks':['installer transactions and equipment validation','core policies','event collision ownership (3 tests)','equipment asset fitting and bounded prop files (4 tests)','equipment swing lifecycle and swept blade contact','target capsule contact geometry','confirmed-hit feedback','motion mailbox, clock, input latch and ownership lifecycle','native body lifecycle and restoration','controller mapping','native input routes','native block packet identity, exact damage intervals and guard-break observations','real character adapter','generated unrelated adapter','architecture boundaries']+character_checks,'status':'passed','live_game_test':False,'host_sha256':f.sha(f.BUILD/'dinput8.dll'),'adapter_sha256':f.sha(f.BUILD/'characters'/character/'character.dll'),'asset_sha256':f.sha(Path(asset)) if asset else None,'runtime_sha256':f.sha(Path(runtime)) if runtime else None},indent=2))
     print('Framework offline checks passed. This does not replace live-game regression tests.')

@@ -38,7 +38,8 @@ static void feedbackSettings(){
 static void feedbackTrack(uintptr_t target,int id,int before,int serial,int move,Vec at,bool object=false){
  if(!feedbackEnabled||!feedbackFocused||before<=0||feedbackReceipts.size()>=64)return;
  for(const auto&r:feedbackReceipts)if(r.target==target&&r.object==object&&r.serial==serial)return;
- feedbackReceipts.push_back({target,id,serial,move,before,GetTickCount(),object,at.x,at.y,at.z,profile->attacks[move].multiplier});
+ float multiplier=move>=0&&move<int(profile->attackCount)?profile->attacks[move].multiplier:1.f;
+ feedbackReceipts.push_back({target,id,serial,move,before,GetTickCount(),object,at.x,at.y,at.z,multiplier});
 }
 static void feedbackConfirmed(const SCFeedback::Receipt&r,int after,DWORD now){
  debugContact({r.x,r.y,r.z},true);

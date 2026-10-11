@@ -1,5 +1,5 @@
 #pragma once
-static const char* attackName(int id){return id>=0&&profile&&id<int(profile->attackCount)?profile->attacks[id].name:"none";}
+static const char* attackName(int id){return id==SC_MAX_ATTACKS?"equipped_sword":id>=0&&profile&&id<int(profile->attackCount)?profile->attacks[id].name:"none";}
 static const SC_Attack* attackDefinition(int id){return id>=0&&profile&&id<int(profile->attackCount)?&profile->attacks[id]:nullptr;}
 static bool automaticContact(Vec delta,const SC_Attack&a){return delta.y>a.automaticMinHeightCm*.01f&&delta.y<a.automaticMaxHeightCm*.01f&&delta.x*delta.x+delta.z*delta.z<a.automaticRadiusCm*a.automaticRadiusCm*.0001f;}
 static void adapterLog(const char*message){logf("ADAPTER %s",message?message:"");}

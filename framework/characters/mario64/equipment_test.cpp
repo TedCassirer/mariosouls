@@ -126,6 +126,11 @@ int main(int argc,char**argv){
         for(int k=0;k<3;k++)require(closeFloat(a.position[k],b.position[k])&&closeFloat(a.velocity[k],b.velocity[k]),"equipment does not change movement");
         require(closeFloat(a.floorHeight,b.floorHeight)&&closeFloat(a.faceAngle,b.faceAngle),"equipment preserves floor and facing");
         require(baseline[i].geometry.size()==equipped[i].geometry.size(),"equipment preserves Mario topology");
+        // Visible foot planting must survive the new torso/arm overlay.
+        if(a.rawAction==0x0c400201)for(unsigned v=0;v<baseline[i].geometry.size()/3;v++){
+            if(baseline[i].geometry[v*3+1]<a.position[1]+20)
+                for(int axis=0;axis<3;axis++)require(closeFloat(baseline[i].geometry[v*3+axis],equipped[i].geometry[v*3+axis]),"weapon windup keeps planted feet unchanged");
+        }
         if(baseline[i].geometry!=equipped[i].geometry)changed++;
     }
     require(changed>150,"rendered arms actually change");printf("Melee kind %u: movement parity and rigid attachments passed\n",kind);}

@@ -1,5 +1,5 @@
 /* Original, adapter-owned equipment layer in the generated libsm64 copy.
- * Render poses only change local arm rotations, never the animation clock or
+ * Render poses only change local upper-body rotations, never the animation clock or
  * movement. An explicit armed-idle policy prevents sleeping with a held item. */
 static struct MarioInstance *scEquipmentRendering;
 
@@ -24,20 +24,23 @@ static void sc_equipment_rotation(const s16 *from,const s16 *to,float t,s16 *out
     out[2]=(s16)(atan2f(2*(w*z+x*y),1-2*(y*y+z*z))*scale);
 }
 
-/* Authored arm keys fitted against the owned-ROM skeleton. The nine channels
- * are upper arm, forearm, wrist XYZ. They are not native Dark Souls poses. */
-static const s16 scSwordKeys[4][9]={
-    {-6463,-7897,-30470,-38,4,37,-26207,7206,26008},
-    {17213,-11649,-12774,-49,255,8651,12615,-8195,19571},
-    {3158,-3664,32622,-406,-6,12,-23609,12371,-25574},
-    {-10751,2582,-32731,226,3,9,20675,412,23390}
-};
-static const s16 scChopKeys[4][9]={
-    {-6463,-7897,-30470,-38,4,37,-26207,7206,26008},
-    {17213,-11649,-17774,-49,255,8651,12615,-8195,19571},
-    {3158,-3664,32622,-406,-6,12,-23609,12371,-25574},
-    {-10751,2582,-30731,226,3,9,20675,412,23390}
-};
+/* Authored full upper-body key poses. No guest action or root motion is changed. */
+#include "sc_equipment_keys.h"
+static unsigned sc_equipment_family(unsigned kind){return kind==1?0:kind-2;}
+static void sc_equipment_keys(struct MarioInstance *instance,const s16 **from,const s16 **to,float *blend){
+    const s16 (*keys)[12]=scWeaponKeys[sc_equipment_family(instance->equipmentRight)][instance->equipmentSwing==2?1:0];
+    float p=instance->equipmentPhase;int first=0,second=0;*blend=0;
+    if(instance->equipmentSwing){
+        if(p<.20f){first=0;second=1;*blend=sc_equipment_smooth(p/.20f);}
+        else if(p<=.55f){
+            // Ease across the WHOLE strike, keeping speed through its middle.
+            // Easing each interval separately made the weapon stop on contact.
+            float strike=sc_equipment_smooth((p-.20f)/.35f)*2.f;
+            first=strike<1.f?1:2;second=first+1;*blend=strike-(first-1);
+        }else{first=3;second=4;*blend=sc_equipment_smooth((p-.55f)/.45f);}
+    }
+    *from=keys[first];*to=keys[second];
+}
 static const s16 scShieldKeys[2][9]={
     {4344,6986,32649,35,-34,6614,-27706,10303,28385},
     {-1054,-4567,30852,-28,-10,12,30580,12574,29400}
@@ -79,19 +82,21 @@ void sc_mario_equipment_rotation(int attributeOffset,s16 *rotation) {
     // The guest tree calls X-positive the left arm. The host's left-handed
     // view presents that glove on the character's right. Mirrored authored
     // joint poses bind native equipment to the glove seen on the proper side.
-    if(instance->equipmentRight!=0&&channel>=18&&channel<27){
-        int first=0,second=0;float blend=0;
-        if(instance->equipmentSwing){
-            const float times[5]={0.f,.20f,.37f,.55f,.90f};
-            const int forward[5]={0,1,2,3,0},reverse[5]={0,3,2,1,0};
-            const int *keys=instance->equipmentSwing==2&&instance->equipmentRight<6?reverse:forward;
-            float phase=instance->equipmentPhase;
-            for(int k=0;k<4;k++)if(phase>=times[k]&&phase<times[k+1]){
-                first=keys[k];second=keys[k+1];blend=sc_equipment_smooth((phase-times[k])/(times[k+1]-times[k]));break;
-            }
+    const s16 *from=NULL,*to=NULL;float blend=0;
+    if(instance->equipmentRight)sc_equipment_keys(instance,&from,&to,&blend);
+    if(instance->equipmentRight&&instance->equipmentSwing&&channel>=9&&channel<15){
+        s16 body[3];sc_equipment_rotation(from,to,blend,body);
+        if(channel==9){
+            for(int k=0;k<3;k++)rotation[k]=(s16)(rotation[k]+body[k]);
+        }else if(channel==12){
+            // Keep looking into the strike, with the neck countering the chest.
+            float p=instance->equipmentPhase;
+            float weight=p<.20f?sc_equipment_smooth(p/.20f):p>.55f?1-sc_equipment_smooth((p-.55f)/.45f):1;
+            s16 look[3]={(s16)(-body[0]*.7f),0,(s16)(-body[2]*.5f)};
+            sc_equipment_rotation(rotation,look,weight,rotation);
         }
-        const s16 (*pose)[9]=instance->equipmentRight>=6?scChopKeys:scSwordKeys;
-        sc_equipment_rotation(pose[first]+channel-18,pose[second]+channel-18,blend,rotation);
+    }else if(instance->equipmentRight&&channel>=18&&channel<27){
+        sc_equipment_rotation(from+3+channel-18,to+3+channel-18,blend,rotation);
     }else if(instance->equipmentLeft==2&&channel>=30&&channel<39){
         float blend=sc_equipment_smooth(instance->equipmentGuard);
         sc_equipment_rotation(scShieldKeys[0]+channel-30,scShieldKeys[1]+channel-30,blend,rotation);

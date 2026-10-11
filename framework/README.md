@@ -1,5 +1,10 @@
 # Souls Character Framework 0.6.0
 
+Animation follow-up: six weapon families now have individually fitted windups,
+strikes and recoveries, with torso movement and planted feet. The SDK-based
+`preview-equipment` workflow renders front/rear visual checks without launching
+the game. See the Mario equipment guide for the private asset requirements.
+
 Death presentation follow-up: Mario now plays his original SM64 collapse and
 death voice once, then holds the final pose while Dark Souls handles "YOU DIED"
 and respawning. This uses the optional SDK death-pose capability and shared
@@ -44,7 +49,7 @@ importer for arbitrary game models or ROMs.
 | `characters/mario64/` | Mario's engine, action IDs, animations, sounds, flask and equipment fitting |
 | `templates/` | Compilable starting adapter for a future character |
 | `tests/` | Shared policy and real DLL conformance tests |
-| `qa/` | Guarded observation and controls for Mario QA, level 1â€“10, Asylum only |
+| `qa/` | Guarded observation and controls for Mario QA: low-level or exact level-13 melee fixture, Asylum only |
 
 Build from the repository root with the pinned dependencies installed:
 

@@ -172,10 +172,21 @@ def main():
     p=commands.add_parser('prepare-assets');p.add_argument('--character',required=True);p.add_argument('--input',required=True);p.add_argument('--output',required=True)
     p=commands.add_parser('prepare-collision');p.add_argument('--map',required=True);p.add_argument('--output',required=True)
     p=commands.add_parser('prepare-equipment');p.add_argument('--game',default=str(GAME));p.add_argument('--output',required=True)
+    p=commands.add_parser('preview-equipment');p.add_argument('--character',default='mario64');p.add_argument('--asset',required=True);p.add_argument('--runtime',required=True);p.add_argument('--equipment-directory',required=True);p.add_argument('--output',required=True)
     args=parser.parse_args()
     if args.command=='new-character':scaffold(args.id,args.name)
     elif args.command=='prepare-collision':run([sys.executable,FRAMEWORK/'hosts/ds1ptde/prepare_collision.py','--game',GAME,'--map',args.map,'--output',args.output])
     elif args.command=='prepare-equipment':run([sys.executable,FRAMEWORK/'hosts/ds1ptde/prepare_equipment.py','--game',args.game,'--output',args.output])
+    elif args.command=='preview-equipment':
+        folder,profile=load_profile(args.character)
+        source=folder/'equipment_preview.cpp'
+        if not source.is_file():raise ValueError('This adapter has no equipment preview fixture')
+        output=Path(args.output).resolve();output.mkdir(parents=True,exist_ok=False)
+        executable=BUILD/(args.character+'-equipment-preview.exe');compile_cpp(source,executable)
+        run([executable,BUILD/'characters'/args.character/'character.dll',args.asset,args.runtime,output/'poses.bin'])
+        for name,yaw in [('front',35),('back',215)]:
+            run([sys.executable,FRAMEWORK/'qa/render_equipment.py',output/'poses.bin','--props',args.equipment_directory,'--sheet',output/(name+'.png'),'--yaw',yaw])
+        print('Private animation previews: '+str(output)+' (offline visual QA, not live-game verification)')
     elif args.command=='prepare-assets':
         folder,profile=load_profile(args.character)
         recipe=folder/'prepare_assets.py'

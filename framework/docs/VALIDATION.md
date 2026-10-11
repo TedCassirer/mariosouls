@@ -1,3 +1,28 @@
+# Weapon animation polish (2026-10-11)
+
+Replaced the shared four-key arm-only sweep with twelve fitted clips across six
+weapon families. Authoring fits glove position and weapon orientation together,
+projects unreachable goals onto the wrist reach sphere, and retains a bent elbow.
+The largest fitted glove-goal error was 0.02cm. Torso twist/lean and head counter-
+rotation follow each strike. Contact easing spans the entire arc without an
+artificial pause at the middle key. Recovery ends at the identical ready pose.
+
+The actual SDK fixture exported 512 mesh/socket frames with both swings at host
+30Hz timings. Front/rear sheets were rendered with native weapon props. These
+are offline animation previews, not game captures. A before/after comparison
+video is saved under outputs. The framework preview-equipment command reproduces
+the sheets using owned assets. All generated geometry stays outside Git.
+
+Full build/test/doctor passed with six-family movement/action parity, finite rigid
+sockets, planted-foot mesh checks, collision, interaction and death regressions.
+This pass changes character presentation; host timing, stamina costs and damage
+remain unchanged. Installed with the transactional installer; previous files are retained at
+`work/checkpoints/before-framework-20261011-134722-798738`. The private runtime
+archive is verified by `checkpoints/framework-melee-animation.json`.
+Live combat checks and the one-time QA arsenal are pending a
+current user control handoff. No saves, character levels or inventories have been
+changed during this animation work.
+
 # Melee-family extension 0.6.0 (2026-10-11, live testing pending)
 
 Implemented six one-handed families, distinct shared timings, axe/hammer distal
@@ -10,8 +35,8 @@ Existing interaction, death, collision, input and native block checks also pass.
 Prepared and independently audited 82 rigid native props / 574 parameter rows.
 Gargoyle Tail Axe model509 is explicitly excluded because its mesh is flexible.
 
-No new live combat result is claimed yet. Installation and live QA await a current
-control handoff. The fixed one-time test kit (Test Mode5) is restricted to Mario QA,
+No new live combat result is claimed yet. Installation subsequently completed with the animation pass above; live QA
+still awaits a current control handoff. The fixed one-time test kit (Test Mode5) is restricted to Mario QA,
 Asylum, living native control, idle/no-menu state, level6 with all eight stats11.
 It calls the signature-checked native item-acquisition function for Dagger100000,
 Longsword201000, Claymore301000, Scimitar400000, Battle Axe701000, Mace801000, then

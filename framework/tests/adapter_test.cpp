@@ -12,6 +12,7 @@
 #include "../core/projectile.h"
 #include "../core/impact.h"
 #include "../sdk/launcher_api.h"
+#include "../core/starting_class.h"
 static void log(const char*s){printf("adapter: %s\n",s);}
 int main(int argc,char**argv){
  setvbuf(stdout,nullptr,_IONBF,0);if(argc<2)return 2;HMODULE dll=LoadLibraryA(argv[1]);if(!dll){printf("LoadLibrary failed %lu\n",GetLastError());return 3;}
@@ -20,6 +21,10 @@ int main(int argc,char**argv){
  if(auto camera=(SC_GetCameraProfile)GetProcAddress(dll,"SoulsCharacterGetCameraProfile")){
   assert(!camera(99,sizeof(SC_CameraProfile)));assert(!camera(SC_CAMERA_PROFILE_VERSION,0));
   assert(SCCamera::valid(camera(SC_CAMERA_PROFILE_VERSION,sizeof(SC_CameraProfile))));
+ }
+ if(auto starting=(SC_GetClassProfile)GetProcAddress(dll,"SoulsCharacterGetClassProfile")){
+  assert(!starting(99,sizeof(SC_ClassProfile)));assert(!starting(SC_CLASS_PROFILE_VERSION,0));
+  assert(SCClass::valid(starting(SC_CLASS_PROFILE_VERSION,sizeof(SC_ClassProfile))));
  }
  std::vector<uint8_t> atlas(d->textureWidth*d->textureHeight*4);
  if(auto impact=(SC_GetImpactProfile)GetProcAddress(dll,"SoulsCharacterGetImpactProfile")){
@@ -34,6 +39,17 @@ int main(int argc,char**argv){
  assert(a->initialize(&init,&tex));assert(!a->initialize(&init,&tex));
  SC_Surface floor[2]={{{{-16000,0,-16000},{-16000,0,16000},{16000,0,16000}},0},{{{-16000,0,-16000},{16000,0,16000},{16000,0,-16000}},0}};
  a->surfaces(floor,2,0);assert(fabsf(a->floorHeight(0,100,0))<.01f);
+ // Repeated creation previews must leave the gameplay instance available.
+ if(GetProcAddress(dll,"SoulsCharacterGetClassProfile")){
+  std::vector<float> pp(d->maxTriangles*9),pn(pp.size()),pc(pp.size()),pu(d->maxTriangles*6);
+  SC_Mesh pm={pp.data(),pn.data(),pc.data(),pu.data(),d->maxTriangles,0};SC_State ps{};
+  for(int cycle=0;cycle<3;cycle++){
+   int preview=a->create(0,0,0,0);assert(preview>=0);
+   for(int frame=0;frame<90;frame++){SC_Pose pose={};pose.phase=-1;pose.yaw=frame*.03f;assert(a->pose(preview,&pose,&ps,&pm));assert(SC::frame(ps,pm,*d));assert(pm.numTrianglesUsed>0);}
+   a->destroy(preview);
+  }
+  puts("PASS class preview: real animated mesh, rotation, repeated teardown then gameplay create");
+ }
  int id=a->create(0,30,0,0);assert(id>=0);assert(a->create(0,30,0,0)<0);
  std::vector<float> pos(d->maxTriangles*9),normal(pos.size()),color(pos.size()),uv(d->maxTriangles*6);
  SC_Mesh m={pos.data(),normal.data(),color.data(),uv.data(),d->maxTriangles,0};SC_State state{};SC_Input input={0,1,0,0,0,0,0,0};

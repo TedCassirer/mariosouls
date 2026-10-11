@@ -131,3 +131,32 @@ Native camera interpolation, wall collision and lock-on remain in charge.
 Observed courtyard framing moved4m to approximately6m; confined lock-on retained
 native proximity constraints. All38 fields restored on toggle-off. Configuration
 is `[Camera.mario64] DistanceScale`, range1..2. See validation for measured scope.
+
+## Mario starting class, 2026-10-11
+
+Added optional SDK starting-class profile, shared bounded validation and one
+activation decision per native actor. PTDE owns the class-7 mapping, FMG text
+hooks and private copies of CharaInitParam rows 2007/3007. Mario owns the class
+description and preview framing. Native save/inventory initialization remains
+authoritative; existing Pyromancer saves receive no retroactive equipment.
+
+Live creation checks: class list and selected-class field display Mario;
+description and Flame/shield preview equipment agree. A real animated guest mesh
+replaces only the full-body native preview texture. Switching to Sorcerer restores
+its human preview, and returning to Mario recreates the guest. Full capture is
+1920x1080 but client coordinates are 1280x720: clicks from a 960x540 capture must
+scale by 4/3. Incorrect scaling previously clicked outside the window.
+
+The human created Mario ClassQA after both Unicode input and main-window WM_CHAR
+failed in native name entry. Read-only observation verifies native class 7,
+level 1, attributes 10/12/11/12/9/12/10/8, HP 573, stamina 93, right Pyromancy Flame
+1330000 and left Plank Shield 1406000. Native empty hand slots resolve initializer
+-1 to unarmed item 900000. Mario automatically owns the world session. Screenshot
+shows Fire Mario and attuned Fireball. No acquisition helper or inventory writes
+were used. Existing character guards remain unchanged; qa/starting_class.py
+observes only the exact new level-1 fixture in the Asylum.
+
+Offline checks pass: class profile rejection, activation/manual override/reload,
+real preview mesh animation/rotation/repeated teardown, subsequent gameplay
+instance and the existing framework/adapter regressions. Final preview-facing,
+name-modal and restart checks are recorded below when completed.

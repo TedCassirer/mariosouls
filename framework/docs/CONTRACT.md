@@ -497,3 +497,18 @@ The host currently supports one launcher/operator pair at a Firelink placement
 and an opt-in Asylum QA placement. Operator unlock state is stored per placement
 in local mod configuration and shared between saves; it is not a native quest
 flag. This is a bounded launcher capability, not a general imported NPC engine.
+
+## Optional native starting class (version 1)
+
+SoulsCharacterGetClassProfile(version, size) returns a static SC_ClassProfile
+from sdk/class_api.h only for an exact version/size handshake. The profile
+contains bounded UTF-8 display strings, a semantic native archetype, and preview
+height in centimetres/yaw in radians. Invalid or absent profiles opt out; ABI4
+is unchanged. The host owns class mapping, native initialization and inventory.
+Adapters supply neither native class IDs nor memory addresses.
+
+Creation uses a temporary pose-only guest instance isolated from world ownership.
+The host destroys it before entering gameplay. The native saved class requests
+the character once per loaded actor, preserving manual overrides during that
+actor lifetime. No retroactive inventory is granted to existing saves.
+See STARTING_CLASSES.md for PTDE mapping, activation and validation.

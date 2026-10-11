@@ -7,7 +7,7 @@ static void uiFrameEnd(){
  unsigned serial=GetPrivateProfileIntA("MarioSouls","UITrace",0,ini);
  if(serial&&serial!=uiTraceSerial){uiTraceSerial=serial;uiTraceFrames=2;}
 }
-static void uiPresent(){uiComposited=false;if(uiTraceFrames)--uiTraceFrames;}
+static void uiPresent(){classPreviewRendered=false;uiComposited=false;if(uiTraceFrames)--uiTraceFrames;}
 enum class UILayout {Other,SceneCopy,Sprite,Text};
 static UILayout uiLayout(IDirect3DDevice9*d,UINT stride){
  if(stride!=12&&stride!=24)return UILayout::Other;
@@ -48,13 +48,17 @@ static UIIndexedFn uiOriginalIndexed;
 static HRESULT WINAPI uiPrimitive(IDirect3DDevice9*d,D3DPRIMITIVETYPE type,UINT count,const void*v,UINT stride){
  auto layout=uiBoundary(d,stride);
  if(layout==UILayout::Text||layout==UILayout::Sprite)uiComposite(d,layout);
+ auto nativePreview=uiLayout(d,stride)==UILayout::Sprite?classPreviewBind(d,count,v,stride,(type==D3DPT_TRIANGLESTRIP||type==D3DPT_TRIANGLEFAN)?count+2:count*3):nullptr;
  HRESULT hr=uiOriginalPrimitive(d,type,count,v,stride);
+ if(nativePreview){d->SetTexture(0,nativePreview);nativePreview->Release();}
  if(SUCCEEDED(hr)&&layout==UILayout::SceneCopy&&(type==D3DPT_TRIANGLESTRIP||type==D3DPT_TRIANGLELIST)&&count==2)uiComposite(d,layout);
  return hr;
 }
 static HRESULT WINAPI uiIndexed(IDirect3DDevice9*d,D3DPRIMITIVETYPE type,UINT min,UINT num,UINT count,const void*indices,D3DFORMAT format,const void*v,UINT stride){
  auto layout=uiBoundary(d,stride);if(layout==UILayout::Text||layout==UILayout::Sprite)uiComposite(d,layout);
- return uiOriginalIndexed(d,type,min,num,count,indices,format,v,stride);
+ auto nativePreview=uiLayout(d,stride)==UILayout::Sprite?classPreviewBind(d,count,v,stride,num):nullptr;
+ HRESULT hr=uiOriginalIndexed(d,type,min,num,count,indices,format,v,stride);
+ if(nativePreview){d->SetTexture(0,nativePreview);nativePreview->Release();}return hr;
 }
 static void installUIHooks(void**table){
  auto a=MH_CreateHook(table[83],(void*)uiPrimitive,(void**)&uiOriginalPrimitive);

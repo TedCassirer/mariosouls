@@ -15,6 +15,8 @@ def test(character,asset,runtime):
     f.run([sys.executable,f.FRAMEWORK/'tests/collision_test.py'])
     f.run([sys.executable,f.FRAMEWORK/'tests/equipment_assets_test.py'])
     f.BUILD.mkdir(parents=True,exist_ok=True)
+    f.compile_cpp(f.FRAMEWORK/'tests/class_test.cpp',f.BUILD/'class-test.exe')
+    f.run([f.BUILD/'class-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/core_test.cpp',f.BUILD/'core-test.exe')
     f.run([f.BUILD/'core-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/context_action_test.cpp',f.BUILD/'context-action-test.exe')

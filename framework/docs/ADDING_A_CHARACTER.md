@@ -199,3 +199,17 @@ gravity, repeated entry, cancelled visibility, damage/pose interruption and
 all animation-frame mesh bounds. Then verify the complete native scene camera,
 terrain contacts, landing and reload in the game. Details and current coverage
 are in [CANNON.md](CANNON.md).
+
+## Optional starting-class selection
+
+Export SoulsCharacterGetClassProfile using the exact SDK version and size.
+Provide static UTF-8 name (1..31 bytes), description (1..191 bytes), a supported
+SC_ClassArchetype and finite previewHeightCm (20..500) / previewYaw (-2pi..2pi).
+The host currently maps SC_CLASS_FIRECASTER to the native Pyromancer slot with
+its stats, Flame, shield and attuned Fireball. Other archetypes are not implemented.
+
+The adapter must support repeated pose-only create/animate/destroy before its
+world instance is created. Keep meshes and default facing in the adapter.
+Test class switching, preview rotation, name entry, new-game initialization,
+save/reload and manual toggle. Face/hair/body options still affect the fallback
+human, not the guest mesh. See STARTING_CLASSES.md for the implementation.

@@ -24,3 +24,6 @@ Suggested check using Mario QA:
 4. Cross back, repeat, then save/reload and confirm Mario still activates normally.
 
 If a problem remains, preserve DATA/mariosouls.log before restarting and note the location and equipped weapon.
+
+Status update: installed together with the Mario grip adjustment on 2026-10-11.
+Live transition/combat checks are still pending.

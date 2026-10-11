@@ -59,6 +59,12 @@ def test(character,asset,runtime):
         f.compile_cpp(character_test,f.BUILD/(character+'-test.exe'))
         f.run([f.BUILD/(character+'-test.exe'),f.BUILD/'characters'/character/'character.dll',asset or ''])
     character_equipment_test=folder/'equipment_test.cpp';character_checks=[]
+    slope_test=folder/'slope_test.cpp'
+    if slope_test.is_file():
+        executable=f.BUILD/(character+'-slope-test.exe')
+        f.compile_cpp(slope_test,executable)
+        f.run([executable,f.BUILD/'characters'/character/'character.dll',asset or '',runtime or ''])
+        character_checks.append(character+' slope traction, run/release, steep terrain and ice')
     death_test=folder/'death_test.cpp'
     if death_test.is_file():
         executable=f.BUILD/(character+'-death-test.exe')

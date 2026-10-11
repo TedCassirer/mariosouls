@@ -842,3 +842,19 @@ thunk's registers/stack/return convention against a fake callee. These are not
 live damage measurements. The user requested preparation only; this build has
 not been installed or tested in-game. Running crossings, actual HP loss, weapon
 hits, stagger and soul rewards across the seam remain live checks.
+
+
+### 2026-10-11 Mario traction (prepared)
+
+The real adapter/guest test exercises ordinary ramps at 0/10/20/30/40 degrees,
+300 idle ticks, and both uphill/downhill running followed by release. All end
+stationary with zero measured late drift. A 50-degree default ramp slides 1324cm
+in 45 ticks; a direct guest ice fixture at 20 degrees slides 2424cm. SDK material
+mapping remains unchanged: the ice fixture calls the guest surface API directly.
+The pre-change installed runtime fails the 40-degree stationary test. These are
+synthetic runtime checks, not measurements on native Dark Souls terrain. Live
+terrain feel and contact-patch interactions remain unverified for this revision.
+
+This traction revision and the preceding area-transition revision were installed
+with user authorization after the game closed. Installed binary hashes match the
+tested build. In-game validation of both revisions remains pending.

@@ -1,0 +1,23 @@
+Mario traction adjustment - installed 2026-10-11
+
+Ordinary terrain below 45 degrees no longer adds downhill slope acceleration or
+forces sliding/steep uphill actions. Mario can settle and stop on these slopes.
+Steeper terrain still slides. Explicit guest ice and slippery materials retain
+their behavior. Flat speed, jump physics and attack movement constants are unchanged.
+
+Installed for you after Dark Souls was closed. Start the game normally.
+For reinstalling, save and close Dark Souls, then run Install Mario grip fix.cmd.
+The installer checks exact tested files and backs up the previous mod installation.
+This also includes the prepared area-transition and melee-targeting update.
+
+Real-runtime offline ramp tests pass: stationary and run/release on 0/10/20/30/40
+degree ramps; sliding on a 50-degree ramp and explicit ice. Actual Dark Souls
+terrain has not been driven or measured for this update.
+
+Try walking uphill/downhill on the troublesome slope, releasing the stick to
+stop, then jumping, diving and slide-kicking. Report the location if Mario still
+slides on a surface that looks gentle; native contact patches may need inspection.
+
+Full framework offline suite, doctor and installation checks passed.
+Installed host, adapter and runtime hashes match the tested build.
+Previous mod backup: work/checkpoints/before-framework-20261011-212057-142685.

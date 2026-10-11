@@ -33,6 +33,16 @@ def prepare(repo):
             if source.count(before)!=count:raise RuntimeError('Pinned runtime equipment anchor changed: '+name+' '+before)
             source=source.replace(before,after)
         path.write_text(source)
+    (repo/'src/sc_grip.h').write_bytes(Path(__file__).with_name('runtime_grip.h').read_bytes())
+    staged('decomp/game/mario.c',[
+        ('#include "mario.h"', '#include "mario.h"\n#include "../../sc_grip.h"',1),
+        ('u32 mario_floor_is_slippery(struct MarioState *m) {',
+         'u32 mario_floor_is_slippery(struct MarioState *m) {\n    if (sc_mario_grip_floor(m)) return FALSE;',1),
+        ('s32 mario_floor_is_slope(struct MarioState *m) {',
+         's32 mario_floor_is_slope(struct MarioState *m) {\n    if (sc_mario_grip_floor(m)) return FALSE;',1),
+        ('s32 mario_floor_is_steep(struct MarioState *m) {',
+         's32 mario_floor_is_steep(struct MarioState *m) {\n    if (sc_mario_grip_floor(m)) return FALSE;',1),
+    ])
     (repo/'src/sc_open_world.h').write_bytes(Path(__file__).with_name('runtime_open_world.h').read_bytes())
     staged('decomp/engine/surface_collision.c',[
         ('#include "surface_collision.h"', '#include "surface_collision.h"\n#include "../../sc_open_world.h"',1),

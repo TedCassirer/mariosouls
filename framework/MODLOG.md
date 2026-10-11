@@ -417,3 +417,24 @@ unlabelled enemies. Stale streamed targets no longer poison melee availability.
 The same handle validation protects delayed impact receipts and projectile owners.
 Added offline lifecycle, target identity and x86 ABI regression checks. Preparation
 only at the user's request; live transition/combat validation remains pending.
+
+
+# Mario ordinary-terrain traction, 2026-10-11 (prepared)
+
+Adapter-owned runtime policy treats default terrain below 45 degrees as grippable
+for slope acceleration, automatic sliding and steep uphill checks together. Flat
+movement constants, air/jump physics, authored attacks and explicitly slippery
+surfaces are unchanged. Patches apply only to the generated copy of the pinned
+guest dependency; original sources and checkpoints remain immutable.
+
+Real-runtime synthetic ramps: idle and uphill/downhill run/release settle without
+drift at 0, 10, 20, 30 and 40 degrees. At 50 degrees Mario still slides; direct
+guest ice at 20 degrees remains slippery. The installed pre-change guest failed
+the same 40-degree idle test (travelled 8796cm across/off the finite fixture).
+No live game controls or tests used. Prepared installation includes the previous
+area-transition fixes. Awaiting user's installation preference.
+
+Installation completed with user authorization after game closure. Full offline
+suite, doctor and installer checks passed; installed host/adapter/runtime hashes
+match the tested files. Backup: before-framework-20261011-212057-142685. No live
+controls were used; actual Dark Souls terrain feel remains for user testing.

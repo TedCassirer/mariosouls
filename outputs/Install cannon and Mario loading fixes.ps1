@@ -16,5 +16,5 @@ Push-Location -LiteralPath $taskRepo
 try {
     & $taskPython @taskArgs
     if ($LASTEXITCODE -ne 0) { throw 'Installation checks failed. Read the message above.' }
-    if (-not $CheckOnly) { Write-Host 'Mario area-transition ownership, melee targeting and previous fixes installed. Start Dark Souls normally.' }
+    if (-not $CheckOnly) { Write-Host 'Mario slope grip, area-transition ownership, melee targeting and previous fixes installed. Start Dark Souls normally.' }
 } finally { Pop-Location }

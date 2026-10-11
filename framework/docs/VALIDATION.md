@@ -1,3 +1,39 @@
+# Framework 0.4.2: diagnostic overlay (2026-10-11)
+
+Built and installed the shared F8/F9/F10 debug overlay, then verified it on Mario
+QA level 6 only. Exact installed host matches the tested build and its source
+receipt. The corrected 0.4.1 Asylum collision cache hash remains unchanged.
+
+- All four views rendered: Combat, Terrain, Objects, All. Terrain displayed its
+  3000-triangle cap. Through-walls and depth-tested screenshots visibly differ.
+- Live smaller Mario capsules and restored native capsules appeared at the same
+  bonfire fixture, with readable labels. Four nearby object origins were counted;
+  orange markers were visible facing the main courtyard gate.
+- A hollow's native HP changed 44 -> 0 from one punch. The recording shows enemy
+  capsule, eligible-point samples, contact/confirmed-hit marks, and the 650 ms
+  RECENT attack display. Native soul reward was 20 (152 -> 172).
+- Bonfire menu opened, Leave returned to Mario, F8 removed all diagnostics,
+  and a subsequent free jump retained stamina 93. Player HP stayed 594 throughout.
+  Every sampled protection flag was zero. Screenshots show native prompts/menus
+  above diagnostic geometry. Normal save/quit/close completed at the bonfire.
+- Offline debug geometry tests cover a large floor triangle whose vertices are
+  all out of range, range rejection, NaNs, line-budget clipping, capsule extents
+  and invalid capsules. Installer/collision/SDK/body/input/combat suites passed;
+  Mario adapter still reports a 242 cm jump and 22 cm wall clearance.
+
+One initial bonfire fixture faced away without a prompt; its interaction request
+was correctly rejected and was not counted as a pass. Retested facing the bonfire
+with the normal interact key. Teleport fixtures can retain a stale native prompt,
+so the hollow recording's prompt is not evidence of bonfire access there.
+
+Private evidence: work/debug-view/ (screenshots, hit recording with separate
+metadata and trace JSON, game log, live summary, save backup). No physical
+controller, device-loss/reset, cross-map transition or exact native per-bone
+hurtbox/weapon-volume mapping was verified. Geometry is diagnostic and does not
+change damage or physics. See DEBUG_VIEW.md for precise layer meanings.
+
+---
+
 # Framework 0.4.1: boss contact and event-controlled doorway (2026-10-11)
 
 The user reported that Mario could not damage the Asylum Demon and could not pass

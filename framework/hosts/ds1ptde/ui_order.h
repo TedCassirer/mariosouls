@@ -24,7 +24,7 @@ static UILayout uiLayout(IDirect3DDevice9*d,UINT stride){
  return UILayout::Other;
 }
 static UILayout uiBoundary(IDirect3DDevice9*d,UINT stride){
- if(uiInside||uiComposited||renderMode!=2||(!characterOwned()&&!nativeActionOwned())||!sceneDepth||!geo.numTrianglesUsed)return UILayout::Other;
+ if(uiInside||uiComposited||renderMode!=2||!renderWanted()||!sceneDepth)return UILayout::Other;
  auto layout=uiLayout(d,stride);if(layout==UILayout::Other)return layout;
  DWORD z=0,blend=0;d->GetRenderState(D3DRS_ZENABLE,&z);d->GetRenderState(D3DRS_ALPHABLENDENABLE,&blend);
  if(z||(layout==UILayout::SceneCopy?blend!=FALSE:blend!=TRUE))return UILayout::Other;

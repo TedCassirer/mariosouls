@@ -78,3 +78,9 @@ size or multiply attack reach by target size in an adapter. Shared host geometry
 handles large bodies, upper-surface automatic attacks, occlusion and native damage.
 Prepared collision caches leave event-controlled barriers to native Havok; an
 adapter must honor their live contact/resolution callbacks.
+
+F8 enables the shared debug overlay; F9 cycles views and F10 controls occlusion.
+It reads the adapter's existing descriptor and samples `probeContact` without
+stepping or committing contacts. Keep that predicate free of side effects.
+Use the capsule, contact, range and terrain views during integration; they do not
+claim exact native per-bone hurtboxes. See DEBUG_VIEW.md.

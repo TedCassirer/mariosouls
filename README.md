@@ -12,10 +12,18 @@ Start with [the framework guide](framework/README.md),
 [verification](framework/docs/VALIDATION.md). Future gameplay changes follow
 [AGENTS.md](AGENTS.md). The `work/` prototype remains historical source.
 
+Current local checkpoint: **framework 0.4.2 visual diagnostics**, tagged
+`checkpoint-2026-10-11-framework-v0.4.2-debug`. F8 toggles the overlay, F9 selects
+Combat/Terrain/Objects/All, and F10 controls through-walls drawing. See
+[debug view meanings and limits](framework/docs/DEBUG_VIEW.md). With the game
+closed, `outputs/Restore framework debug checkpoint.cmd` restores this installed
+Mario version, including the 0.4.1 boss-contact and doorway fixes. Earlier restore
+helpers intentionally return to their older versions of the entire framework.
+
 The original playable **0.7 contextual interactions** checkpoint is preserved at
 `checkpoint-2026-10-11-mariosouls-v0.7`. The instructions below still restore it.
 
-## Return to this playable version
+## Return to the historical 0.7 version
 
 1. Quit Dark Souls normally and close the game.
 2. Run `outputs/Restore MarioSouls checkpoint.cmd`.

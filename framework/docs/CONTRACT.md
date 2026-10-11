@@ -207,3 +207,12 @@ maximum5% HP per landing, and nonlethal falls. Live checks confirm smaller nativ
 capsules, reduced actor separation and retained melee damage. This is not a
 per-bone hitbox rewrite; projectile, grab and boss-specific hit routes need separate
 coverage. See VALIDATION.md for measured scope.
+
+## Read-only diagnostics (ABI 3 unchanged)
+
+The host may call `probeContact` repeatedly to visualize eligible points without
+advancing a frame. It must be a read-only predicate: no animation changes, attack
+window changes, bounce, damage, random-state consumption, or contact side effects.
+Only `commitContact` may apply an accepted contact reaction. The shared diagnostic
+overlay uses descriptor ranges, current state and this predicate for every adapter;
+it contains no character-ID branches. See DEBUG_VIEW.md for view semantics and limits.

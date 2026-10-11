@@ -64,6 +64,9 @@ def install(character,asset,runtime,check_only=False,collision=None):
     if 'Feedback' not in cfg:cfg['Feedback']={}
     for key,value in dict(Enabled='1',HitStop='1',Sound='1',Flash='1',Rumble='1',Volume='65',RumbleStrength='75').items():
         if key not in cfg['Feedback']:cfg['Feedback'][key]=value
+    if 'Debug' not in cfg:cfg['Debug']={}
+    for key,value in dict(Enabled='0',Layer='0',ThroughWalls='1',RadiusMeters='12',MaxTerrainTriangles='3000').items():
+        if key not in cfg['Debug']:cfg['Debug'][key]=value
     for section_name,values in [('Test',{'Mode':'0','Frames':'0','Buttons':'0','X':'0','Y':'0'}),('Harness',{'Armed':'0','Session':'0'})]:
         if section_name not in cfg:cfg[section_name]={}
         cfg[section_name].update(values)
@@ -84,10 +87,10 @@ def install(character,asset,runtime,check_only=False,collision=None):
             harness['Harness'].update(Armed='0',Heartbeat='0',Mode='0',Frames='0',Buttons='0')
             with (temp/'harness.ini').open('w') as out:harness.write(out)
             sources[harness_path]=temp/'harness.ini'
-        legacy=json.loads((f.GAME/'MarioSouls/install.json').read_text());legacy['version']='framework-0.4.1';legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
+        legacy=json.loads((f.GAME/'MarioSouls/install.json').read_text());legacy['version']='framework-0.4.2';legacy['proxy_sha256']=expected['host_sha256'];legacy['framework']={'character':character,**expected}
         (temp/'legacy.json').write_text(json.dumps(legacy,indent=2));sources[f.GAME/'MarioSouls/install.json']=temp/'legacy.json'
         target_manifest=f.GAME/'SoulsCharacterFramework/install.json'
-        installed={'framework_version':'0.4.1','character':character,'abi':3,'build':receipt,'backup':str(backup),'files':{str(dst.relative_to(f.GAME)).replace('\\','/'):f.sha(src) for dst,src in sources.items()}}
+        installed={'framework_version':'0.4.2','character':character,'abi':3,'build':receipt,'backup':str(backup),'files':{str(dst.relative_to(f.GAME)).replace('\\','/'):f.sha(src) for dst,src in sources.items()}}
         (temp/'install.json').write_text(json.dumps(installed,indent=2));sources[target_manifest]=temp/'install.json'
         # Stage every source before touching destinations, including on reinstall
         # when the configured runtime already lives at its destination.
@@ -113,4 +116,4 @@ def install(character,asset,runtime,check_only=False,collision=None):
                 if previous[name]:shutil.copy2(backup/name,dst)
                 elif dst.exists():dst.unlink()
             raise
-    print('Installed framework 0.4.1 with '+character+'; previous files retained at '+str(backup))
+    print('Installed framework 0.4.2 with '+character+'; previous files retained at '+str(backup))

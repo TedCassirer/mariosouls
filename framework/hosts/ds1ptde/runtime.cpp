@@ -48,6 +48,7 @@ static uintptr_t scan(const char* sig,int immediate){
  logf("signature matches=%d at=%08x",count,(unsigned)hit);return count==1?read<uint32_t>(hit+immediate):0;
 }
 struct Vec{float x,y,z;Vec operator+(Vec b)const{return {x+b.x,y+b.y,z+b.z};}Vec operator-(Vec b)const{return {x-b.x,y-b.y,z-b.z};}Vec operator*(float s)const{return{x*s,y*s,z*s};}};
+static void debugContact(Vec at,bool confirmed);
 static float dot(Vec a,Vec b){return a.x*b.x+a.y*b.y+a.z*b.z;}
 static Vec cross(Vec a,Vec b){return{a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x};}
 static Vec unit(Vec v){float n=sqrtf(dot(v,v));return n>.0001f?v*(1/n):Vec{0,0,1};}
@@ -192,10 +193,12 @@ static bool lineClear(Vec a,Vec b){
 #include "feedback.h"
 #include "combat.h"
 #include "object_combat.h"
+#include "debug_view.h"
 static void update(){
  static LARGE_INTEGER freq={},prev={};if(!freq.QuadPart)QueryPerformanceFrequency(&freq);LARGE_INTEGER now;QueryPerformanceCounter(&now);double dt=prev.QuadPart?double(now.QuadPart-prev.QuadPart)/freq.QuadPart:0;prev=now;static double acc=0;acc=std::min(acc+std::min(dt,.1),.1);
  player=chain(playerSlot,{0,4,0});cam=chain(cameraSlot,{0,0x3c,0x60});uintptr_t mp=read<uint32_t>(player+0x28);posData=read<uint32_t>(mp+0x1c);
  DWORD fg=0;GetWindowThreadProcessId(GetForegroundWindow(),&fg);bool focus=fg==GetCurrentProcessId();
+ debugInput(focus);
  feedbackFocused=focus;if(!focus)feedbackReset();
  static SCController::Toggle controllerToggle;DWORD inputTime=GetTickCount();auto pad=pollController(inputTime);auto controller=pad.connected&&focus?SCController::map(pad.pad):SCController::Input{};
  static int lastController=-2;if(pad.slot!=lastController){logf("controller %s slot=%d",pad.connected?"connected":"disconnected",pad.slot);lastController=pad.slot;}
@@ -265,22 +268,23 @@ static D3DMATRIX identity(){D3DMATRIX m={};m._11=m._22=m._33=m._44=1;return m;}
 static D3DMATRIX viewMatrix(Vec eye,Vec at){Vec z=unit(at-eye),x=unit(cross({0,1,0},z)),y=cross(z,x);D3DMATRIX m={};m._11=x.x;m._12=y.x;m._13=z.x;m._21=x.y;m._22=y.y;m._23=z.y;m._31=x.z;m._32=y.z;m._33=z.z;m._41=-dot(x,eye);m._42=-dot(y,eye);m._43=-dot(z,eye);m._44=1;return m;}
 struct Vertex{float x,y,z;DWORD color,shade;float u,v;};
 static void draw(IDirect3DDevice9* d){
- if((!characterOwned()&&!nativeActionOwned())||!geo.numTrianglesUsed)return;
+ if(!renderWanted())return;
+ bool drawCharacter=(characterOwned()||nativeActionOwned())&&geo.numTrianglesUsed;
  if(!tex){if(FAILED(d->CreateTexture(profile->textureWidth,profile->textureHeight,1,0,D3DFMT_A8R8G8B8,D3DPOOL_MANAGED,&tex,NULL)))return;D3DLOCKED_RECT lr;if(SUCCEEDED(tex->LockRect(0,&lr,NULL,0))){for(int y=0;y<profile->textureHeight;y++){auto row=(uint32_t*)((BYTE*)lr.pBits+y*lr.Pitch);for(int x=0;x<profile->textureWidth;x++){auto p=&texture[(y*profile->textureWidth+x)*4];row[x]=(p[3]<<24)|(p[0]<<16)|(p[1]<<8)|p[2];}}tex->UnlockRect(0);}}
  IDirect3DStateBlock9* saved=nullptr;if(FAILED(d->CreateStateBlock(D3DSBT_ALL,&saved)))return;
  D3DVIEWPORT9 vp;d->GetViewport(&vp);Vec eye=cameraEye();Vec at=eye+cameraForward();
  D3DMATRIX world=identity(),view=viewMatrix(eye,at),proj={};float fov=read<float>(cam+0x50),aspect=read<float>(cam+0x54),zn=read<float>(cam+0x58),zf=read<float>(cam+0x5c);if(fov<.1f||fov>2.8f)fov=.75049f;if(aspect<.5f||aspect>5)aspect=float(vp.Width)/vp.Height;if(zn<.001f||zn>2)zn=.05f;if(zf<50||zf>10000)zf=3000;float ys=1/tanf(fov/2);proj._11=ys/aspect;proj._22=ys;proj._33=zf/(zf-zn);proj._34=1;proj._43=-zn*proj._33;
  Vec renderOrigin=origin;if(characterOwned()&&worldMode==1&&worldMotionReady){Vec offset=read<Vec>(posData+0x10)-(origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f);if(isfinite(dot(offset,offset))&&dot(offset,offset)<4)renderOrigin=renderOrigin+offset;}
- std::vector<Vertex> verts(geo.numTrianglesUsed*3);for(size_t i=0;i<verts.size();i++){auto&p=verts[i];p.x=renderOrigin.x+SCBody::modelCoordinate(gpos[i*3],state.position[0],characterBody.modelScale)*.01f;p.y=renderOrigin.y+SCBody::modelCoordinate(gpos[i*3+1],state.position[1],characterBody.modelScale)*.01f;p.z=renderOrigin.z+SCBody::modelCoordinate(gpos[i*3+2],state.position[2],characterBody.modelScale)*.01f;int r=std::clamp(int(gcolor[i*3]*255),0,255),g=std::clamp(int(gcolor[i*3+1]*255),0,255),b=std::clamp(int(gcolor[i*3+2]*255),0,255);p.color=0xff000000|(r<<16)|(g<<8)|b;Vec normal=unit({gnormal[i*3],gnormal[i*3+1],gnormal[i*3+2]});int light=int(255*(.4f+.6f*std::max(0.f,dot(normal,unit({-.3f,.8f,-.5f})))));p.shade=0xff000000|(light<<16)|(light<<8)|light;p.u=guv[i*2];p.v=guv[i*2+1];}
+ std::vector<Vertex> verts(drawCharacter?geo.numTrianglesUsed*3:0);for(size_t i=0;i<verts.size();i++){auto&p=verts[i];p.x=renderOrigin.x+SCBody::modelCoordinate(gpos[i*3],state.position[0],characterBody.modelScale)*.01f;p.y=renderOrigin.y+SCBody::modelCoordinate(gpos[i*3+1],state.position[1],characterBody.modelScale)*.01f;p.z=renderOrigin.z+SCBody::modelCoordinate(gpos[i*3+2],state.position[2],characterBody.modelScale)*.01f;int r=std::clamp(int(gcolor[i*3]*255),0,255),g=std::clamp(int(gcolor[i*3+1]*255),0,255),b=std::clamp(int(gcolor[i*3+2]*255),0,255);p.color=0xff000000|(r<<16)|(g<<8)|b;Vec normal=unit({gnormal[i*3],gnormal[i*3+1],gnormal[i*3+2]});int light=int(255*(.4f+.6f*std::max(0.f,dot(normal,unit({-.3f,.8f,-.5f})))));p.shade=0xff000000|(light<<16)|(light<<8)|light;p.u=guv[i*2];p.v=guv[i*2+1];}
  d->SetVertexShader(NULL);d->SetPixelShader(NULL);d->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_SPECULAR|D3DFVF_TEX1);d->SetTransform(D3DTS_WORLD,&world);d->SetTransform(D3DTS_VIEW,&view);d->SetTransform(D3DTS_PROJECTION,&proj);
  d->SetRenderState(D3DRS_LIGHTING,FALSE);d->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);d->SetRenderState(D3DRS_ZENABLE,depthTest?TRUE:FALSE);d->SetRenderState(D3DRS_ZWRITEENABLE,TRUE);d->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);d->SetRenderState(D3DRS_ALPHABLENDENABLE,FALSE);d->SetRenderState(D3DRS_ALPHATESTENABLE,(profile->capabilities&SC_CAP_ALPHA_TEST)?TRUE:FALSE);d->SetRenderState(D3DRS_ALPHAREF,127);d->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);d->SetRenderState(D3DRS_FOGENABLE,FALSE);d->SetRenderState(D3DRS_STENCILENABLE,FALSE);d->SetRenderState(D3DRS_SCISSORTESTENABLE,FALSE);d->SetRenderState(D3DRS_COLORWRITEENABLE,15);d->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID);d->SetRenderState(D3DRS_CLIPPLANEENABLE,0);d->SetRenderState(D3DRS_VERTEXBLEND,D3DVBF_DISABLE);d->SetTextureStageState(0,D3DTSS_TEXCOORDINDEX,0);d->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);
  d->SetTexture(0,tex);d->SetTextureStageState(0,D3DTSS_COLOROP,(profile->capabilities&SC_CAP_TEXTURE_MODULATE)?D3DTOP_MODULATE:D3DTOP_BLENDTEXTUREALPHA);d->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);d->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);d->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(0,D3DTSS_ALPHAARG1,(profile->capabilities&SC_CAP_ALPHA_TEST)?D3DTA_TEXTURE:D3DTA_DIFFUSE);d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(1,D3DTSS_COLORARG1,D3DTA_CURRENT);d->SetTextureStageState(1,D3DTSS_COLORARG2,D3DTA_SPECULAR);d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(1,D3DTSS_ALPHAARG1,D3DTA_CURRENT);d->SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_POINT);d->SetSamplerState(0,D3DSAMP_ADDRESSU,D3DTADDRESS_CLAMP);d->SetSamplerState(0,D3DSAMP_ADDRESSV,D3DTADDRESS_CLAMP);
- HRESULT hr=d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex));static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}feedbackDraw(d);saved->Apply();saved->Release();
+ HRESULT hr=drawCharacter?d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,geo.numTrianglesUsed,verts.data(),sizeof(Vertex)):S_OK;static bool logged=false;if(!logged){logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f",hr,vp.Width,vp.Height,fov,zn,zf);logged=true;}if(drawCharacter)feedbackDraw(d);debugDraw(d);saved->Apply();saved->Release();
 }
 typedef HRESULT (WINAPI *EndSceneFn)(IDirect3DDevice9*);
 static EndSceneFn originalEnd;
 static void drawComposite(IDirect3DDevice9*d){
- if((!characterOwned()&&!nativeActionOwned())||!sceneDepth||!geo.numTrianglesUsed)return;
+ if(!renderWanted()||!sceneDepth)return;
  if(!characterLayer&&FAILED(d->CreateTexture(1024,720,1,D3DUSAGE_RENDERTARGET,D3DFMT_A8R8G8B8,D3DPOOL_DEFAULT,&characterLayer,nullptr)))return;
  IDirect3DSurface9*target=nullptr,*depth=nullptr,*layer=nullptr;IDirect3DStateBlock9*saved=nullptr;d->GetRenderTarget(0,&target);d->GetDepthStencilSurface(&depth);characterLayer->GetSurfaceLevel(0,&layer);if(!target||!layer||FAILED(d->CreateStateBlock(D3DSBT_ALL,&saved))){if(target)target->Release();if(depth)depth->Release();if(layer)layer->Release();return;}
  IDirect3DVertexDeclaration9* uiDeclaration=nullptr;d->GetVertexDeclaration(&uiDeclaration);D3DMATRIX uiWorld,uiView,uiProjection;d->GetTransform(D3DTS_WORLD,&uiWorld);d->GetTransform(D3DTS_VIEW,&uiView);d->GetTransform(D3DTS_PROJECTION,&uiProjection);saved->Capture();D3DVIEWPORT9 output;d->GetViewport(&output);d->SetDepthStencilSurface(nullptr);d->SetRenderTarget(0,layer);d->SetDepthStencilSurface(sceneDepth);D3DVIEWPORT9 vp={0,0,1024,720,0,1};d->SetViewport(&vp);d->Clear(0,nullptr,D3DCLEAR_TARGET,0,1,0);draw(d);
@@ -307,13 +311,13 @@ static HRESULT WINAPI setRenderTarget(IDirect3DDevice9*d,DWORD index,IDirect3DSu
  if(index==0){++rtCount;if(rtCount==1)mainTarget=target;if(target==mainTarget)++mainUses;
   if(player){IDirect3DSurface9*old=nullptr,*depth=nullptr;d->GetRenderTarget(0,&old);d->GetDepthStencilSurface(&depth);D3DSURFACE_DESC desc={},dd={};if(old)old->GetDesc(&desc);if(depth)depth->GetDesc(&dd);if(depth&&desc.Width==1024&&desc.Height==720&&dd.Width==1024&&dd.Height==720){if(sceneDepth)sceneDepth->Release();sceneDepth=depth;depth=nullptr;}if(old)old->Release();if(depth)depth->Release();}
   if(graphFrames==1){IDirect3DSurface9*old=nullptr,*depth=nullptr;d->GetRenderTarget(0,&old);d->GetDepthStencilSurface(&depth);D3DSURFACE_DESC desc={},dd={};if(old)old->GetDesc(&desc);if(depth)depth->GetDesc(&dd);logf("graph pass=%u mainuses=%u old=%08x new=%08x size=%ux%u format=%u depth=%08x depthsize=%ux%u",rtCount,mainUses,(unsigned)(uintptr_t)old,(unsigned)(uintptr_t)target,desc.Width,desc.Height,desc.Format,(unsigned)(uintptr_t)depth,dd.Width,dd.Height);using SaveFn=HRESULT(WINAPI*)(const char*,int,IDirect3DSurface9*,const void*,const RECT*);auto save=(SaveFn)GetProcAddress(GetModuleHandleA("d3dx9_43.dll"),"D3DXSaveSurfaceToFileA");if(save&&old){char path[MAX_PATH];snprintf(path,sizeof(path),"%s\\charactersouls-pass-%02u.bmp",root,rtCount);save(path,0,old,nullptr,nullptr);}if(old)old->Release();if(depth)depth->Release();}
-  if((characterOwned()||nativeActionOwned())&&renderMode>=100&&rtCount==unsigned(renderMode-100)){draw(d);sceneDrawn=true;}
-  if((characterOwned()||nativeActionOwned())&&!sceneDrawn&&renderMode==1&&mainUses==2&&mainTarget){IDirect3DSurface9*old=nullptr;d->GetRenderTarget(0,&old);if(old==mainTarget&&target!=old){draw(d);sceneDrawn=true;}if(old)old->Release();}
+  if(renderWanted()&&renderMode>=100&&rtCount==unsigned(renderMode-100)){draw(d);sceneDrawn=true;}
+  if(renderWanted()&&!sceneDrawn&&renderMode==1&&mainUses==2&&mainTarget){IDirect3DSurface9*old=nullptr;d->GetRenderTarget(0,&old);if(old==mainTarget&&target!=old){draw(d);sceneDrawn=true;}if(old)old->Release();}
  }
  return originalRenderTarget(d,index,target);
 }
 static DWORD WINAPI start(void*){
- GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.2 host ds1ptde starting");
+ GetModuleFileNameA(selfModule,root,MAX_PATH);char*p=strrchr(root,'\\');if(p)*p=0;snprintf(ini,sizeof(ini),"%s\\mariosouls.ini",root);char file[MAX_PATH];snprintf(file,sizeof(file),"%s\\mariosouls.log",root);logfile=fopen(file,"w");logf("Souls Character Framework 0.4.2 host ds1ptde starting");
  if(read<uint32_t>(0x400080)!=0xfc293654){logf("Unsupported executable; inactive");return 0;}
  playerSlot=scan("8B 15 ? ? ? ? F3 0F 10 44 24 30 52",2);cameraSlot=scan("D9 45 08 A1 ? ? ? ? 51 D9 1C 24 50",4);if(!playerSlot||!cameraSlot)return 0;
  mapSlot=scan("8B 48 04 8B 11 50 8B 42 34 FF D0 C7 46 2C 00 00 00 00 C3 8B 0D ? ? ? ? 8B 89 50 0B 00 00 32 C0 83 79 28 00",0x15);if(!mapSlot)return 0;eventFlagsSlot=scan("56 8B F1 8B 46 1C 50 A1 ? ? ? ? 32 C9",8);ready=initCharacter();if(!ready){logf("initialization failed");return 0;}

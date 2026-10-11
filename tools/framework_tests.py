@@ -26,6 +26,8 @@ def test(character,asset,runtime):
     f.run([f.BUILD/'kinematic-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/contact_test.cpp',f.BUILD/'contact-test.exe')
     f.run([f.BUILD/'contact-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/debug_geometry_test.cpp',f.BUILD/'debug-geometry-test.exe')
+    f.run([f.BUILD/'debug-geometry-test.exe'])
     for name in ['controller','action_input']:
         f.compile_cpp(f.FRAMEWORK/f'tests/{name}_test.cpp',f.BUILD/f'{name}-test.exe',extra=['-luser32','-ldxguid'])
         f.run([f.BUILD/f'{name}-test.exe'])

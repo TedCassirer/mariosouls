@@ -20,6 +20,7 @@ static void combatObjects(){
    if(fabsf(delta.y)>1.5f||delta.x*delta.x+delta.z*delta.z>radius*radius||(!(profile->attacks[move].flags&SC_ATTACK_RADIAL)&&dot(delta,forward)<0))continue;
    if(!lineClear(p+Vec{0,.7f,0},at)||!worldLineClear(p+Vec{0,.7f,0},at,obj))continue;
    characterWindow.hit.insert(handle);characterPacketMove=move;characterPacketPower=characterWindow.attackPower;characterPacketPoise=0;characterPacketBuilt=false;
+   debugContact(at,false);
    uint16_t objectPower=uint16_t(std::clamp(characterWindow.attackPower,1.f,1200.f));memcpy(characterAttacks[move]+0x62,&objectPower,2);
    alignas(16) float point[4]={at.x,at.y,at.z,1};int before=read<int16_t>(obj+0x2a);
    int result=worldDamageObject(990050+move,player,obj,point);characterPacketMove=-1;

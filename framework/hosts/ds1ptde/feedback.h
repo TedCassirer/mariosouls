@@ -41,6 +41,7 @@ static void feedbackTrack(uintptr_t target,int id,int before,int serial,int move
  feedbackReceipts.push_back({target,id,serial,move,before,GetTickCount(),object,at.x,at.y,at.z,profile->attacks[move].multiplier});
 }
 static void feedbackConfirmed(const SCFeedback::Receipt&r,int after,DWORD now){
+ debugContact({r.x,r.y,r.z},true);
  auto e=SCFeedback::envelope(r.multiplier);bool first=feedbackGroups.first(r.serial);
  if(first){if(feedbackStopEnabled)feedbackPause.start(now,e.stopMs);if(feedbackSoundEnabled)feedbackSound(e,r.serial);if(feedbackRumbleEnabled)feedbackRumble(int(InterlockedCompareExchange(&controllerOwnedSlot,-1,-1)),e,feedbackRumbleScale);}
  if(feedbackFlashEnabled){if(feedbackFlashes.size()>=8)feedbackFlashes.erase(feedbackFlashes.begin());feedbackFlashes.push_back({{r.x,r.y,r.z},now,e,r.serial});}

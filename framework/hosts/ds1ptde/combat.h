@@ -120,6 +120,7 @@ static void combat(){
   else if(!(contact&SC_CONTACT_ATTACK))continue;
   if(read<uint32_t>(read<uint32_t>(0x137d644)+0x3c)!=player)continue;
   bool first=characterWindow.hit.empty();characterWindow.hit.insert(id);
+  debugContact(pos,false);
   char fields[240];snprintf(fields,sizeof(fields),",\"move\":\"%s\",\"serial\":%d,\"target_id\":%d,\"power\":%.3f",attackName(move),characterWindow.serial,id,characterWindow.attackPower);harnessEvent("character_contact",fields);
   DWORD now=GetTickCount();float poise=characterBalance.poise[move];auto last=characterLastStagger.find(id);if(last!=characterLastStagger.end()&&DWORD(now-last->second)<1000)poise=0;else characterLastStagger[id]=now;
   harnessHitAttempt(id,hp,990050+move,0,"hit_attempt");int result=characterNativeHit(move,characterWindow.attackPower,poise,id,pos);harnessHitAttempt(id,hp,990050+move,result,"native_call_return");

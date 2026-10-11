@@ -28,6 +28,19 @@ inline Input map(const XINPUT_GAMEPAD& pad) {
     return result;
 }
 
+// Either stick can aim a scripted launcher. Right stick takes priority;
+// normal movement mapping is unchanged outside that interaction.
+inline Input aim(const XINPUT_GAMEPAD& pad) {
+    Input result=map(pad);
+    float x=pad.sThumbRX,y=pad.sThumbRY,length=sqrtf(x*x+y*y);
+    constexpr float deadzone=XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE;
+    if(length>deadzone){
+        float speed=std::min(1.f,(length-deadzone)/(32767.f-deadzone));
+        result.x=x/length*speed;result.y=y/length*speed;
+    }
+    return result;
+}
+
 inline void filterNative(XINPUT_GAMEPAD& pad) {
     // Jump must not also grab a ladder, and the character's movement must not drive the host.
     pad.sThumbLX=pad.sThumbLY=0;

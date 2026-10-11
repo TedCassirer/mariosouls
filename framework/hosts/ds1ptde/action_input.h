@@ -5,6 +5,9 @@ static volatile LONG actionRoute=0,actionButton=0,actionUntil=0,actionPadSource=
 static bool actionInputReady=false;
 static volatile LONG equipmentGuardInput=0;
 static volatile LONG actionBlockHeldA=0;
+// Renewed by scripted scene-camera ownership; expiry prevents stuck input.
+static volatile LONG actionAimUntil=0;
+static bool actionAimOwned(){DWORD until=DWORD(InterlockedCompareExchange(&actionAimUntil,0,0));return until&&int32_t(until-GetTickCount())>0;}
 static unsigned actionGuardKeys[7]={},actionGuardKeyCount=0;
 static bool actionKeyboardGuardReady=false;
 static DWORD actionKeyboardPolls=0;
@@ -73,6 +76,7 @@ static void actionCancelPulse(){InterlockedExchange(&actionUntil,0);InterlockedE
 static ActionRoute actionCurrentRoute(){return ActionRoute(InterlockedCompareExchange(&actionRoute,0,0));}
 static void actionFilterPad(XINPUT_GAMEPAD& p){
  auto route=actionCurrentRoute();if(route==ActionRoute::Free)return;
+ if(actionAimOwned()){p.sThumbRX=p.sThumbRY=0;p.wButtons&=~XINPUT_GAMEPAD_RIGHT_THUMB;}
  if(route!=ActionRoute::Menu){
   p.sThumbLX=0;if(route!=ActionRoute::Ladder)p.sThumbLY=0;
   p.bLeftTrigger=p.bRightTrigger=0;
@@ -108,6 +112,7 @@ static HRESULT WINAPI actionDeviceState(IDirectInputDevice8W*d,DWORD size,LPVOID
   int pulse=actionPulse(false);if((pulse==1||pulse==2)&&actionKeys[pulse==1?10:11]<256)keys[actionKeys[pulse==1?10:11]]=0x80;
  }else if((size==sizeof(DIMOUSESTATE)||size==sizeof(DIMOUSESTATE2))&&route!=ActionRoute::Menu){
   auto mouse=(DIMOUSESTATE*)data;mouse->rgbButtons[0]=mouse->rgbButtons[1]=0;
+  if(actionAimOwned())mouse->lX=mouse->lY=0;
  }
  return result;
 }

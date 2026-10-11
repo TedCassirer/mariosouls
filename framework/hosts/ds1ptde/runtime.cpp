@@ -262,6 +262,7 @@ static void update(){
   auto native=nativeInteractionState();if(native.valid&&(native.menu||native.ladder||native.event))beginInteraction(pad.slot,false);
  }
  launcherObserve(focus);
+ if(launcherBusy()&&focus&&pad.connected)controller=SCController::aim(pad.pad);
  static SCContext::Button contextA;
  auto context=contextA.update(controller.jump,focus&&pad.connected,player,pad.slot,
   characterOwned()&&!nativeActionOwned()&&!nativeReaction,!launcherBusy()&&(actionEligible(1)||launcherTarget));

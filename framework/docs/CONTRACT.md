@@ -489,8 +489,11 @@ input arbitration, native collision and scripted camera submission. Original
 native prompts win over custom objects. Opening/aiming consume equipment input;
 the entry press cannot fire. Damage, death, native takeover, focus loss, map or
 character changes revoke the session. The camera request is actor/camera-bound,
-expires after 150 ms without refresh, and is applied only during native render
-submission; the normal follow-camera transform is restored in the same call.
+expires after 150 ms without refresh, and replaces the gameplay camera's exported
+matrix. The normal follow-camera transform is never overwritten. Both controller
+sticks can aim; right stick takes priority, and native camera input is blocked
+under the same expiring ownership. Guest-specific raw stick conventions remain
+inside the adapter.
 Flight still uses the shared motion bridge, native HP and fall-damage policy.
 
 The host currently supports one launcher/operator pair at a Firelink placement

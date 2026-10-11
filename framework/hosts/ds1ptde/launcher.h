@@ -16,6 +16,10 @@ static char launcherSection[96]={};
 static bool launcherBusy(){return launcherState.phase==SC_LAUNCHER_OPENING||launcherState.phase==SC_LAUNCHER_AIMING;}
 static void launcherCameraRelease(){aimCameraSet(false);}
 static void launcherCameraTick(){
+ static unsigned previousPhase=0;
+ if(launcherState.phase==SC_LAUNCHER_FLIGHT&&previousPhase==SC_LAUNCHER_AIMING)
+  logf("WORLD launcher fired yaw=%.5f pitch=%.5f local_cm=%.2f,%.2f,%.2f",launcherState.yaw,launcherState.pitch,launcherState.position[0],launcherState.position[1],launcherState.position[2]);
+ previousPhase=launcherState.phase;
  if(launcherState.phase!=SC_LAUNCHER_AIMING){aimCameraSet(false);return;}
  float y=launcherState.yaw,p=launcherState.pitch;Vec at=origin+Vec{launcherState.position[0],launcherState.position[1],launcherState.position[2]}*.01f+Vec{0,1.25f,0};
  aimCameraSet(true,at,{sinf(y)*cosf(p),sinf(p),cosf(y)*cosf(p)});

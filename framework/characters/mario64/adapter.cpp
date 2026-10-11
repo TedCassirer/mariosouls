@@ -159,6 +159,9 @@ static uint32_t step(int32_t id,const SC_Input*in,SC_State*out,SC_Mesh*mesh){
     if(id!=active||id<0||!in||!out)return 0;SM64MarioGeometryBuffers g;
     if(!geometry(mesh,g))return 0;
     SM64MarioInputs input={in->camLookX,in->camLookZ,-in->moveX,-in->moveY,in->jump,in->attack,in->crouch};
+    // SM64's cannon uses raw stick yaw, unlike camera-relative locomotion.
+    // Positive framework X must turn toward screen-right in the host's +Z view.
+    float cannon[7]={};if(libCannonQuery(id,cannon)==SC_LAUNCHER_AIMING)input.stickX=in->moveX;
     libTick(id,&input,&raw,&g);mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);captureEquipment(id);firePresentation(*mesh,true);if(raw.action==0x00001371)mesh->numTrianglesUsed=0;return 1;
 }
 

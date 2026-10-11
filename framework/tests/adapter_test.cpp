@@ -116,6 +116,29 @@ int main(int argc,char**argv){
   l->cancel(id);a->resume(id,0,0,0,0);step();assert(m.numTrianglesUsed>0);
   assert(l->begin(id,at,0));step();a->nativeDamage(id,1);step();assert(l->query(id,&ls)&&!ls.phase);assert(m.numTrianglesUsed>0);
   printf("PASS real cannon opening/aim limits/held-A gate/launch speed/gravity/hurt cancellation\n");
+  float headings[2]={};
+  for(int shot=0;shot<2;shot++){
+   l->cancel(id);a->resume(id,0,0,0,0);input={0,1,0,0,0,0,0,0};step();assert(l->begin(id,at,0));
+   for(int frame=0;frame<160;frame++){a->nativeDamage(id,0);step();}
+   assert(l->query(id,&ls)&&ls.phase==SC_LAUNCHER_AIMING);
+   input.moveX=shot?1.f:-1.f;input.moveY=.5f;
+   for(int frame=0;frame<12;frame++)step();
+   input.moveX=input.moveY=0;step();assert(l->query(id,&ls));
+   const auto aimed=ls;headings[shot]=ls.yaw;
+   // Reconcile exactly as the host does between simulation ticks.
+   SC_MotionResolution ack={};ack.size=sizeof(ack);memcpy(ack.position,state.position,sizeof(ack.position));
+   assert(a->resolveMotion(id,&ack,&state,&m));
+   input.jump=1;step();assert(l->query(id,&ls)&&ls.phase==SC_LAUNCHER_FLIGHT);
+   assert(fabsf(ls.yaw-aimed.yaw)<.001f&&fabsf(ls.pitch-aimed.pitch)<.001f);
+   assert(fabsf(state.position[0]-aimed.position[0]-120*cosf(aimed.pitch)*sinf(aimed.yaw))<1);
+   assert(fabsf(state.position[2]-aimed.position[2]-120*cosf(aimed.pitch)*cosf(aimed.yaw))<1);
+   input.jump=0;step();
+   assert(fabsf(state.velocity[0]-3000*cosf(aimed.pitch)*sinf(aimed.yaw))<4);
+   assert(fabsf(state.velocity[2]-3000*cosf(aimed.pitch)*cosf(aimed.yaw))<4);
+  }
+  assert(headings[1]-headings[0]>.5f); // screen-right increases yaw in the host frame
+  l->cancel(id);a->resume(id,0,0,0,0);input={0,1,0,0,0,0,0,0};step();
+  puts("PASS cannon aim/launch agreement: opposite yaw inputs, release, motion acknowledgement, muzzle and flight vectors");
  }
  for(int kind=SC_POSE_NEUTRAL;kind<=SC_POSE_STAGGER;kind++)for(int frame=0;frame<20;frame++){
   SC_Pose p={uint32_t(kind),{100,50,200},.75f,frame/19.f,float(frame*3)};assert(a->pose(id,&p,&state,&m));assert(SC::frame(state,m,*d));assert(fabsf(state.position[1]-50)<.01f);

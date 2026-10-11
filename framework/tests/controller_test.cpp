@@ -10,6 +10,11 @@ int main(){
     pad.sThumbLX=6000;pad.sThumbLY=4000;
     assert(closeEnough(map(pad).x,0)&&closeEnough(map(pad).y,0));
     pad={};pad.sThumbLY=32767;
+    assert(closeEnough(aim(pad).y,1));
+    pad.sThumbRX=32767;assert(closeEnough(aim(pad).x,1)&&closeEnough(aim(pad).y,0));
+    pad.sThumbRX=1000;assert(closeEnough(aim(pad).y,1));
+    pad.sThumbRX=0;pad.sThumbRY=-32768;assert(closeEnough(aim(pad).y,-1));
+    pad.sThumbRY=0;
     assert(closeEnough(map(pad).y,1)&&closeEnough(map(pad).x,0));
     pad.sThumbLY=-32768;
     assert(closeEnough(map(pad).y,-1));

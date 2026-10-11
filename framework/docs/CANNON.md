@@ -8,8 +8,10 @@ mode; adapters without the capability do not show these objects.
 
 1. Stand beside the Buddy and press controller **A** or keyboard **Q** to unlock.
 2. Approach the cannon and press **A / Q** to enter. Opening takes about five seconds.
-3. Aim with **left stick / WASD**, fire with **A / Space**, leave with **Y / Q**.
+3. Aim with **either stick / WASD**, fire with **A / Space**, leave with **Y / Q**.
    Release the entry button before firing; a held entry cannot launch.
+   Right stick takes priority if both sticks move. The ordinary follow-camera
+   stick, lock-on press and mouse rotation are suppressed during cannon aiming.
 
 Native interaction prompts take priority over custom objects. The launch uses
 normal collision and native health, including Mario's existing fall-damage
@@ -28,10 +30,12 @@ animation channels come from the user's US ROM. The full SM64 object scheduler,
 Buddy dialogue/AI and save system are not ported. Framework proximity interaction
 unlocks the placement instead. Buddy faces the view and plays its ROM idle motion.
 
-The host supplies an SM64-style circular sight and a verified native scene-camera
-hook. Native terrain and guest meshes share the camera; the follow-camera matrix
-is restored immediately after render submission. Requests expire after 150 ms
-without renewal and are bound to the current camera and actor. Damage, death,
+The host supplies an SM64-style circular sight. The revised camera hook replaces
+the current gameplay camera's exported matrix at 404EA0 (ECX source, EAX output),
+leaving its simulation matrix untouched. This supersedes the ineffective FF7460
+CamSfx submission hook: the observed gameplay camera had render handle +4=0.
+Aim rotates about the fixed cannon eye, using the same yaw/pitch as launch.
+Requests expire after 150 ms without renewal and bind to camera and actor. Damage, death,
 focus loss, native takeover, character or map changes cancel opening/aiming.
 
 Native HP, stamina, inventory, quests and rewards remain authoritative. Guest
@@ -85,6 +89,20 @@ area and requires focused, living native control outside menus/interactions.
 Controller routing passed offline; the controller was disconnected during live
 cannon checks. Enemy hits and lethal damage while aiming, and every interruption
 path, have not all been verified live. Adapter hurt cancellation is tested.
+
+### Aiming correction prepared after the user's video
+
+The earlier live pass did not establish camera pivot correctness. The user clip
+revealed the normal follow-camera orbit; read-only observation confirmed its
+camera object had no direct render handle. The revised matrix-export hook has
+passed executable tests of its actual x86 wrapper, original register outputs,
+fixed eye/changing direction, source preservation, unrelated cameras, expiry,
+death, actor replacement and cancellation. Both sticks route to cannon aim;
+Mario's raw cannon yaw input is inverted relative to its locomotion mapping so
+right means screen-right. Real-adapter tests verify two different headings,
+button release, host position acknowledgements, muzzle displacement and flight
+velocity matching aim. This revision is prepared for user testing and has NOT
+been verified in the running game; no new live visual claim is made.
 
 Dark Souls was not designed for SM64 launch reach. Some trajectories reach roofs,
 awkward ledges or out-of-bounds areas. The recorded high shot landed beside upper

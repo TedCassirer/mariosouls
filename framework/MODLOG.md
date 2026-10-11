@@ -211,3 +211,31 @@ cover delayed class data, manual suppression, identity changes during loading,
 unsafe frames and first-safe-frame activation after settling. Installation and
 live reload validation await the requested control handoff; the running game
 is still the previous checkpoint. This entry is not a live verification claim.
+
+## 2026-10-11 - Cannon aiming correction (prepared, not installed)
+
+The user video shows a follow-camera orbit and unchanged shot direction. The
+right stick previously bypassed cannon input and controlled the native camera.
+Added either-stick aiming with right-stick priority, a 150 ms native camera-input
+lease, and corrected the Mario adapter horizontal raw-stick sign. The original
+cannon actions and flight remain unchanged. Real-adapter regression tests now
+compare opposite aimed headings with muzzle displacement and launch velocity,
+including release and a host motion acknowledgement.
+
+Read-only examination of the running game found the gameplay camera vtable
+1174114 but render handle +4 was zero. Existing FF7460 submission interception
+therefore did not override that gameplay camera. Native 404EA0 exports its
+camera-to-world matrix using ECX source and EAX destination, returning ECX+40.
+Replaced the submission hook with a signature-checked export wrapper. It changes
+only copies from the current gameplay camera, under the actor-bound expiring
+request; the source matrix is never written. Guest drawing uses that same
+exported eye/forward. A dedicated executable test invokes the actual x86 wrapper
+and tests register results, original preservation, unrelated cameras, stable
+pivot across yaw, expiry, death, actor change and cancellation.
+
+Full build, full framework tests and doctor pass. The hash-pinned local installer
+passes read-only check-only verification and refuses an open game. Includes
+1445508 Mario load gate fixes. No install or game controls performed: user chose
+prepare-only and will test personally. Live scene composition/pivot, controller
+feel and terrain trajectories remain unverified for this revision. No new
+checkpoint tag replaces the earlier verified Mario-class checkpoint.

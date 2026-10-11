@@ -63,7 +63,7 @@ static void launcherDraw(IDirect3DDevice9*d){
  }
  char prompt[160]={};const char*message=nullptr;
  if(launcherState.phase==SC_LAUNCHER_OPENING)message="Preparing cannon...";
- else if(launcherState.phase==SC_LAUNCHER_AIMING)message="Stick / WASD: aim    A / Space: fire    Y / Q: leave";
+ else if(launcherState.phase==SC_LAUNCHER_AIMING)message="Either stick / WASD: aim    A / Space: fire    Y / Q: leave";
  else if(launcherMessageUntil&&int32_t(launcherMessageUntil-GetTickCount())>0)message="Ready for blastoff! The cannon is open.";
  else if(launcherTarget==1){snprintf(prompt,sizeof(prompt),"A / Q: Talk to %s",launcherApi->operatorName);message=prompt;}
  else if(launcherTarget==2)message="A / Q: Enter cannon";

@@ -1,0 +1,27 @@
+PREPARED UPDATE - NOT YET INSTALLED OR VERIFIED IN GAME
+
+Close Dark Souls, then double-click "Install cannon and Mario loading fixes.cmd".
+The installer checks the exact tested build and backs up the installed files.
+Keep these installer files in this outputs folder; they use the local workspace.
+
+Changes:
+- Either controller stick aims the cannon; right stick has priority.
+- Right means screen-right, rather than reversed cannon steering.
+- Normal camera stick/mouse rotation is blocked while aiming.
+- The view uses a fixed cannon pivot and the cannon's launch direction.
+- Mario-class saves wait for a stable loaded character, then activate Mario.
+
+Try on a test character:
+1. Load a Mario-class save without touching the manual toggle.
+2. Enter the cannon and release A. Aim horizontally and vertically with each stick.
+3. The scene should turn from a fixed point, with no normal third-person orbit.
+4. Fire two shots with visibly different headings; flight should match the sight.
+5. Enter again, press Y to leave, and check that the normal camera works.
+
+Full offline framework tests, original guest cannon direction/velocity tests,
+and the camera hook's executable wrapper tests pass. Live camera composition,
+native terrain collision and controller feel remain for your test.
+
+If it fails, keep the video and DATA/mariosouls.log before restarting the game.
+The log includes the exported camera source and the yaw/pitch of each shot.
+The existing "Restore Mario class checkpoint.cmd" remains available for rollback.

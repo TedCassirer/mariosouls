@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "sha256": "28BB15A564D52F473E08785D78DDC378E508EEE3EE740B89378255A4FE773195",
+      "path": "work/framework-build/dinput8.dll"
+    },
+    {
+      "sha256": "28068B35A70786F14E38A83AF093602DD6CC9EB917DB60B6C286CB0C35CE8C0A",
+      "path": "work/framework-build/characters/mario64/character.dll"
+    },
+    {
+      "sha256": "A67D59C6080AAE322A373243232E1424681601A089CD6D115EE50E2FEC7EACBF",
+      "path": "work/framework-build/characters/mario64/sm64.dll"
+    }
+  ]
+}

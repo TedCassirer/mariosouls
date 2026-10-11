@@ -24,7 +24,7 @@ inline bool descriptor(const SC_Descriptor *d){
         if(int(i)==d->automaticAttackId&&!(a.flags&SC_ATTACK_AUTOMATIC))return false;
     }return true;
 }
-inline bool api(const SC_CharacterAPI *a){return a&&a->abiVersion==SC_ABI_VERSION&&a->size==sizeof(*a)&&a->describe&&a->initialize&&a->shutdown&&a->create&&a->destroy&&a->step&&a->pose&&a->resume&&a->setPosition&&a->command&&a->nativeDamage&&a->surfaces&&a->floorHeight&&a->probeContact&&a->commitContact&&a->audio;}
+inline bool api(const SC_CharacterAPI *a){return a&&a->abiVersion==SC_ABI_VERSION&&a->size==sizeof(*a)&&a->describe&&a->initialize&&a->shutdown&&a->create&&a->destroy&&a->step&&a->pose&&a->resume&&a->setPosition&&a->command&&a->nativeDamage&&a->surfaces&&a->floorHeight&&a->probeContact&&a->commitContact&&a->audio&&a->resolveMotion;}
 inline bool frame(const SC_State&s,const SC_Mesh&m,const SC_Descriptor&d){
     if(m.numTrianglesUsed>m.capacityTriangles||m.numTrianglesUsed>d.maxTriangles||s.attackId< -1||s.attackId>=int(d.attackCount)||s.interruptedAttackId< -1||s.interruptedAttackId>=int(d.attackCount)||s.landingRecoveryTicks>300)return false;
     for(int i=0;i<3;i++)if(!std::isfinite(s.position[i])||!std::isfinite(s.velocity[i]))return false;

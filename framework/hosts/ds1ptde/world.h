@@ -4,14 +4,18 @@
 extern "C" { void* characterOriginalMotion=nullptr; }
 static bool worldMotionReady=false,worldObjectDamageReady=false;
 static int worldMode=0;
-static Vec worldWanted{},worldSubmitted{};
-static DWORD worldLastSubmit=0;
 static SRWLOCK worldLock=SRWLOCK_INIT;
+static SCMotion::Mailbox worldMailbox;
+static SCSession::Identity worldBinding{};
+static DWORD worldHeartbeat=0;
+static uint32_t worldSubmissions=0,worldAcknowledgements=0,worldRejected=0;
+static bool worldPaused=false;
+static SCMotion::Point motionPoint(Vec p){return{p.x,p.y,p.z};}
 struct WorldContact{Vec point,normal;float distance;uintptr_t owner;int kind;};
 static std::vector<WorldContact> worldContacts;
 static void worldHostSurfaces(){
  worldContacts.clear();SC_Surface triangles[48]={};unsigned used=0;
- if(worldMode!=1||!worldMotionReady||!enabled){guest->surfaces(nullptr,0,1);return;}
+ if(worldMode!=1||!worldMotionReady||!characterOwned()){guest->surfaces(nullptr,0,1);return;}
  uintptr_t proxy=read<uintptr_t>(posData+0x38),data=read<uintptr_t>(proxy+0x10),self=read<uintptr_t>(proxy+0x60)+0x10;
  int count=read<int>(proxy+0x14);Vec feet=read<Vec>(posData+0x10);
  if(data&&count>=0&&count<=64)for(int i=0;i<count&&used<48;i++){
@@ -23,6 +27,9 @@ static void worldHostSurfaces(){
   uintptr_t worldObject=body+read<int8_t>(body+0x10),userData=read<uintptr_t>(worldObject+0xc),tag=read<uintptr_t>(userData);
   int kind=read<uint16_t>(tag+4);uintptr_t owner=read<uintptr_t>(tag+8);
   worldContacts.push_back({raw.point,n,raw.distance,owner,kind});
+  // A tangent patch on an actor capsule is not a walkable platform. Let native
+  // capsule collision block actors; don't invent guest floors on their shoulders.
+  if(kind==2)continue;
   // Only local contact patches are projected into the guest. Native Havok remains
   // authoritative; patches are refreshed every frame and never outlive contact.
   Vec u=unit(cross(n,fabsf(n.y)>.7f?Vec{0,0,1}:Vec{0,1,0})),v=cross(n,u);
@@ -39,26 +46,44 @@ static bool worldLineClear(Vec a,Vec b,uintptr_t target=0){
  }return true;
 }
 extern "C" __attribute__((used,noinline)) void characterWorldMotion(uintptr_t physics,uintptr_t motion){
- if(!physics||physics!=posData||!player||chain(playerSlot,{0,4,0})!=player)return;
- static DWORD config=0,traceEnd=0,lastTrace=0;DWORD now=GetTickCount();
- if(now-config>1000){config=now;worldMode=GetPrivateProfileIntA("World","NativeMotion",1,ini);if(GetPrivateProfileIntA("World","Trace",0,ini)){traceEnd=now+8000;WritePrivateProfileStringA("World","Trace","0",ini);}}
- if(traceEnd&&int32_t(traceEnd-now)>0&&now-lastTrace>100){lastTrace=now;auto p=read<Vec>(physics+0x10),a=read<Vec>(motion),b=read<Vec>(motion+16),c=read<Vec>(motion+32);logf("WORLD trace active=%d p=%.3f,%.3f,%.3f delta=%.5f,%.5f,%.5f b=%.4f,%.4f,%.4f c=%.4f,%.4f,%.4f physics=%08x",enabled,p.x,p.y,p.z,a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,(unsigned)physics);}
- if(!enabled||interacting||worldMode!=1)return;
- AcquireSRWLockExclusive(&worldLock);Vec current=read<Vec>(physics+0x10),delta=worldWanted-current;
- if(dot(delta,delta)<4){float angle=read<float>(physics+4),cs=cosf(angle),sn=sinf(angle);float vectors[12]={cs*delta.x-sn*delta.z,delta.y,sn*delta.x+cs*delta.z,0,0,0,0,0,1,1,1,0};SIZE_T n;WriteProcessMemory(GetCurrentProcess(),(void*)motion,vectors,sizeof(vectors),&n);worldSubmitted=worldWanted;worldLastSubmit=now;}
+ if(!physics)return;
+ DWORD now=GetTickCount();
+ AcquireSRWLockExclusive(&worldLock);
+ if(worldMode!=1||physics!=worldBinding.physics||!worldBinding.valid()||chain(playerSlot,{0,4,0})!=worldBinding.actor||read<uint32_t>(worldBinding.actor+0x28)!=worldBinding.movement||DWORD(now-worldHeartbeat)>250){ReleaseSRWLockExclusive(&worldLock);return;}
+ Vec current=read<Vec>(physics+0x10),delta{};SCMotion::Ticket ticket;
+ if(!worldPaused&&worldMailbox.consume(now,ticket)){
+  delta={ticket.to.x-current.x,ticket.to.y-current.y,ticket.to.z-current.z};
+  if(!isfinite(dot(delta,delta))||dot(delta,delta)>4){delta={};++worldRejected;}else{put(physics+4,ticket.yaw);++worldSubmissions;}
+ }
+ // Never chase an old destination twice. Idle hooks submit neutral intent while
+ // Havok continues resolving the capsule and native forces normally.
+ float angle=read<float>(physics+4),cs=cosf(angle),sn=sinf(angle);float vectors[12]={cs*delta.x-sn*delta.z,delta.y,sn*delta.x+cs*delta.z,0,0,0,0,0,1,1,1,0};SIZE_T n;WriteProcessMemory(GetCurrentProcess(),(void*)motion,vectors,sizeof(vectors),&n);
  ReleaseSRWLockExclusive(&worldLock);
 }
-static void worldActivate(){worldMode=GetPrivateProfileIntA("World","NativeMotion",1,ini);AcquireSRWLockExclusive(&worldLock);worldWanted=worldSubmitted=read<Vec>(posData+0x10);worldLastSubmit=0;ReleaseSRWLockExclusive(&worldLock);}
-static void worldReconcile(){
- if(worldMode!=1||!worldMotionReady)return;
- static DWORD seen=0;AcquireSRWLockShared(&worldLock);DWORD stamp=worldLastSubmit;Vec submitted=worldSubmitted;ReleaseSRWLockShared(&worldLock);
- if(!stamp||stamp==seen)return;seen=stamp;Vec host=read<Vec>(posData+0x10),current=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f,correction=host-current;
- if(!isfinite(correction.x)||!isfinite(correction.y)||!isfinite(correction.z)||dot(correction,correction)>4)return;
- Vec local=(host-origin)*100;guest->setPosition(character,local.x,local.y,local.z);state.position[0]=local.x;state.position[1]=local.y;state.position[2]=local.z;
- for(size_t i=0;i<geo.numTrianglesUsed*3;i++){gpos[i*3]+=correction.x*100;gpos[i*3+1]+=correction.y*100;gpos[i*3+2]+=correction.z*100;}
- static DWORD lastLog=0;if(GetPrivateProfileIntA("World","Debug",0,ini)&&GetTickCount()-lastLog>500){lastLog=GetTickCount();logf("WORLD resolved wanted=%.3f,%.3f,%.3f actual=%.3f,%.3f,%.3f correction=%.3f,%.3f,%.3f flags=%d,%d",submitted.x,submitted.y,submitted.z,host.x,host.y,host.z,correction.x,correction.y,correction.z,read<uint8_t>(posData+0x32),read<uint8_t>(posData+0x33));}
+static void worldRelease(){AcquireSRWLockExclusive(&worldLock);worldMailbox.reset();worldBinding={};worldPaused=false;ReleaseSRWLockExclusive(&worldLock);worldContacts.clear();}
+static void worldActivate(){AcquireSRWLockExclusive(&worldLock);worldMode=1;worldMailbox.bind();worldBinding={player,posData,lastMap,loadedMap};worldHeartbeat=GetTickCount();worldPaused=false;ReleaseSRWLockExclusive(&worldLock);}
+static void worldPause(bool paused){AcquireSRWLockExclusive(&worldLock);worldHeartbeat=GetTickCount();if(paused!=worldPaused){worldMailbox.bind();worldPaused=paused;}ReleaseSRWLockExclusive(&worldLock);}
+static bool worldReady(){AcquireSRWLockShared(&worldLock);bool ok=worldMailbox.ready()&&!worldPaused;ReleaseSRWLockShared(&worldLock);return ok;}
+static bool worldReconcile(bool& resolvedTick){
+ resolvedTick=false;
+ if(worldMode!=1||!worldMotionReady)return false;
+ SCMotion::Ticket ticket;AcquireSRWLockExclusive(&worldLock);worldHeartbeat=GetTickCount();bool expired=worldMailbox.expired(worldHeartbeat),resolved=worldMailbox.acknowledge(ticket),busy=worldMailbox.busy();uint32_t generation=worldMailbox.generation(),submissions=worldSubmissions,rejected=worldRejected;ReleaseSRWLockExclusive(&worldLock);
+ if(expired){logf("WORLD motion timeout; native handback");return false;}if(busy)return true;
+ Vec host=read<Vec>(posData+0x10),current=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f,correction=host-current;
+ if(!isfinite(dot(correction,correction))||dot(correction,correction)>4)return false;
+ SC_MotionResolution r={};r.size=sizeof(r);r.generation=generation;r.sequence=resolved?ticket.sequence:0;Vec local=(host-origin)*100;r.position[0]=local.x;r.position[1]=local.y;r.position[2]=local.z;
+ if(resolved){
+  ++worldAcknowledgements;Vec wanted={ticket.to.x-ticket.from.x,ticket.to.y-ticket.from.y,ticket.to.z-ticket.from.z};
+  // Only planes from actual native contacts may clip guest momentum. Positional
+  // disagreement itself is not evidence of a wall, ceiling or ground.
+  for(const auto&c:worldContacts){if(r.normalCount>=4)break;Vec n=c.normal;float into=dot(wanted,n);if(into<-.001f&&dot(correction,n)>.005f){auto index=r.normalCount++;r.normals[index][0]=n.x;r.normals[index][1]=n.y;r.normals[index][2]=n.z;}}
+ }
+ if(!guest->resolveMotion(character,&r,&state,&geo)||!SC::frame(state,geo,*profile))return false;
+ resolvedTick=resolved;
+ static DWORD lastLog=0;if(GetTickCount()-lastLog>1000){lastLog=GetTickCount();logf("WORLD bridge submitted=%u ack=%u rejected=%u error_cm=%.3f planes=%u generation=%u",submissions,worldAcknowledgements,rejected,sqrtf(dot(correction,correction))*100,r.normalCount,r.generation);}
+ return true;
 }
-static void worldSubmit(Vec destination){AcquireSRWLockExclusive(&worldLock);worldWanted=destination;ReleaseSRWLockExclusive(&worldLock);put(posData+4,state.faceAngle+3.14159265f);}
+static bool worldSubmit(Vec from,Vec destination){AcquireSRWLockExclusive(&worldLock);bool ok=worldMailbox.publish(motionPoint(from),motionPoint(destination),state.faceAngle+3.14159265f,GetTickCount());ReleaseSRWLockExclusive(&worldLock);return ok;}
 __attribute__((naked)) static void characterMotionHook(){__asm__ volatile(
  "pushfl\n pushal\n subl $128,%esp\n"
  "movups %xmm0,0(%esp)\n movups %xmm1,16(%esp)\n movups %xmm2,32(%esp)\n movups %xmm3,48(%esp)\n movups %xmm4,64(%esp)\n movups %xmm5,80(%esp)\n movups %xmm6,96(%esp)\n movups %xmm7,112(%esp)\n"

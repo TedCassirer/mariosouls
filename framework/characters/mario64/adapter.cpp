@@ -6,6 +6,7 @@
 #include <cstring>
 #include <vector>
 #include "../../sdk/character_api.h"
+#include "../../core/motion.h"
 #include "../../../work/libsm64/src/libsm64.h"
 #include "profile.generated.h"
 
@@ -30,6 +31,8 @@ static decltype(&sm64_mario_host_pose_tick) libPose;
 static decltype(&sm64_mario_host_resume) libResume;
 static decltype(&sm64_mario_hand_matrix) libHand;
 static decltype(&sm64_set_mario_position) libPosition;
+static decltype(&sm64_set_mario_velocity) libVelocity;
+static decltype(&sm64_set_mario_forward_velocity) libForward;
 static decltype(&sm64_set_mario_action) libAction;
 static decltype(&sm64_set_mario_faceangle) libFace;
 static void (*libHealth)(int32_t,int32_t);
@@ -80,6 +83,7 @@ static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
     if(!runtime){if(report)report("Mario runtime could not be loaded");return 0;}
 #define LOAD(var,name) var=(decltype(var))GetProcAddress(runtime,#name);if(!var){if(report)report("Missing " #name);shutdown();return 0;}
     LOAD(libInit,sm64_global_init);LOAD(libShutdown,sm64_global_terminate);LOAD(libAudioInit,sm64_audio_init);LOAD(libAudio,sm64_audio_tick);
+    LOAD(libVelocity,sm64_set_mario_velocity);LOAD(libForward,sm64_set_mario_forward_velocity);
     LOAD(libSurfaces,sm64_static_surfaces_load);LOAD(libContacts,sm64_host_contacts_load);LOAD(libCreate,sm64_mario_create);LOAD(libDestroy,sm64_mario_delete);
     LOAD(libTick,sm64_mario_tick);LOAD(libPose,sm64_mario_host_pose_tick);LOAD(libResume,sm64_mario_host_resume);LOAD(libHand,sm64_mario_hand_matrix);
     LOAD(libPosition,sm64_set_mario_position);LOAD(libAction,sm64_set_mario_action);LOAD(libFace,sm64_set_mario_faceangle);LOAD(libHealth,sm64_mario_host_health);
@@ -141,8 +145,8 @@ static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
     if(p->kind==SC_POSE_DRINK&&p->phase>.02f)flask(*mesh);
     return 1;
 }
-static void resume(int32_t id,float x,float y,float z,float yaw){if(id==active&&id>=0){libResume(id,x,y,z,yaw);previousAction=0;}}
-static void position(int32_t id,float x,float y,float z){if(id==active&&id>=0)libPosition(id,x,y,z);}
+static void resume(int32_t id,float x,float y,float z,float yaw){if(id==active&&id>=0){libResume(id,x,y,z,yaw);raw.position[0]=x;raw.position[1]=y;raw.position[2]=z;raw.velocity[0]=raw.velocity[1]=raw.velocity[2]=raw.forwardVelocity=0;raw.faceAngle=yaw;previousAction=0;}}
+static void position(int32_t id,float x,float y,float z){if(id==active&&id>=0){libPosition(id,x,y,z);raw.position[0]=x;raw.position[1]=y;raw.position[2]=z;}}
 static void command(int32_t id,uint32_t c){if(id==active&&id>=0)libAction(id,c==SC_COMMAND_FALL?0x0100088c:0x0c400201);}
 static void damage(int32_t id,uint32_t severity){if(id==active&&id>=0)libHealth(id,std::min(severity,2u));}
 static void surfaces(const SC_Surface*s,uint32_t n,uint32_t dynamic){
@@ -157,5 +161,20 @@ static uint32_t audio(uint32_t queued,uint32_t desired,int16_t*stereo,uint32_t c
     if(!initialized||!stereo||capacity<1088)return 0;
     return 2*libAudio(queued,desired,stereo);
 }
-static SC_CharacterAPI api={sizeof(SC_CharacterAPI),SC_ABI_VERSION,describe,initialize,shutdown,create,destroy,step,pose,resume,position,command,damage,surfaces,floorHeight,probe,contact,audio};
+static uint32_t resolveMotion(int32_t id,const SC_MotionResolution*r,SC_State*out,SC_Mesh*m){
+    if(id!=active||id<0||!r||r->size!=sizeof(*r)||r->normalCount>4||!out||!m||m->numTrianglesUsed>m->capacityTriangles)return 0;
+    SCMotion::Point target={r->position[0],r->position[1],r->position[2]};if(!SCMotion::finite(target))return 0;
+    SCMotion::Point velocity={raw.velocity[0],raw.velocity[1],raw.velocity[2]},before=velocity;
+    for(unsigned i=0;i<r->normalCount;i++)velocity=SCMotion::clip(velocity,{r->normals[i][0],r->normals[i][1],r->normals[i][2]});
+    bool horizontal=fabsf(velocity.x-before.x)+fabsf(velocity.z-before.z)>.001f;
+    if(horizontal){float forward=velocity.x*sinf(raw.faceAngle)+velocity.z*cosf(raw.faceAngle);libForward(id,forward);raw.forwardVelocity=forward;}
+    // A contact callback can change engine momentum between ticks (a bounce).
+    // Empty positional acknowledgements must not overwrite it with old telemetry.
+    if(SCMotion::squared(velocity-before)>.000001f)libVelocity(id,velocity.x,velocity.y,velocity.z);
+    libPosition(id,target.x,target.y,target.z);
+    for(unsigned axis=0;axis<3;axis++){float delta=r->position[axis]-raw.position[axis];for(unsigned j=0;j<m->numTrianglesUsed*3;j++)m->position[j*3+axis]+=delta;raw.position[axis]=r->position[axis];}
+    raw.velocity[0]=velocity.x;raw.velocity[1]=velocity.y;raw.velocity[2]=velocity.z;
+    for(int k=0;k<3;k++){out->position[k]=raw.position[k];out->velocity[k]=raw.velocity[k]*SC_FIXED_HZ;}out->forwardSpeed=raw.forwardVelocity*SC_FIXED_HZ;return 1;
+}
+static SC_CharacterAPI api={sizeof(SC_CharacterAPI),SC_ABI_VERSION,describe,initialize,shutdown,create,destroy,step,pose,resume,position,command,damage,surfaces,floorHeight,probe,contact,audio,resolveMotion};
 extern "C" __declspec(dllexport) const SC_CharacterAPI* SoulsCharacterGetAPI(uint32_t abi,uint32_t size){return abi==SC_ABI_VERSION&&size==sizeof(api)?&api:nullptr;}

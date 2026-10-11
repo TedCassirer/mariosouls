@@ -1,4 +1,4 @@
-SOULS CHARACTER FRAMEWORK 0.1
+SOULS CHARACTER FRAMEWORK 0.2
 
 Mario now runs as the first character module in a reusable Dark Souls framework.
 The framework shares world collision, rendering, menus and interactions, native
@@ -26,7 +26,14 @@ refuses unfinished examples. Build/test/install instructions are in
 framework/README.md; the interface and porting guide are in framework/docs/.
 AGENTS.md directs future development to these shared components.
 
-VERIFICATION
+MOVEMENT OWNERSHIP IN 0.2
+The framework now sends each movement request once, waits for native movement,
+and corrects position and blocked momentum without restarting animations. It
+separates free movement, native actions and loading, clears stale requests, and
+recreates a requested character after a safe actor reload. ABI 2 exposes this
+contract to future character adapters. See Framework robustness notes.txt.
+
+EARLIER EXTRACTION VERIFICATION
 Offline checks passed for the Mario module, an unrelated generated sample module,
 combat policy, input/controller routes and installer rollback.
 

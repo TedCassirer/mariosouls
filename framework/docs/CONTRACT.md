@@ -1,4 +1,4 @@
-# Character ABI version 1
+# Character ABI version 2
 
 `sdk/character_api.h` is the authoritative declaration. Adapters are trusted native
 32-bit Windows DLLs, loaded in-process; validation is not a memory-safety sandbox.
@@ -17,7 +17,7 @@ handle, or -1. A second live instance should be rejected. Failed initialization
 must tolerate `shutdown`; duplicate initialization must fail cleanly.
 
 The host loads static surfaces before creation, steps the character at 30 Hz,
-and passes native corrections with `setPosition`. `pose` animates the **same**
+and passes resolved native corrections with `resolveMotion`. `pose` animates the **same**
 instance during an interaction; it must not run independent locomotion physics.
 `resume` restores locomotion at the host's position and facing. It must clear stale
 momentum so drinking or climbing cannot launch the character. `destroy` releases
@@ -26,6 +26,35 @@ must not retain their input pointers, block on I/O during gameplay, or throw.
 
 Simulation/render callbacks run serially in the host update. There is no concurrent
 audio thread. The current process-lifetime host does not hot-unload an adapter.
+
+## Movement ownership (ABI 2)
+
+ABI 1 adapters are rejected; rebuild both host and adapter. `resolveMotion` is a
+required callback. `SC_MotionResolution` contains the native capsule position in
+local centimetres, an ownership generation, a movement sequence (zero for an
+unsolicited correction), and up to four unit contact normals. Copy the corrected
+position into internal state and output, translate existing mesh vertices by the
+same displacement, and remove only velocity directed into the supplied normals.
+Do not tick physics, advance animations, invent a floor, or consume/re-emit an
+attack/landing event. An empty normal set changes position without cancelling
+momentum. `setPosition` remains available for coordinate-origin rebasing only.
+
+The shared host publishes one bounded movement request, the native movement
+hook consumes it once, and the next render update samples the native capsule
+before permitting another guest tick. This is a consumed-request acknowledgement,
+not a separately hooked Havok post-solve callback. Native contacts, combined with
+actual position disagreement, identify blocked velocity. Actor capsule tangents
+are never turned into guest floor patches. Combat observes the corrected pose.
+
+The guest clock targets 30 Hz with at most one tick per presentation. It does not
+replay a stall backlog. Button taps are latched briefly while waiting for native
+movement. Focus loss clears queued intent. Requests time out; invalid output or
+an unsupported bridge restores native controls. A central session owns the
+actor/physics/movement/map binding. Native actions suspend guest locomotion and
+resume the same character after 100 ms of stable idle state. Loads, actor changes
+and death discard the old instance and all queued work; a requested character
+may be recreated only after a living, safe native actor is stable for 500 ms.
+An explicit toggle-off cancels that request. Faults require explicit reactivation.
 
 ## Coordinates and geometry
 
@@ -40,7 +69,7 @@ The host rebases the local origin and resubmits static surfaces when necessary.
 short-lived native contact triangles (zero clears). Native Havok resolves dynamic
 doors, enemies and props. The adapter must respect host corrections, not insist
 that a stale guest wall or enemy overlap is authoritative. Surface material is
-reserved in v1; the current host supplies zero.
+reserved in v2; the current host supplies zero.
 
 Mesh arrays are unindexed triangles. Position/normal/color each have
 `capacityTriangles * 9` floats; UV has `capacityTriangles * 6`. Do not write beyond
@@ -78,7 +107,7 @@ in the adapter, never in host code.
 does not change behavior. Attack index/name pairs identify moves. Report -1 when
 no attack is underway. Distinct combo punches and finishing kicks need separate
 IDs. Repeated instances of the same move must include an intervening idle sample;
-v1 does not have an explicit attack-instance token. If a future engine can chain
+v2 does not have an explicit attack-instance token. If a future engine can chain
 identical attacks without that boundary, extend the SDK and shared window logic.
 
 `SC_ATTACK_ACTIVE` marks only the actual contact phase. `activeTicks` adds an

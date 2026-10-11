@@ -1,4 +1,4 @@
-# Souls Character Framework 0.1
+# Souls Character Framework 0.2
 
 MarioSouls is the first character adapter for a shared Dark Souls PTDE integration.
 This is a working extraction of the installed 0.7 integration, with a versioned
@@ -9,7 +9,7 @@ importer for arbitrary game models or ROMs.
 | Directory | Responsibility |
 | --- | --- |
 | `sdk/` | Versioned C interface between the host and each character |
-| `core/` | Attack windows, progression, exhaustion, confirmed-hit feedback and validation |
+| `core/` | Movement ownership, lifecycle, input buffering, combat, feedback and validation |
 | `hosts/ds1ptde/` | Native collision, rendering before UI, input, interactions, health, stamina and damage |
 | `characters/mario64/` | Mario's engine, action IDs, animations, sounds and procedural flask |
 | `templates/` | Compilable starting adapter for a future character |
@@ -47,6 +47,15 @@ Balance overrides use `[Combat.<id>]`, including `BasePower`, `UpgradePower`,
 Installation migrates the existing Mario `[Combat]` values once. Another character
 starts with its manifest defaults. Upgrades remain configurable test values;
 this refactor does not add an inventory/titanite upgrade shop.
+
+Version 0.2 introduces a single-use native movement mailbox and explicit ownership
+for character locomotion, native actions and loading/death recovery. Each guest
+step waits for its previous request to be consumed; the native capsule position
+is sampled before collision correction and combat. Position corrections preserve
+animations and clip only momentum directed into confirmed native contact planes.
+Queued input and movement cannot survive an ownership change. ABI 2 makes this
+contract available to every adapter through `resolveMotion`; ABI 1 DLLs must be
+rebuilt. See [movement ownership](docs/CONTRACT.md#movement-ownership-abi-2).
 
 Shared impact feedback now adds a short attacker pause, procedural contact sound,
 depth-tested contact burst and controller vibration after native target HP falls.

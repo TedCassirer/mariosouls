@@ -1,0 +1,45 @@
+{
+  "name": "Framework 0.2 movement ownership",
+  "tag": "checkpoint-2026-10-11-framework-v0.2-ownership",
+  "created": "2026-10-11T06:40:35.682399+02:00",
+  "archive": "work/checkpoints/framework-v0.2-ownership-runtime.zip",
+  "archive_sha256": "958204077e5077e6cc3ae7289f1808624f75a5e9d65d56d6eaae40292733ed53",
+  "requires_existing_collision_and_owned_rom": true,
+  "game_directory": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Dark Souls Prepare to Die Edition\\DATA",
+  "game_exe_sha256": "67bcab513c8f0ed6164279d85f302e06b1d8a53abff5df7f3d10e1d4dfd81459",
+  "files": {
+    "dinput8.dll": {
+      "sha256": "94fe5626420777ea0470f9edbebe211946c1cfb3226977f9e85c9612607318ac",
+      "bytes": 528384
+    },
+    "mariosouls.ini": {
+      "sha256": "72ec0233157affd41f74430e5ac21430df1c2ffd0a6e86465ff785a8b5d70385",
+      "bytes": 1491
+    },
+    "SoulsCharacterFramework/install.json": {
+      "sha256": "792f338829541bb5d4ac2e2858a094661eb1b98c14f2ef3ab456ae7163455e56",
+      "bytes": 10229
+    },
+    "SoulsCharacterFramework/characters/mario64/character.dll": {
+      "sha256": "1452fec204d4e6ae5d05e0a5bcd77e98bab8cb69198eb1787ea67183c032e0c6",
+      "bytes": 386048
+    },
+    "SoulsCharacterFramework/characters/mario64/character.json": {
+      "sha256": "6f59ff820652dd737d1b8482c57bfa9818230356d78ef26f985603ad3c6612da",
+      "bytes": 2893
+    },
+    "SoulsCharacterFramework/characters/mario64/sm64.dll": {
+      "sha256": "cdd495997e3fedb139a76f9ec00472b2a96fa824ebecaf4d4e52a99134ae8637",
+      "bytes": 812032
+    },
+    "MarioSouls/harness.ini": {
+      "sha256": "a3bcef9bde870b0ad46250989d1f70852d3b9543038770d1d749edd22d7abcc8",
+      "bytes": 98
+    },
+    "MarioSouls/install.json": {
+      "sha256": "eecd67c1348ed6a8733ca2d0212f05869a893b6f318880909eb858f350deb1f2",
+      "bytes": 8088
+    }
+  },
+  "validation": "framework/docs/VALIDATION.md"
+}

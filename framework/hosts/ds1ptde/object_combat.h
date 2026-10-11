@@ -4,7 +4,7 @@
 __attribute__((naked)) static int __cdecl worldDamageObject(int behavior,uintptr_t owner,uintptr_t target,const float* point){__asm__ volatile(
  "pushl %ebx\n pushl %esi\n pushl %edi\n movl 16(%esp),%ecx\n movl 20(%esp),%eax\n movl 24(%esp),%edx\n movl 28(%esp),%ebx\n pushl %ebx\n pushl %edx\n movl 0x137d6ac,%edx\n pushl %edx\n movl $0xdea8e0,%edi\n call *%edi\n popl %edi\n popl %esi\n popl %ebx\n ret\n");}
 static void combatObjects(){
- if(!enabled||!worldObjectDamageReady||!combatEnabled||!characterDamageReady||!characterWindow.active(state,*profile))return;
+ if(!characterOwned()||!worldObjectDamageReady||!combatEnabled||!characterDamageReady||!characterWindow.active(state,*profile))return;
  if(harness.armed&&harness.suppressOutgoing)return;
  int move=characterWindow.move;if(move<0||(profile->attacks[move].flags&SC_ATTACK_NO_OBJECTS))return;
  uintptr_t manager=read<uintptr_t>(0x137d5f8),maps=read<uintptr_t>(manager+0x20);int count=read<int>(manager+0x1c);if(count<1||count>64||!maps)return;

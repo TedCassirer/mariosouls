@@ -9,7 +9,7 @@ static uintptr_t __cdecl actionEffect(uintptr_t out,uintptr_t actor,int id,uintp
  // spill at the same human-hand dummy, so replace that visual too. 228 is
  // the body healing effect and remains native. No item or HP logic is here.
  // Passing -1 uses the native empty-handle constructor path.
- if(enabled&&hideNative&&(profile->capabilities&SC_CAP_ITEM_PROP)&&actor==player&&(id==22700||id==22750||id==22900||id==22950))id=-1;
+ if(characterOwned()&&hideNative&&(profile->capabilities&SC_CAP_ITEM_PROP)&&actor==player&&(id==22700||id==22750||id==22900||id==22950))id=-1;
  return actionOriginalEffect(out,actor,id,setup);
 }
 static void installActionEffects(){

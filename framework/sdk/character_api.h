@@ -10,7 +10,7 @@ extern "C" {
  * Velocity is centimetres/second. Yaw is radians: 0 faces +Z, positive toward +X.
  * Fixed simulation callbacks are 30 Hz; adapters resample their own engine if needed.
  * Input X is right, Y is forward relative to camera. No host pointers are exposed. */
-#define SC_ABI_VERSION 1u
+#define SC_ABI_VERSION 2u
 #define SC_FIXED_HZ 30u
 #define SC_MAX_ATTACKS 32u
 #define SC_MAX_TRIANGLES 16384u
@@ -76,6 +76,16 @@ typedef struct SC_Pose {
 } SC_Pose;
 enum SC_Command { SC_COMMAND_IDLE, SC_COMMAND_FALL };
 
+/* Resolved host position and collision planes, local cm; never a simulation tick.
+ * Update momentum only into the supplied unit normals; preserve tangential motion,
+ * the current action and animation phase. Shift the existing mesh coherently. */
+typedef struct SC_MotionResolution {
+    uint32_t size,generation,sequence;
+    float position[3];
+    uint32_t normalCount;
+    float normals[4][3];
+} SC_MotionResolution;
+
 typedef struct SC_CharacterAPI {
     uint32_t size, abiVersion;
     const SC_Descriptor *(*describe)(void);
@@ -95,6 +105,7 @@ typedef struct SC_CharacterAPI {
     void (*commitContact)(int32_t,float,float,float,float radiusCm);
     /* Return stereo sample FRAMES, never bytes. capacityFrames is a hard bound. */
     uint32_t (*audio)(uint32_t queuedFrames,uint32_t desiredFrames,int16_t *stereo,uint32_t capacityFrames);
+    uint32_t (*resolveMotion)(int32_t,const SC_MotionResolution *,SC_State *,SC_Mesh *);
 } SC_CharacterAPI;
 typedef const SC_CharacterAPI *(*SC_GetAPI)(uint32_t hostAbi,uint32_t hostApiSize);
 

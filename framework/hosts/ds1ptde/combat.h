@@ -8,7 +8,7 @@ static bool characterFalling=false;
 static float characterPeakY=0;
 static int characterRecoveryDelay=500;
 static int combatNativeStamina(uintptr_t actor,int value,uintptr_t caller){
- if(!enabled||interacting||actor!=player||actor!=lastPlayer)return value;
+ if(!characterOwned()||nativeActionOwned()||actor!=player||actor!=lastPlayer)return value;
  int current=read<int>(actor+0x2e4);
  // The native character-state command1001 (FE024A ->46D550 ->E67960)
  // debits20 after the character's injected hit. Character owns attack/movement costs
@@ -47,10 +47,10 @@ static void combatSettings(){
 }
 static void combatReset(){feedbackReset();characterWindow.reset();characterRecoveryUntil=0;characterStaminaCeiling=0;characterLandingRecovery=0;characterLastStagger.clear();characterFalling=false;}
 static bool combatTestDrop(int height){
- if(!harness.armed||!harnessIdentity()||!enabled||interacting||height<1||height>25||state.position[1]>state.floorHeight+5)return false;
+ if(!harness.armed||!harnessIdentity()||!characterOwned()||nativeActionOwned()||height<1||height>25||state.position[1]>state.floorHeight+5)return false;
  state.position[1]+=height*100;guest->setPosition(character,state.position[0],state.position[1],state.position[2]);guest->command(character,SC_COMMAND_FALL);state.flags=0;
  Vec p=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;
- put(posData+0x10,p);put(lastMap+0xd0,p);put<uint8_t>(lastMap+0xc8,1);characterFalling=true;characterPeakY=p.y;
+ put(posData+0x10,p);put(lastMap+0xd0,p);put<uint8_t>(lastMap+0xc8,1);worldActivate();characterClock.clear();characterInput.clear();characterFalling=true;characterPeakY=p.y;
  harnessEvent("test_drop");return true;
 }
 static bool combatEnvironment(){
@@ -66,7 +66,7 @@ static bool combatEnvironment(){
   if(damage>0&&hp>0&&maxHP>0&&maxHP<100000&&(read<uint32_t>(player+0x1fc)&0x4000)&&player==lastPlayer){
    int after=std::max(0,hp-damage);put<int>(player+0x2d4,after);
    char fields[220];snprintf(fields,sizeof(fields),",\"drop_meters\":%.3f,\"before\":%d,\"after\":%d,\"damage\":%d",drop,hp,after,hp-after);harnessEvent("environmental_fall_damage",fields);logf("Character fall%s",fields);
-   if(after==0){if(harness.armed)harnessObserve(true,pollController(GetTickCount()).connected);releaseControl();return false;}
+   if(after==0){if(harness.armed)harnessObserve(true,pollController(GetTickCount()).connected);releaseControl(true);return false;}
   }
  }return true;
 }

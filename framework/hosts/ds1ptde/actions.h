@@ -3,9 +3,9 @@
 static DWORD actionRequested=0,actionPhaseStart=0;
 static int actionRequestKind=0,actionNativeAnimation=-1;
 static float actionLadderFrame=0;
-static unsigned actionQuietFrames=0;
+static SCSession::QuietGate actionReturnGate;
 static int actionPendingHurt=0;static DWORD actionHurtTime=0;
-static void actionReset(){actionRequestKind=0;actionQuietFrames=0;actionPendingHurt=0;actionCancelPulse();}
+static void actionReset(){actionRequestKind=0;actionReturnGate.clear();actionPendingHurt=0;actionCancelPulse();}
 static bool actionPending(){return actionRequestKind&&DWORD(GetTickCount()-actionRequested)<600;}
 static void actionFlags(bool nativeMotion){
  if(!player||player!=lastPlayer)return;
@@ -17,7 +17,7 @@ static void actionFlags(bool nativeMotion){
  put(player+0x3c4,(f2&~0x300u)|(savedFlags2&0x300u)|(allowAction?0:0x100u));
 }
 static void requestAction(int kind,bool fromPad=false){
- if(!enabled||interacting||character<0||!actionInputReady)return;
+ if(!characterOwned()||nativeActionOwned()||character<0||!actionInputReady)return;
  auto o=nativeInteractionState();
  if(!o.valid||!o.grounded||!(state.flags&SC_CAN_INTERACT)||!o.idle)return;
  if(kind==1&&!read<uint32_t>(read<uint32_t>(0x13786d0)+0x58)){logf("Action request rejected: no native prompt; Character retained");return;}
@@ -27,10 +27,10 @@ static void requestAction(int kind,bool fromPad=false){
 }
 static void beginInteraction(int slot,bool pressAction=true){
  if(pressAction){requestAction(1);return;}
- if(!enabled||interacting||character<0)return;
- interacting=true;interactionPrevious=read<Vec>(posData+0x10);interactionMap=currentMap();
- actionNativeAnimation=-1;actionPhaseStart=GetTickCount();actionQuietFrames=0;actionLadderFrame=0;
- actionRequestKind=0;actionPendingHurt=0;actionCancelPulse();combatReset();worldActivate();
+ if(!characterOwned()||nativeActionOwned()||character<0)return;
+ if(!characterSession.handoff())return;worldRelease();characterClock.clear();characterInput.clear();actionReturnGate.clear();interactionPrevious=read<Vec>(posData+0x10);interactionMap=currentMap();
+ actionNativeAnimation=-1;actionPhaseStart=GetTickCount();actionLadderFrame=0;
+ actionRequestKind=0;actionPendingHurt=0;actionCancelPulse();combatReset();
  actionFlags(true);lastHP=read<int>(player+0x2d4);
  logf("Action confirmed character=%d; native script owns action only",character);
 }
@@ -63,14 +63,13 @@ static void updateInteraction(double& acc,bool focus,int slot){
   pumpAudio();
  }
  // Completion follows actual action/menu state, not the native walk/idle animation.
- if(!o.menu&&!o.event&&!o.ladder&&focus){++actionQuietFrames;}else actionQuietFrames=0;
- if(actionQuietFrames>=2){
+ if(actionReturnGate.update(!o.menu&&!o.event&&!o.ladder&&o.idle&&focus,now)){
   Vec local=(host-origin)*100;guest->resume(character,local.x,local.y,local.z,read<float>(posData+4)-3.14159265f);
-  if(actionPendingHurt&&DWORD(now-actionHurtTime)<700)guest->nativeDamage(character,actionPendingHurt);
+  if(actionPendingHurt&&DWORD(now-actionHurtTime)<700)pendingNativeHurt=std::max(pendingNativeHurt,uint32_t(actionPendingHurt));
   actionPendingHurt=0;
   state.position[0]=local.x;state.position[1]=local.y;state.position[2]=local.z;
   state.faceAngle=read<float>(posData+4)-3.14159265f;state.flags=o.grounded?(SC_GROUNDED|SC_CAN_INTERACT):0;state.attackId=state.interruptedAttackId=-1;
-  interacting=false;actionRequestKind=0;lastHP=read<int>(player+0x2d4);worldActivate();actionFlags(false);InterlockedExchange(&actionRoute,LONG(ActionRoute::Character));acc=0;
+  characterSession.resume();actionRequestKind=0;lastHP=read<int>(player+0x2d4);worldActivate();characterClock.clear();characterInput.clear();actionFlags(false);InterlockedExchange(&actionRoute,LONG(ActionRoute::Character));acc=0;
   logf("Action complete; same character=%d resumes immediately",character);
  }
 }

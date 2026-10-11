@@ -19,7 +19,9 @@ that check.
    tree in this repository. For a separately built runtime, provide a local
    `build_runtime.py --output <directory>` next to the adapter.
 2. Translate input, coordinates, ticks, collision and mesh output to the SDK.
-   Implement bounded buffers, error handling, destroy/recreate and host corrections.
+   Implement bounded buffers, error handling, destroy/recreate and `resolveMotion`.
+   Corrections must translate the existing mesh without advancing the animation,
+   clip only velocity into supplied collision normals, and preserve attack events.
 3. Map the character's attack phases and contact probes to semantic attack IDs.
    Define power/stamina/poise/range in the manifest. Use the shared damage and
    progression code; do not read or write Dark Souls memory from the adapter.
@@ -43,6 +45,6 @@ Link/OoT would need an OoT-compatible runtime/asset and animation implementation
 DK/DK64 would need its own. Neither is present. Research their runtime availability
 when implementing those ports; Mario's libsm64 cannot run them. Extra buttons,
 weapons, aiming, projectiles, transformations or unusually large collision shapes
-will require explicit framework extensions. Current v1 supports one active
+will require explicit framework extensions. Current v2 supports one active
 character, a shared native body, three movement/combat inputs and generic native
 interaction poses; it does not promise every game mechanic out of the box.

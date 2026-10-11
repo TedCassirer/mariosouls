@@ -1,0 +1,48 @@
+SOULS CHARACTER FRAMEWORK 0.2 — ROBUSTNESS CHECKPOINT
+
+Installed and tested on Mario QA, 11 October 2026.
+
+The main change is ownership: Mario proposes movement; Dark Souls resolves its
+native body; the framework reconciles that result before the next movement step.
+Requests cannot be replayed or carry over into a menu, interaction or new actor.
+
+What changed
+- One movement request at a time, consumed once by native physics.
+- Collision correction preserves animations and removes blocked momentum only.
+- Enemy body contacts no longer create artificial guest floor ledges.
+- Explicit control ownership for free movement, native actions and load/death.
+- Automatic re-creation after a safe native actor reload; explicit F6 off stays off.
+- Short input taps and native hurt events survive gaps between simulation ticks.
+- Fixed origin-rebase mesh drift and a correction that could cancel stomp bounce.
+- Shared ABI 2, tests and documentation; future characters inherit the host rules.
+
+Verified on the final installed build
+- Native quit/load automatically restores Mario on the new Mario QA actor.
+- Four toggles, bonfire rest/healing/leave, then jumping again.
+- Closed-door blocking and enemy body collision (minimum separation 0.85 m).
+- 2.42 m navigation jumps, no jump stamina; punch costs 9 with current equipment.
+- Hollow HP 44 to 0, one hit-feedback receipt and one stamina charge.
+- Native melee damage, Mario hurt/knockback, and bonfire healing to 594 HP.
+- Full offline framework suite, including origin shifts and bounce preservation.
+- No motion rejection/timeout in the final game log. Mario QA saved; game closed.
+
+This is a stronger foundation, not a claim that every glitch is fixed. Testing
+was confined to the Asylum. Other areas, death/respawn, bosses, ladders, dialogue,
+Estus, projectiles and destructibles need further live regression. The native
+human collider and collision-cache coverage remain current limitations. The
+controller was disconnected; its mapping tests pass, but physical play was not
+retested. The existing movement speeds and combat balance were kept.
+
+Recovery
+Source tag: checkpoint-2026-10-11-framework-v0.2-ownership
+Source bundle: Souls Character Framework robustness checkpoint.bundle
+Private runtime archive: work/checkpoints/framework-v0.2-ownership-runtime.zip
+Runtime manifest: checkpoints/framework-v0.2-ownership.json
+
+Close Dark Souls, then run Restore Framework robustness checkpoint.cmd to restore
+this installed version. The restore verifies hashes, backs up replaced files,
+and does not touch saves. Keep the private runtime archive with this workspace;
+the Git bundle does not contain it, game collision caches, the ROM or dependencies.
+The original 0.7 and impact-feedback checkpoints remain intact.
+
+Full evidence scope: framework/docs/VALIDATION.md.

@@ -26,7 +26,7 @@ static void harnessEvent(const char* type,const char* fields=""){
 static void harnessStop(const char* why,bool restore=true){
  if(!harness.armed)return;char fields[200];snprintf(fields,sizeof(fields),",\"reason\":\"%s\"",why);harnessEvent("stopped",fields);
  harness.armed=false;harness.remaining=0;harness.buttons=0;harness.x=harness.y=0;testFrames=0;testButtons=0;testX=testY=0;harness.closedSession=harness.session;
- if(restore&&(enabled||interacting))releaseControl();
+ if(restore&&(characterOwned()||nativeActionOwned()))releaseControl();
  if(harness.events){fclose(harness.events);harness.events=nullptr;}
  logf("harness stopped session=%lu reason=%s",harness.session,why);
 }
@@ -36,7 +36,7 @@ static void harnessObserve(bool focus,bool padConnected){
  int hp=npc?read<int>(npc+0x2d4):-1,php=read<int>(player+0x2d4);auto native=nativeInteractionState();
  char fields[1500];
  snprintf(fields,sizeof(fields),",\"player_ref\":%u,\"target_ref\":%u,\"target_id\":%d,\"map\":%d,\"player_hp\":%d,\"target_hp\":%d,\"stamina\":%d,\"player_pos\":[%.5f,%.5f,%.5f],\"target_pos\":[%.5f,%.5f,%.5f],\"player_facing\":%.5f,\"target_facing\":%.5f,\"action\":%u,\"animation\":%d,\"animation_frame\":%d,\"focus\":%d,\"controller\":%d,\"menu\":%d,\"interaction\":%d,\"native_idle\":%d,\"active\":%d,\"frames_remaining\":%d,\"flags1\":%u,\"flags2\":%u",
- (unsigned)player,(unsigned)npc,harness.targetId,currentMap(),php,hp,read<int>(player+0x2e4),p.x,p.y,p.z,n.x,n.y,n.z,read<float>(posData+4),read<float>(np+4),state.rawAction,state.rawAnimation,state.rawAnimationFrame,focus,padConnected,native.menu,interacting||native.event||native.ladder,native.idle,enabled,harness.remaining,read<uint32_t>(player+0x1fc),read<uint32_t>(player+0x3c4));
+ (unsigned)player,(unsigned)npc,harness.targetId,currentMap(),php,hp,read<int>(player+0x2e4),p.x,p.y,p.z,n.x,n.y,n.z,read<float>(posData+4),read<float>(np+4),state.rawAction,state.rawAnimation,state.rawAnimationFrame,focus,padConnected,native.menu,nativeActionOwned()||native.event||native.ladder,native.idle,characterOwned(),harness.remaining,read<uint32_t>(player+0x1fc),read<uint32_t>(player+0x3c4));
  harnessEvent("observation",fields);
  if(npc==harness.targetRef&&harness.prevHP>=0&&hp>=0&&hp!=harness.prevHP){snprintf(fields,sizeof(fields),",\"target_id\":%d,\"before\":%d,\"after\":%d,\"damage\":%d",harness.targetId,harness.prevHP,hp,harness.prevHP-hp);harnessEvent(hp<harness.prevHP?"confirmed_target_hp_loss":"target_heal",fields);}
  if(harness.prevPlayerHP>=0&&php!=harness.prevPlayerHP){snprintf(fields,sizeof(fields),",\"before\":%d,\"after\":%d,\"damage\":%d",harness.prevPlayerHP,php,harness.prevPlayerHP-php);harnessEvent(php<harness.prevPlayerHP?"confirmed_player_hp_loss":"player_heal",fields);}
@@ -57,7 +57,7 @@ static void harnessTick(bool focus,bool padConnected){
   if(!harness.armed&&armed&&session&&session!=harness.closedSession&&DWORD(now-heartbeat)<2000){
    harness.session=session;harness.command=serial;harness.closedSession=session;
    if(!focus||!harnessIdentity()||!player||read<int>(player+0x2d4)<=0){logf("harness arm rejected: focus/identity/living-player guard");return;}
-   auto native=nativeInteractionState();if(!native.valid||native.menu||native.event||native.ladder||interacting){logf("harness arm rejected: native busy");return;}
+   auto native=nativeInteractionState();if(!native.valid||native.menu||native.event||native.ladder||nativeActionOwned()){logf("harness arm rejected: native busy");return;}
    harness.targetId=GetPrivateProfileIntA("Harness","Target",1810101,harness.config);uintptr_t target=harnessTarget();
    if(!target||read<int>(target+0x2d4)<=0){uintptr_t rr=read<uint32_t>(playerSlot),bb=read<uint32_t>(rr+4),ee=read<uint32_t>(rr+8);logf("harness arm rejected: target absent/dead id=%d target=%08x hp=%d slot=%08x root=%08x begin=%08x end=%08x",harness.targetId,(unsigned)target,read<int>(target+0x2d4),(unsigned)playerSlot,(unsigned)rr,(unsigned)bb,(unsigned)ee);if(bb&&ee>=bb&&ee-bb<=16384)for(uintptr_t at=bb;at<ee;at+=4){uintptr_t pp=read<uint32_t>(at);if(pp)logf("harness candidate ref=%08x id=%d hp=%d",(unsigned)pp,read<int>(pp+0x208),read<int>(pp+0x2d4));}return;}
    char path[MAX_PATH];snprintf(path,sizeof(path),"%s\\MarioSouls\\harness-events.jsonl",root);harness.events=fopen(path,"a");if(!harness.events){logf("harness arm rejected: cannot open report");return;}
@@ -72,13 +72,13 @@ static void harnessTick(bool focus,bool padConnected){
     harness.command=serial;int mode=GetPrivateProfileIntA("Harness","Mode",0,harness.config);
     harness.remaining=0;harness.buttons=0;harness.buttonDelay=0;harness.x=harness.y=0;
     if(mode==4){harnessStop("cancelled");return;}
-    if(mode==1){if(enabled||interacting)releaseControl();if(!activate()){harnessStop("unsafe_activation");return;}}
-    else if(mode==2){if(enabled||interacting)releaseControl();}
+    if(mode==1){if(characterOwned()||nativeActionOwned())releaseControl();if(!activate()){harnessStop("unsafe_activation");return;}}
+    else if(mode==2){if(characterOwned()||nativeActionOwned())releaseControl();}
     else if(mode==5){int height=GetPrivateProfileIntA("Harness","Frames",0,harness.config);if(!combatTestDrop(height)){harnessStop("invalid_test_drop");return;}}
     else if(mode==3){
      int frames=GetPrivateProfileIntA("Harness","Frames",0,harness.config),buttons=GetPrivateProfileIntA("Harness","Buttons",0,harness.config);char sx[40],sy[40];GetPrivateProfileStringA("Harness","X","0",sx,sizeof(sx),harness.config);GetPrivateProfileStringA("Harness","Y","0",sy,sizeof(sy),harness.config);float x=strtof(sx,nullptr),y=strtof(sy,nullptr);
      harness.buttonDelay=GetPrivateProfileIntA("Harness","ButtonDelay",0,harness.config);
-     if(!enabled||!HarnessPolicy::validInput(frames,buttons,x,y)||harness.buttonDelay<0||harness.buttonDelay>=frames){harnessStop("invalid_input_command");return;}
+     if(!characterOwned()||!HarnessPolicy::validInput(frames,buttons,x,y)||harness.buttonDelay<0||harness.buttonDelay>=frames){harnessStop("invalid_input_command");return;}
      harness.remaining=frames;harness.buttons=buttons;harness.x=x;harness.y=y;
     }else if(mode!=0){harnessStop("invalid_command");return;}
     char fields[200];snprintf(fields,sizeof(fields),",\"mode\":%d,\"frames\":%d,\"buttons\":%d,\"x\":%.4f,\"y\":%.4f",mode,harness.remaining,harness.buttons,harness.x,harness.y);harnessEvent("command_accepted",fields);
@@ -88,7 +88,7 @@ static void harnessTick(bool focus,bool padConnected){
  if(!harness.armed)return;
  if(!harnessIdentity()||!player||player!=harness.owner||!posData||!cam){harnessStop("character_map_or_loading_changed");return;}
  harnessObserve(focus,padConnected);
- auto native=nativeInteractionState();HarnessPolicy::State guard;guard.focus=focus;guard.alive=read<int>(player+0x2d4)>0;guard.target=harnessTarget()==harness.targetRef;guard.busy=!native.valid||native.menu||native.event||native.ladder||interacting;guard.controller=padConnected;guard.requireController=harness.requirePad;guard.now=now;guard.heartbeat=harness.heartbeat;guard.started=harness.started;
+ auto native=nativeInteractionState();HarnessPolicy::State guard;guard.focus=focus;guard.alive=read<int>(player+0x2d4)>0;guard.target=harnessTarget()==harness.targetRef;guard.busy=!native.valid||native.menu||native.event||native.ladder||nativeActionOwned();guard.controller=padConnected;guard.requireController=harness.requirePad;guard.now=now;guard.heartbeat=harness.heartbeat;guard.started=harness.started;
  if(auto why=HarnessPolicy::stopReason(guard)){
   // Native damage can land between the observation and the guard read.
   // Capture terminal HP before closing the journal on death.

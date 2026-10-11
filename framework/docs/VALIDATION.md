@@ -1,4 +1,68 @@
-# Framework 0.1 verification — 2026-10-11
+# Framework verification — 2026-10-11
+
+## Framework 0.2 movement ownership
+
+Final installed host and adapter were live-tested directly in PID 27264 on Mario
+QA, level 6, Asylum only. The runtime hashes are retained in
+`work/ownership-qa/validation.json` and the checkpoint manifest. No PE-timestamp
+normalization was used to substitute another build's evidence.
+
+- Full offline suite passes: five installer transactions, core combat, feedback,
+  controller/input routes, Mario adapter and independent generated adapter.
+  New motion tests cover single consumption, backpressure, stale requests,
+  ownership generations, finite bounds, tick counts at 30/60/120 render Hz,
+  input latching, velocity clipping, actor lifecycle and timed action return.
+- Adapter regressions verify collision correction without animation advancement,
+  coherent mesh translation after origin rebasing, and preservation of Mario's
+  committed stomp bounce across an acknowledgement with no contact normals.
+- Final binary: native quit/load released the old actor, retained the requested
+  character, and recreated Mario after the new native actor settled. No F6 or
+  activation command was sent after reloading. Observed new actor pointer and
+  `SESSION character resumed after stable native actor` in the log.
+- Before and after reload, ordinary jumps reached 2.42 m with no stamina cost;
+  punches cost 9 with the existing equipment penalty. Four native/Mario toggle
+  cycles preserved position and restored control. Bonfire rest healed native HP
+  to 594; Leave resumed the same instance and a subsequent jump worked.
+- A 75-tick push against the closed Asylum main door stopped at Z=-3.370 m.
+  A separate 75-tick push into hollow 1810101 retained at least 0.850 m horizontal
+  body separation. Enemy contact supplied velocity-clipping normals; idle
+  contact remained stable. Camera-reset setup matters: early attempts moved in
+  the previous camera direction and were not counted as door tests.
+- Final punch: native hollow HP 44 -> 0; one confirmed impact after 31 ms,
+  34 ms requested attacker pause, sound/flash, one stamina debit of 9. Native
+  duplicate action debit was suppressed. No damage or balance values changed.
+- Final incoming melee: a setup hit happened before activation; while Mario owned
+  locomotion, native HP 460 -> 380 and then 380 -> 292 each produced a hurt
+  transition and knockback, followed by idle. The second hit landed during the
+  retreat setup and is in the game log, outside the timed sample array. No HP,
+  protection, inventory, AI or save edits manufactured these results. All sampled
+  protection flags remained zero. Bonfire healing restored 594 afterward.
+- No rejected movement request, bridge timeout or adapter failure appeared in the
+  final log. Submission/acknowledgement count differences at ownership changes
+  are intentionally discarded outstanding work, not replayed motion.
+- The earlier candidate (PID 40448) also passed minimize/restore without movement
+  drift. That check was not repeated after the adapter rebase/bounce fixes.
+- Saved through the native quit menu and closed normally. Test transports are
+  disarmed in the checkpoint. Level-65 character was never loaded.
+
+Limits: this improves ownership and correction, not every engine incompatibility.
+The native position is sampled after consumption of a movement request; this is
+not a separate Havok post-solve hook. Static collision caches and short-lived
+native contact patches still need broader area coverage. The shared collider is
+still the native human body. Large characters need an explicit collider extension.
+No fresh death/respawn, other-map, ladder, dialogue, Estus, boss, projectile or
+object-break test is claimed. Controller absent; physical-controller testing was
+not repeated. Existing historical evidence below does not replace those checks.
+
+Local evidence: `work/ownership-qa/` snapshots, logs and test scripts;
+`work/framework-build/live-smoke.json`. Save backup:
+`work/checkpoints/saves-before-ownership-20261011-062358.zip`.
+Final install backup: `work/checkpoints/before-framework-20261011-063434-313087`.
+Pre-change installed impact build: `work/checkpoints/before-framework-20261011-062409-453544`.
+Checkpoint: `checkpoint-2026-10-11-framework-v0.2-ownership`.
+
+The following sections describe earlier versions.
+
 
 ## Impact feedback addition — 2026-10-11
 

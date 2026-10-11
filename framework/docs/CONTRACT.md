@@ -401,3 +401,21 @@ The host presents the observed native windup/release track with a normalized
 visual phase. This does not change native cast speed or interruption/recovery.
 Fireball is the initial live-test target; other pyromancies require additional
 presentation and gameplay coverage. Sorcery and miracle catalysts are not added.
+
+## Optional camera profile (framework 0.8.1)
+
+The separate `SoulsCharacterGetCameraProfile(version, size)` export returns a
+validated `SC_CameraProfile` (version 1). This leaves ABI4's existing structures
+unchanged. Missing export keeps the native camera. A profile may request a
+distance multiplier in [1,2]; adapters never write camera memory. The manifest's
+`camera.distance_scale` is emitted as `characterCameraProfile` for adapters that
+export this optional getter. Mario requests 1.5; other characters remain unchanged.
+
+The DS host applies this to the live LockCamParam camera distance, preserving
+native camera collision, interpolation, FOV and lock-on targeting. It snapshots
+each row, avoids cumulative multiplication, and restores only its own values
+when the character releases control. Directory position/ID/offset identify rows
+because the stock table contains duplicate ID 200. Replaced tables are not written
+through stale references. External edits revoke ownership of the affected value.
+`[Camera.<character-id>] DistanceScale` in mariosouls.ini overrides the default;
+1 restores native distance. Invalid overrides select 1. No param file is edited.

@@ -8,11 +8,16 @@
 #include <vector>
 #include "../sdk/character_api.h"
 #include "../core/validation.h"
+#include "../core/camera.h"
 static void log(const char*s){printf("adapter: %s\n",s);}
 int main(int argc,char**argv){
  if(argc<2)return 2;HMODULE dll=LoadLibraryA(argv[1]);if(!dll){printf("LoadLibrary failed %lu\n",GetLastError());return 3;}
  auto entry=(SC_GetAPI)GetProcAddress(dll,"SoulsCharacterGetAPI");assert(entry);assert(!entry(99,sizeof(SC_CharacterAPI)));assert(!entry(1,sizeof(SC_CharacterAPI)));assert(!entry(SC_ABI_VERSION,0));
  const auto*a=entry(SC_ABI_VERSION,sizeof(SC_CharacterAPI));assert(SC::api(a));const auto*d=a->describe();assert(SC::descriptor(d));
+ if(auto camera=(SC_GetCameraProfile)GetProcAddress(dll,"SoulsCharacterGetCameraProfile")){
+  assert(!camera(99,sizeof(SC_CameraProfile)));assert(!camera(SC_CAMERA_PROFILE_VERSION,0));
+  assert(SCCamera::valid(camera(SC_CAMERA_PROFILE_VERSION,sizeof(SC_CameraProfile))));
+ }
  std::vector<uint8_t> atlas(d->textureWidth*d->textureHeight*4);
  SC_Init init={sizeof(SC_Init),argc>2?argv[2]:"",argc>3?argv[3]:"",log};SC_Texture tex={atlas.data(),uint32_t(atlas.size())};
  assert(a->initialize(&init,&tex));assert(!a->initialize(&init,&tex));

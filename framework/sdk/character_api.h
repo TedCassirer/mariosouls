@@ -154,6 +154,13 @@ typedef struct SC_CharacterAPI {
 } SC_CharacterAPI;
 typedef const SC_CharacterAPI *(*SC_GetAPI)(uint32_t hostAbi,uint32_t hostApiSize);
 
+/* Optional independent export: SoulsCharacterGetCameraProfile(version, size).
+ * Does not change ABI4 layouts. Missing export keeps the host camera unchanged.
+ * The host owns camera collision, targets, timing and restoration. */
+#define SC_CAMERA_PROFILE_VERSION 1u
+typedef struct SC_CameraProfile { uint32_t size,version; float distanceScale; } SC_CameraProfile;
+typedef const SC_CameraProfile *(*SC_GetCameraProfile)(uint32_t version,uint32_t size);
+
 #ifdef __cplusplus
 }
 #endif

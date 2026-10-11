@@ -1,0 +1,23 @@
+Mario camera - framework 0.8.1
+
+Installed default: 50% farther away while Mario mode is active.
+The usual 4-metre camera distance becomes 6 metres in open space.
+Walls and native camera constraints can still pull it closer.
+Turning Mario off restores the original camera distances.
+
+Adjust in the game's DATA/mariosouls.ini:
+
+[Camera.mario64]
+DistanceScale=1.5
+
+Use 1 for the original distance, 1.25 for 25% farther, or 1.5 for the installed
+setting. Supported range: 1 to 2. Changes are read while the game runs.
+This changes camera distance, not field of view or Mario's model size.
+
+Tested with Mario QA in the courtyard and a confined lock-on view. All 38 native
+camera-distance values restored correctly when switching Mario off. The level-65
+character was never loaded. Fire Flower and other gameplay remain in this build.
+
+Checkpoint: checkpoint-2026-10-11-wide-camera.
+Close the game normally, then run Restore wide camera checkpoint.cmd to restore
+this local build. Saves are not included or changed by the restore.

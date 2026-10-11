@@ -1,4 +1,10 @@
-# Souls Character Framework 0.8.0
+# Souls Character Framework 0.8.1
+
+Mario's camera is now 50% farther away while his mode is active. The shared host
+preserves native camera collision and restores native distance on handback.
+Override `DistanceScale=1.5` under `[Camera.mario64]` in mariosouls.ini; 1 restores
+the original distance. The optional camera-profile export keeps ABI4 compatible
+and lets future adapters opt in without host character switches.
 
 Fire Flower follow-up: selecting a Pyromancy Flame in either hand gives Mario
 a procedural flower, white hat/shirt and red overalls. With Fireball attuned,

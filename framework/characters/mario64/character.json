@@ -2,6 +2,7 @@
   "schema": 1,
   "id": "mario64",
   "display_name": "Mario 64",
+  "camera": {"distance_scale": 1.5},
   "status": "implemented",
   "source": "adapter.cpp",
   "max_triangles": 1536,

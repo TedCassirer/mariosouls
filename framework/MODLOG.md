@@ -121,3 +121,13 @@ were backed up first. Native HP loss and death occurred during an early hostile
 test setup; that interrupted cast is not counted as a pass. Three-metre rear
 placement produced a native baseline kill and matching Mario kills from each hand.
 See docs/VALIDATION.md for evidence, final-build checks and limits.
+
+## Wider camera, framework0.8.1
+
+Added optional SDK camera-profile export; Mario's manifest requests1.5 distance.
+The host scales the38 live LockCamParam distance fields only while a character
+owns the session, with exact compare-and-restore and stale-directory checks.
+Native camera interpolation, wall collision and lock-on remain in charge.
+Observed courtyard framing moved4m to approximately6m; confined lock-on retained
+native proximity constraints. All38 fields restored on toggle-off. Configuration
+is `[Camera.mario64] DistanceScale`, range1..2. See validation for measured scope.

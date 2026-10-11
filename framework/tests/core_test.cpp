@@ -1,10 +1,18 @@
 #undef NDEBUG
 #include "../core/combat.h"
 #include "../core/validation.h"
+#include "../core/camera.h"
 #include <cassert>
 #include <cstdio>
 #include <limits>
 int main(){
+ SC_CameraProfile camera={sizeof(camera),SC_CAMERA_PROFILE_VERSION,1.5f};assert(SCCamera::valid(&camera));
+ camera.distanceScale=NAN;assert(!SCCamera::valid(&camera));camera.distanceScale=3;assert(!SCCamera::valid(&camera));
+ SCCamera::Distance distance(4);float target=0;assert(distance.next(4,1.5f,target)&&target==6);distance.written(target);
+ for(int i=0;i<300;i++){assert(distance.next(6,1.5f,target)&&target==6);distance.written(target);}
+ assert(distance.next(6,1.25f,target)&&target==5);distance.written(target);assert(distance.restore(5,target)&&target==4);
+ assert(!distance.next(7,1.5f,target));assert(!distance.restore(7,target));
+ puts("PASS camera: profile bounds, no accumulated zoom, configuration change, exact restore, external edit conflict");
  SC_Descriptor d{};d.size=sizeof(d);d.abiVersion=SC_ABI_VERSION;strcpy(d.id,"test_actor");strcpy(d.displayName,"Synthetic test actor");d.maxTriangles=12;d.textureWidth=d.textureHeight=1;d.attackCount=3;d.automaticAttackId=2;d.basePower=100;d.upgradePower=10;d.dexterityWeight=.5f;
  for(int i=0;i<3;i++){auto&a=d.attacks[i];sprintf(a.name,"move%d",i);a.multiplier=1;a.staminaCost=8;a.activeTicks=10;a.maxTargets=2;a.rangeCm=100;a.minHeightCm=-100;a.maxHeightCm=100;}
  d.attacks[2].flags=SC_ATTACK_AUTOMATIC;d.attacks[2].automaticRadiusCm=50;d.attacks[2].automaticMinHeightCm=-170;d.attacks[2].automaticMaxHeightCm=-35;

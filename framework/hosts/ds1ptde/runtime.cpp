@@ -136,6 +136,7 @@ static DamageFn nativeDamage=nullptr;
 #include "native_combat.h"
 static Vec cameraEye(){return read<Vec>(cam+0x40);}
 static Vec cameraForward(){return read<Vec>(cam+0x30);}
+#include "camera.h"
 
 static int currentMap(){uintptr_t p=read<uint32_t>(mapSlot);if(!p)return -1;int world=read<uint8_t>(p+0xa13),area=read<uint8_t>(p+0xa12);return world>=10&&world<=18&&area<=3?world*100+area:-1;}
 #include "arena_floor.h"
@@ -153,6 +154,7 @@ static void rebuildSurfaces(){
 }
 #include "loader.h"
 static void releaseControl(bool preserveRequest=false){
+ cameraRelease();
  nativeReaction=false;nativeReactionIncomingUntil=0;equipmentActionOwned=false;
  characterSession.request(preserveRequest&&characterSession.requested());
  visibilityRelease();bodyRelease();worldRelease();characterClock.clear();characterInput.clear();pendingNativeHurt=0;
@@ -223,6 +225,7 @@ static void update(){
  }
  if(characterSession.death()&&read<int>(player+0x2d4)>0){logf("Death presentation complete: native respawn");releaseControl(true);acc=0;}
  if((focus&&pressed(VK_F6))||padToggle){if(characterOwned()||characterSession.requested()){characterSession.request(false);releaseControl();}else{characterSession.request(true);if(!activate())characterSession.failed(inputTime);}}
+ cameraTick();
  if(characterSession.death()){deathTick(acc,pad.slot);return;}
  if(!characterOwned()&&characterSession.requested()){
   bool safe=focus&&identity.valid()&&cam&&read<int>(player+0x2d4)>0;

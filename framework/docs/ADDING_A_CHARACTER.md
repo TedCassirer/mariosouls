@@ -148,3 +148,14 @@ if desired, but remove it when the native equipment snapshot becomes empty.
 Test both hands, mixed melee/caster equipment, recovery, rejected/empty casts,
 palette restoration and bounded mesh capacity. The host owns native spell
 selection, charges, projectiles and damage. Do not add a second spell inventory.
+
+### Optional camera distance
+
+Set `camera: {"distance_scale": 1.5}` in the character manifest, then export
+`SoulsCharacterGetCameraProfile(uint32_t version, uint32_t size)` returning
+`&characterCameraProfile` only for `SC_CAMERA_PROFILE_VERSION` and the exact
+`sizeof(SC_CameraProfile)`. The generated constant contains the manifest policy.
+Omitting this export preserves the native camera. Acceptable scale is 1..2.
+The host owns native parameter validation, collision and restoration. Verify
+normal/character/normal transitions and confined-space behavior in the game;
+an offline profile check alone does not prove the camera moved correctly.

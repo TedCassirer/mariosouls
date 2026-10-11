@@ -1,3 +1,37 @@
+# Wider character camera (2026-10-11)
+
+Framework0.8.1 adds an optional camera-profile export without changing ABI4.
+Mario requests a1.5 distance multiplier. Host changes only live camera distance
+parameters; no FOV or view-matrix patch, game param file edit, guest movement
+change or character-specific host branch.
+
+Owned executable observation identified repo slot31, LOCK_CAM_PARAM_ST,
+38 rows, distance at+0. Stock has two ID200 entries; directory index/ID/offset
+are checked instead of relying on unique row IDs. The local Soulstruct
+LOCK_CAM_PARAM_ST schema independently describes camDistTarget in metres.
+
+Live Mario QA checks (level13, Asylum, current user control handoff):
+- Courtyard: measured native camera-to-target4.000m; Mario5.976m after the
+  native interpolation interval; handback4.026m while settling toward4.
+- Every one of38 rows was exactly1.5 times baseline during Mario mode and
+  restored byte-exact float values after handback, with no accumulated zoom.
+- Confined cell/lock-on view: native4.000m, Mario4.087m despite requested6m;
+  native scene constraints still brought the camera closer. Screenshots were
+  inspected for framing and retained lock-on. This is not an all-map camera test.
+- No damage, inventory or stat edits. The level65 character was never loaded.
+- Live override1->1.5 changed row0 from4m to6m while Mario remained active;
+  the native camera eased outward. Recorded work/camera-qa/demo and inspected
+  its contact sheet. Final setting1.5, normal save/quit, verified92-file runtime
+  checkpoint: checkpoints/framework-wide-camera.json. Earlier checkpoints remain
+  immutable. The installed build is the exact build used for these live checks.
+
+Offline tests cover profile version/size/bounds, repeated updates without
+compounding, setting changes, exact restoration, and external-edit conflicts.
+The real DLL export rejects incompatible version/size. The full framework
+suite passed, including existing combat, input, movement, death and equipment.
+Evidence: work/camera-qa/before.json, open/trace.json and confined/trace.json,
+with native/character/restored screenshots. camera_smoke.py repeats these checks.
+
 # Fire Flower and native Fireball (2026-10-11)
 
 Framework 0.8.0, optional pyromancy capability on ABI4. Tested only on Mario QA,

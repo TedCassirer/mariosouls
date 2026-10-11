@@ -64,7 +64,7 @@ static int renderMode=1;
 static int depthTest=1,testFrames=0,testButtons=0,graphFrames=0;
 static bool combatEnabled=false;
 static float testX=0,testY=0;
-static bool ready=false,showCharacter=true,nativeReaction=false;
+static bool ready=false,showCharacter=true,nativeReaction=false,equipmentActionOwned=false;
 static DWORD nativeReactionIncomingUntil=0;
 static SCSession::Session characterSession;
 static SCMotion::Clock characterClock;
@@ -153,7 +153,7 @@ static void rebuildSurfaces(){
 }
 #include "loader.h"
 static void releaseControl(bool preserveRequest=false){
- nativeReaction=false;nativeReactionIncomingUntil=0;
+ nativeReaction=false;nativeReactionIncomingUntil=0;equipmentActionOwned=false;
  characterSession.request(preserveRequest&&characterSession.requested());
  visibilityRelease();bodyRelease();worldRelease();characterClock.clear();characterInput.clear();pendingNativeHurt=0;
  combatReset();
@@ -203,6 +203,7 @@ static bool lineClear(Vec a,Vec b){
 #include "equipment.h"
 #include "qa_arsenal.h"
 #include "native_reaction.h"
+#include "equipment_actions.h"
 #include "death.h"
 #include "debug_view.h"
 static void update(){
@@ -236,7 +237,7 @@ static void update(){
  bool interactPressed=focus&&previousActionFocus&&(padInteract||qPressed),itemPressed=focus&&previousActionFocus&&(padItem||ePressed);
  previousInteract=yDown;previousItem=xDown;previousActionFocus=focus;previousActionSlot=pad.slot;
  if(!focus){actionCancelPulse();equipmentReset();}
- if(characterOwned()&&!nativeActionOwned()){
+ if(characterOwned()&&!nativeActionOwned()&&!equipmentActionOwned){
   auto native=nativeInteractionState();if(native.valid&&(native.menu||native.ladder||native.event))beginInteraction(pad.slot,false);
  }
  static SCContext::Button contextA;
@@ -257,6 +258,7 @@ static void update(){
  if(!characterOwned()){acc=0;return;}
  if(arenaRefresh())rebuildSurfaces();
  if(focus&&pressed(VK_F7)){releaseControl();if(!activate())return;}
+ if(equipmentActionsTick(acc,focus))return;
  if(nativeReactionTick(acc,focus))return;
  worldPause(!focus);
  Vec host=read<Vec>(posData+0x10),expected=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;if(dot(host-expected,host-expected)>64){logf("native warp/load detected");releaseControl(true);return;}
@@ -268,6 +270,11 @@ static void update(){
  if(resolvedTick&&!pendingNativeHurt){if(!combatEnvironment())return;combat();combatObjects();equipmentContact();feedbackPoll();}
  SC_Input input={};Vec look=cameraForward();input.camLookX=look.x;input.camLookZ=look.z;
  if(focus){input.moveX=((GetAsyncKeyState('D')&0x8000)?1.f:0)-((GetAsyncKeyState('A')&0x8000)?1.f:0);input.moveY=((GetAsyncKeyState('W')&0x8000)?1.f:0)-((GetAsyncKeyState('S')&0x8000)?1.f:0);if(input.moveX==0&&input.moveY==0){input.moveX=controller.x;input.moveY=controller.y;}float n=sqrtf(input.moveX*input.moveX+input.moveY*input.moveY);if(n>1){input.moveX/=n;input.moveY/=n;}input.jump=controller.jump||!!(GetAsyncKeyState(VK_SPACE)&0x8000);input.attack=controller.attack||!!(GetAsyncKeyState(VK_LBUTTON)&0x8000);input.crouch=controller.crouch||!!(GetAsyncKeyState(VK_CONTROL)&0x8000);input.guard=controller.guard||(actionKeyboardGuardReady&&!!(GetAsyncKeyState(VK_RBUTTON)&0x8000));}
+ SC_Input specialInput=input;
+ if(testFrames>0){specialInput.attack=!!(testButtons&2);specialInput.guard=!!(testButtons&8);specialInput.jump=!!(testButtons&1);specialInput.crouch=!!(testButtons&4);}
+ bool parry=focus&&((pad.connected&&pad.pad.bRightTrigger>XINPUT_GAMEPAD_TRIGGER_THRESHOLD)||!!(GetAsyncKeyState(VK_TAB)&0x8000)||(testFrames>0&&(testButtons&16)));
+ if(equipmentActionsInput(specialInput,parry,focus,pad.slot)){acc=1./SC_FIXED_HZ;equipmentActionsTick(acc,focus);return;}
+ if(equipmentActionButtons.suppressAttack())input.attack=0;
  static int lastPadInput=-1;static DWORD padLogTime=0;int padInput=(fabsf(controller.x)+fabsf(controller.y)>.01f?8:0)|(controller.jump?1:0)|(controller.attack?2:0)|(controller.crouch?4:0);if(padInput!=lastPadInput&&DWORD(inputTime-padLogTime)>=100){logf("controller input stick=%.2f %.2f buttons=%d%d%d",controller.x,controller.y,controller.jump,controller.attack,controller.crouch);lastPadInput=padInput;padLogTime=inputTime;}
  // Capture short taps even on render frames without a simulation tick. Consume
  // paused time instead of accumulating a catch-up burst. The host keeps running.
@@ -275,7 +282,7 @@ static void update(){
  if(!focus){characterInput.clear();characterClock.clear();testFrames=0;}
  else if(SCFeedback::pending(feedbackPause.until,GetTickCount())){feedbackPause.filter(input,GetTickCount());characterClock.clear();pumpAudio();}
  else if(characterClock.take(worldReady())){
-  input=characterInput.take(GetTickCount());if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);input.guard=!!(testButtons&8);--testFrames;}harnessInput(input);feedbackPause.filter(input,GetTickCount());combatInput(input);equipmentInput(input);uint32_t old=state.rawAction;
+  input=characterInput.take(GetTickCount());if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);input.guard=!!(testButtons&8);--testFrames;}harnessInput(input);if(equipmentActionButtons.suppressAttack())input.attack=0;feedbackPause.filter(input,GetTickCount());combatInput(input);equipmentInput(input);uint32_t old=state.rawAction;
   guest->nativeDamage(character,pendingNativeHurt);pendingNativeHurt=0;
   if(!guestStep(character,&input,&state,&geo)){logf("Adapter frame rejected; restoring native controls");releaseControl();return;}stepped=true;harnessAfterStep(old,input);pumpAudio();
   if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);

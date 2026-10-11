@@ -1,3 +1,23 @@
+# Native equipment parry and critical ownership, 2026-10-11
+
+Framework 0.7.0: optional SDK native_combat capability, native combat pose and
+equipment action kinds. Shared core policies handle fresh input and observed
+native completion. PTDE owns routing, native animation tracking, root following,
+eligibility hints and lifecycle cleanup. Mario's adapter owns all authored
+shield/critical geometry; no character-specific branch was added to the host.
+
+RT/Tab requests shield parry. Normal attack behind an enemy or facing an actually
+parried target requests native critical eligibility; guard+attack is an explicit
+attempt. Native DS resolves the result. No guest damage or stamina writes run
+during this ownership. Focus loss cancels queued input; native busy actions are
+not truncated by a timeout. Menus, death, actor/map loss and held buttons retain
+their lifecycle guards. Unsupported gear fails closed.
+
+Replaced binary search of native parameter row directories with validated index
+caching because owned live data is not globally sorted. Expanded offline tests,
+SDK/adapter docs, and guarded QA capture helpers. See docs/VALIDATION.md for actual
+native HP, stamina, soul and animation measurements and remaining limitations.
+
 # Death presentation, 2026-10-11
 
 Baseline c64a462 / immutable contextual-A checkpoint. The immediate HP<=0

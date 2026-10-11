@@ -246,10 +246,11 @@ it contains no character-ID branches. See DEBUG_VIEW.md for view semantics and l
 
 ## Equipped melee and guard (ABI 4)
 
-PTDE 0.6 supports one-handed straight swords, daggers, curved swords, greatswords,
+PTDE 0.7 supports one-handed straight swords, daggers, curved swords, greatswords,
 axes, and hammers/maces, plus left-hand small/medium shields. This is two ground
-light attacks and held guard, not native heavy attacks, parry, two-handed moves,
-critical attacks or a complete weapon animation port. Flexible Gargoyle Tail Axe
+light attacks and held guard, plus optional native parry/critical presentation.
+Native heavy attacks, two-handed moves and a complete animation port remain out
+of scope. Flexible Gargoyle Tail Axe
 model 509 is excluded. Other weapon families and temporary weapon-buff parity
 remain outside the verified scope. Mario supplies the first fitted adapter.
 
@@ -346,3 +347,31 @@ follows native displacement using `SC_POSE_STAGGER`, cancels equipment work and
 waits for the verified native active-action flag to recover. Adapters fit that
 pose to their own hurt animation; it is not a guest physics tick. No attack input
 or residual guest velocity is submitted during the native reaction.
+
+
+## Native parry and critical ownership (optional ABI4 extension)
+
+`SC_CAP_NATIVE_COMBAT` (128, manifest `native_combat`) requires equipment support.
+No struct layouts change. `SC_EquipmentPose.swing` additionally accepts
+`SC_EQUIPMENT_BACKSTAB` (3), `SC_EQUIPMENT_RIPOSTE` (4), and
+`SC_EQUIPMENT_PARRY` (5). `SC_POSE_NATIVE_COMBAT` preserves the most recent
+equipment presentation, returns matching attachment matrices, follows the
+supplied host root/yaw, and reports no attack/interaction/locomotion eligibility.
+An adapter must not run its guest attack simulation during these poses.
+
+The PTDE host sends a bounded native LT/parry or RB/light-attack pulse, observes
+native animation layers, and locks guest locomotion until native recovery.
+Nearby rear targets, observed parried targets, and guard+attack are input-routing
+hints only: the game's native evaluator must approve the throw. An ineligible
+critical attempt can become an ordinary native light swing. There is no extra
+framework damage or stamina debit during this ownership interval. Death, actor
+change, menu takeover and invalid state clear or transfer ownership; focus loss
+cancels queued input, and return requires native idle plus focused quiet time.
+Held attacks cannot spill into an extra guest swing afterward.
+
+Mario supplies authored critical thrust/chop keys and an outward shield sweep.
+Presentation reads elapsed native track time; its normalized visual schedule is
+an approximation and does not alter native hit frames. It is not native skeleton
+retargeting. Native contact volumes remain native during these sequences.
+The first supported scope is one-handed fitted melee weapons and small/medium
+parrying shields; unarmed Mario attacks retain the independent guest moveset.

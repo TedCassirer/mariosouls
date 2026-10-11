@@ -17,7 +17,7 @@ static void actionFlags(bool nativeMotion){
  put(player+0x3c4,(f2&~0x300u)|(savedFlags2&0x300u)|(allowAction?0:0x100u));
 }
 static bool actionEligible(int kind){
- if(!characterOwned()||nativeActionOwned()||nativeReaction||character<0||!actionInputReady||actionPending())return false;
+ if(!characterOwned()||nativeActionOwned()||nativeReaction||equipmentActionOwned||character<0||!actionInputReady||actionPending())return false;
  auto o=nativeInteractionState();
  if(!o.valid||!o.grounded||!(state.flags&SC_CAN_INTERACT)||!o.idle||o.menu||o.event||o.ladder)return false;
  return kind!=1||read<uint32_t>(read<uint32_t>(0x13786d0)+0x58)!=0;

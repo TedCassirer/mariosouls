@@ -174,7 +174,7 @@ static void flask(SC_Mesh&mesh){
 }
 static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
     if(id!=active||id<0||!p||!out)return 0;SM64MarioGeometryBuffers g;if(!geometry(mesh,g))return 0;
-    clearEquipment(id);
+    if(p->kind!=SC_POSE_NATIVE_COMBAT)clearEquipment(id);
     int anim=0xc3,style=0;float phase=-1;
     switch(p->kind){
         case SC_POSE_CLIMB:anim=5;style=2;phase=p->travelCm*.9f;break;
@@ -188,7 +188,8 @@ static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
     }
     libPose(id,p->position[0],p->position[1],p->position[2],p->yaw,anim,phase,style,&raw,&g);
     mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);
-    if(p->kind==SC_POSE_DEATH){out->flags=0;out->attackId=out->interruptedAttackId=-1;out->landingRecoveryTicks=0;}
+    if(p->kind==SC_POSE_NATIVE_COMBAT)captureEquipment(id);
+    if(p->kind==SC_POSE_DEATH||p->kind==SC_POSE_NATIVE_COMBAT){out->flags=0;out->attackId=out->interruptedAttackId=-1;out->landingRecoveryTicks=0;}
     if(p->kind==SC_POSE_DRINK&&p->phase>.02f)flask(*mesh);
     return 1;
 }
@@ -225,7 +226,7 @@ static uint32_t resolveMotion(int32_t id,const SC_MotionResolution*r,SC_State*ou
     for(int k=0;k<3;k++){out->position[k]=raw.position[k];out->velocity[k]=raw.velocity[k]*SC_FIXED_HZ;}out->forwardSpeed=raw.forwardVelocity*SC_FIXED_HZ;return 1;
 }
 static uint32_t equipment(int32_t id,const SC_EquipmentPose*p){
-    if(id!=active||id<0||!p||p->size!=sizeof(*p)||(p->rightKind!=SC_EQUIPMENT_NONE&&p->rightKind!=SC_EQUIPMENT_SWORD&&(p->rightKind<SC_EQUIPMENT_DAGGER||p->rightKind>SC_EQUIPMENT_HAMMER))||(p->leftKind!=SC_EQUIPMENT_NONE&&p->leftKind!=SC_EQUIPMENT_SHIELD)||p->swing>2||!std::isfinite(p->swingPhase)||!std::isfinite(p->guard)||p->swingPhase<0||p->swingPhase>1||p->guard<0||p->guard>1)return 0;
+    if(id!=active||id<0||!p||p->size!=sizeof(*p)||(p->rightKind!=SC_EQUIPMENT_NONE&&p->rightKind!=SC_EQUIPMENT_SWORD&&(p->rightKind<SC_EQUIPMENT_DAGGER||p->rightKind>SC_EQUIPMENT_HAMMER))||(p->leftKind!=SC_EQUIPMENT_NONE&&p->leftKind!=SC_EQUIPMENT_SHIELD)||p->swing>SC_EQUIPMENT_PARRY||!std::isfinite(p->swingPhase)||!std::isfinite(p->guard)||p->swingPhase<0||p->swingPhase>1||p->guard<0||p->guard>1)return 0;
     if(!libEquipment(id,p->rightKind,p->leftKind,p->swing,p->swingPhase,p->guard))return 0;
     if(p->rightKind!=equipmentPose.rightKind||p->leftKind!=equipmentPose.leftKind||(!p->rightKind&&!p->leftKind))equipmentHands={sizeof(SC_Attachments)};
     equipmentPose=*p;return 1;

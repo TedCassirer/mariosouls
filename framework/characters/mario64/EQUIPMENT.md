@@ -55,3 +55,22 @@ The SDK fixture exports both swings for all six families at the host's actual
 the returned mesh and glove matrices, including weapon props at the same model
 scale. Dumps contain owned-ROM geometry and stay private, outside Git. These
 previews establish visual behavior, not native damage or live-game performance.
+
+
+## Parries and criticals
+
+Mario opts into the shared `native_combat` capability. RT on a controller or Tab
+on a keyboard requests the equipped shield's native parry. LT remains Mario's
+crouch/ground-pound input. With a supported one-handed weapon, B/RB/left-click
+requests a native backstab behind a nearby enemy, or a riposte in front of an
+enemy in its native parried reaction. Step closer after parrying if the enemy
+recoils out of reach. Guard+attack also explicitly requests a native critical
+attempt. Native rules decide whether it succeeds; an invalid opportunity may
+produce an ordinary native weapon swing.
+
+The model stays Mario. Native combat poses keep the equipment sockets and render
+original authored critical thrusts/chops and a shield sweep. Damage, stamina,
+protection and enemy animation stay native; guest attack contacts are suspended.
+Visual timing follows the native track clock with an approximate normalized
+schedule. Unsupported shield/weapon families, two-handing and unarmed criticals
+are not implemented by this extension.

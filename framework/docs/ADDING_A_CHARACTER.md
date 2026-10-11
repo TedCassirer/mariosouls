@@ -127,3 +127,15 @@ on that capability, leaving equipment-only adapters compatible. Preparing all su
 of in-game behavior for every item. Validate real hits, misses, stamina exhaustion,
 front/rear shield impacts, guard breaks, equipment changes and native interactions
 on the dedicated test save, and document unverified cases explicitly.
+
+
+To opt into parry and critical presentation, advertise `native_combat` together
+with `equipment`. Implement all three special equipment action values and
+`SC_POSE_NATIVE_COMBAT` without clearing the equipment layer. Render the supplied
+root/yaw, return sockets from that same frame, and clear all guest attack and
+input-eligibility flags. Support a shield parry even when the right hand is empty.
+The host handles input routing, native throw eligibility, stamina and damage;
+never write host memory or infer a successful critical from proximity. Exercise
+both accepted throws and rejected attempts, interrupted parries, held-input
+release, menu/focus boundaries and native death. Adapters without the capability
+continue using the existing optional equipment path.

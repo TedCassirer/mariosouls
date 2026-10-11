@@ -21,6 +21,7 @@ extern "C" {
 #define SC_CAP_EQUIPMENT 16u
 #define SC_CAP_DEATH_POSE 32u
 #define SC_CAP_MELEE_FAMILIES 64u
+#define SC_CAP_NATIVE_COMBAT 128u
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u
@@ -87,7 +88,7 @@ typedef struct SC_Init {
 } SC_Init;
 enum SC_PoseKind { SC_POSE_NEUTRAL, SC_POSE_CLIMB, SC_POSE_DRINK, SC_POSE_REST,
     SC_POSE_DOOR, SC_POSE_WALK, SC_POSE_DOWNED, SC_POSE_TALK, SC_POSE_STAGGER,
-    SC_POSE_DEATH };
+    SC_POSE_DEATH, SC_POSE_NATIVE_COMBAT };
 typedef struct SC_Pose {
     uint32_t kind;
     float position[3], yaw, phase, travelCm;
@@ -110,6 +111,10 @@ typedef struct SC_MotionResolution {
 enum SC_EquipmentKind { SC_EQUIPMENT_NONE, SC_EQUIPMENT_SWORD, SC_EQUIPMENT_SHIELD,
     SC_EQUIPMENT_DAGGER, SC_EQUIPMENT_CURVED_SWORD, SC_EQUIPMENT_GREATSWORD,
     SC_EQUIPMENT_AXE, SC_EQUIPMENT_HAMMER };
+/* Special values require SC_CAP_NATIVE_COMBAT. Native combat posing preserves
+ * the equipment layer; the adapter never performs damage or locomotion. */
+enum SC_EquipmentAction { SC_EQUIPMENT_READY, SC_EQUIPMENT_LIGHT_1, SC_EQUIPMENT_LIGHT_2,
+    SC_EQUIPMENT_BACKSTAB, SC_EQUIPMENT_RIPOSTE, SC_EQUIPMENT_PARRY };
 typedef struct SC_EquipmentPose {
     uint32_t size, rightKind, leftKind, swing;
     float swingPhase, guard;

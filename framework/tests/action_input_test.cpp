@@ -23,6 +23,8 @@ template<class T> static bool get(uintptr_t address,T& value){
   case 0x10002c:scalar=0x110000;break;
   case 0x110000:scalar=0x116bb5c;break;
   case 0x110050:scalar=testGuardBinding;break;
+  case 0x110048:scalar='H';break;
+  case 0x110054:scalar=VK_TAB;break;
   default:return false;
  }
  memcpy(&value,&scalar,sizeof(scalar));return true;
@@ -62,4 +64,12 @@ int main(){
  testInputAvailable=true;testGuardBinding=0x40000;actionDeviceState(nullptr,256,k);assert(k[DIK_LSHIFT]==0x80&&actionKeyboardGuardReady);
  testGuardBinding=0x400000;actionDeviceState(nullptr,256,k);assert(k[DIK_LSHIFT]==0&&!actionKeyboardGuardReady);
  puts("PASS: all six native modifiers, combined binding, runtime option changes, missing config, unsupported binding fail closed");
+ testGuardBinding=0x40000;equipmentGuardInput=0;actionRoute=LONG(ActionRoute::Locked);
+ actionQueue(3,GetTickCount(),true);p={};actionFilterPad(p);assert(p.bLeftTrigger==255&&!p.bRightTrigger&&!p.wButtons);
+ memset(k,0,sizeof(k));actionDeviceState(nullptr,256,k);assert(!k[DIK_TAB]);
+ actionQueue(4,GetTickCount(),true);p={};actionFilterPad(p);assert(p.wButtons==XINPUT_GAMEPAD_RIGHT_SHOULDER&&!p.bLeftTrigger);
+ actionQueue(3,GetTickCount(),false);memset(k,0,sizeof(k));actionDeviceState(nullptr,256,k);assert(k[DIK_TAB]==0x80&&!k[DIK_H]&&!k[DIK_E]);
+ actionQueue(4,GetTickCount(),false);actionDeviceState(nullptr,256,k);assert(k[DIK_H]==0x80&&!k[DIK_TAB]&&!k[DIK_E]);
+ actionCancelPulse();actionDeviceState(nullptr,256,k);assert(!k[DIK_H]&&!k[DIK_TAB]);
+ puts("PASS: source-specific native parry/light attack pulses, no item/guard leakage and complete release");
 }

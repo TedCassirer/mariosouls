@@ -1,3 +1,64 @@
+# Native parry and critical attacks (2026-10-11)
+
+Framework 0.7.0 adds an optional native_combat capability without changing ABI4
+structure layouts. The host submits a bounded native parry/light-attack input,
+observes the actual animation lane and clock, and suspends guest attacks and
+movement until native recovery. Mario retains his mesh, hand props and authored
+shield sweep / thrust / chop. Native eligibility, damage, stamina, paired enemy
+animation, invulnerability, deaths and rewards remain authoritative.
+
+Live tests used only Mario QA on the owned PTDE executable. Saves were backed up
+before testing. The user-authorized six-weapon kit was granted through native
+acquisition, and only Mario QA was raised to the exact level-13 fixture
+(STR16/DEX13, other stats11). The user's level-65 character was never loaded.
+
+Final installed-build evidence:
+- Plank Shield parry: player lane22 animation485100; enemy lane25 animation2100.
+  HP stayed594. Stamina93->79 (14). The same Mario instance resumed.
+- Longsword riposte: player lane28 animation233201; enemy lane28 animation2510.
+  Target HP69->0, native displayed damage180, stamina93->73 (20), HP594 unchanged.
+  Souls236->260 (+24). The paired action completed before same-instance return.
+- Longsword backstab: player lane28 animation233400; enemy lane28 animation2500.
+  Target HP69->0, native displayed damage136, stamina93->73 (20), HP594 unchanged.
+  Souls260->284 (+24). Native recovery completed and Mario resumed.
+- Earlier Straight Sword Hilt backstab: target69->63 (6 actual HP), stamina20.
+- Failed parry attempts took real incoming damage; parrying is not automatic
+  protection. Earlier tests also exercised an ineligible critical attempt that
+  resolved as a native ordinary swing instead of fabricating a critical.
+- After final backstab, Mario jumped2.42m and performed an ordinary weapon swing.
+  Bonfire rest/leave reset enemies and healed through the native game between runs.
+- No no-damage/no-dead/no-stamina/global no-hit flags were enabled in the traces.
+
+Native riposte uses32xx on lane28, unlike backstab34xx. A preliminary capture
+correctly damaged the enemy but selected the ordinary swing pose; the final
+build corrects this and logs kind4 for riposte / kind3 for backstab. Native
+sequence lengths vary; the current visual curve is approximate and can return
+to its ready pose before the native recovery ends. It never shortens recovery.
+Critical camera and enemy alignment retain native human-sized pairing and can
+clip around Mario's smaller body; this is not full per-enemy retargeting.
+
+Fixed native parameter lookup: live Behavior/Attack directories contain unsorted
+appended groups. Cached, validated row indices replace binary search. This fixed
+Battle Axe validation; all six QA kit items were then acquired successfully.
+
+Offline build/test/doctor passed: input source isolation and release, held-input
+and focus/actor/device boundaries, native-completion policy, malformed/unsorted
+parameter directories, all six families' critical mesh/socket poses, empty-right
+shield parry pose, movement parity, death, interaction and collision regressions.
+One QA backstab take sent a new file command before activation was polled and did
+nothing; it is not a pass. The helper now waits before submitting that command.
+
+Private evidence: work/critical-qa/parry-final and backstab-final2 (trace, log and
+game-only video/audio), work/critical-qa/return-check.json. The helper
+framework/qa/critical_smoke.py repeats guarded native-AI tests after bonfire rest.
+
+Scope: live critical damage was tested with Longsword and Straight Sword Hilt,
+and parry with Plank Shield. Other families passed offline presentation checks,
+not a full live enemy/weapon matrix. Physical controller RT was not exercised
+in this pass (controller disconnected); routing passed executable tests. NPCs,
+bosses, online play, two-handing, empty-hand parries and unarmed criticals are
+not newly validated/supported by this change. Unarmed Mario attacks are preserved.
+
 # Weapon animation polish (2026-10-11)
 
 Replaced the shared four-key arm-only sweep with twelve fitted clips across six

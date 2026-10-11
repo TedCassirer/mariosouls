@@ -80,6 +80,26 @@ static std::vector<Frame> run(const SC_CharacterAPI*api,const char*asset,const c
     }
     api->destroy(id);api->shutdown();return frames;
 }
+static void nativeCombatPoses(const SC_CharacterAPI*api,const char*asset,const char*runtime){
+ auto*d=api->describe();std::vector<uint8_t>pixels(d->textureWidth*d->textureHeight*4);SC_Texture texture={pixels.data(),(uint32_t)pixels.size()};SC_Init init={sizeof(init),asset,runtime,logMessage};require(api->initialize(&init,&texture),"combat pose initialize");
+ SC_Surface floor[2]={{{{-16000,0,-16000},{-16000,0,16000},{16000,0,16000}},0},{{{-16000,0,-16000},{16000,0,16000},{16000,0,-16000}},0}};api->surfaces(floor,2,0);
+ int id=api->create(0,0,0,0);require(id>=0,"native combat pose create");Buffers b(d->maxTriangles);SC_State state{};
+ for(unsigned kind:{0u,1u,3u,4u,5u,6u,7u})for(unsigned action:{3u,4u,5u}){
+  if(kind==0&&action!=SC_EQUIPMENT_PARRY)continue;
+  std::vector<float>first;unsigned changed=0;
+  for(int frame=0;frame<=30;frame++){
+   SC_EquipmentPose e={sizeof(e),kind,SC_EQUIPMENT_SHIELD,action,frame/30.f,0};require(api->equipment(id,&e),"critical/parry request");
+   SC_Pose pose={};pose.kind=SC_POSE_NATIVE_COMBAT;pose.phase=-1;pose.position[0]=17;pose.position[1]=31;pose.position[2]=53;
+   require(api->pose(id,&pose,&state,&b.mesh),"native combat pose");
+   require(state.attackId==-1&&state.flags==0,"presentation cannot start guest attack or navigation");
+   require(closeFloat(state.position[0],17)&&closeFloat(state.position[1],31)&&closeFloat(state.position[2],53),"native root authority");
+   SC_Attachments hands={sizeof(hands)};require(api->attachments(id,&hands)&&hands.valid==(kind?3u:2u),"native combat preserves equipped props");if(kind)rigid(hands.right);rigid(hands.left);
+   if(frame==0)first=b.positions;else if(first!=b.positions)changed++;
+  }
+  require(changed>20,"native combat visibly animates");
+ }
+ api->destroy(id);api->shutdown();puts("PASS native combat poses: all families, preserved sockets, no guest attacks, host root position");
+}
 static void armedIdle(const SC_CharacterAPI*api,const char*asset,const char*runtime){
     auto*d=api->describe();std::vector<uint8_t>pixels(d->textureWidth*d->textureHeight*4);SC_Texture texture={pixels.data(),(uint32_t)pixels.size()};SC_Init init={sizeof(init),asset,runtime,logMessage};require(api->initialize(&init,&texture),"idle policy initialize");
     SC_Surface floor[2]={{{{-16000,0,-16000},{-16000,0,16000},{16000,0,16000}},0},{{{-16000,0,-16000},{16000,0,16000},{16000,0,-16000}},0}};api->surfaces(floor,2,0);int id=api->create(0,0,0,0);require(id>=0,"idle policy create");Buffers b(d->maxTriangles);SC_State state{};SC_Input input{};input.camLookZ=1;
@@ -134,5 +154,5 @@ int main(int argc,char**argv){
         if(baseline[i].geometry!=equipped[i].geometry)changed++;
     }
     require(changed>150,"rendered arms actually change");printf("Melee kind %u: movement parity and rigid attachments passed\n",kind);}
-    armedIdle(api,argv[2],argv[3]);if(argc==5)preview(api,argv[2],argv[3],argv[4]);FreeLibrary(module);puts("PASS: Mario equipment movement/action parity, rendered arm poses, finite rigid sockets, correction/rebase, interaction/hurt lifecycle, armed-idle wake policy");return 0;
+    nativeCombatPoses(api,argv[2],argv[3]);armedIdle(api,argv[2],argv[3]);if(argc==5)preview(api,argv[2],argv[3],argv[4]);FreeLibrary(module);puts("PASS: Mario equipment movement/action parity, rendered arm poses, finite rigid sockets, correction/rebase, interaction/hurt lifecycle, armed-idle wake policy");return 0;
 }

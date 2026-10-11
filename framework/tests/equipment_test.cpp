@@ -4,7 +4,25 @@
 #include "../hosts/ds1ptde/equipment_family.h"
 #include "../core/qa_identity.h"
 #include <cstdio>
+#include "../core/native_action.h"
 int main(){
+ SCNativeAction::Buttons buttons;
+ assert(!buttons.sample(true,true,true,1,0).attack); // held at attachment
+ buttons.sample(false,false,true,1,0);
+ auto e=buttons.sample(true,true,true,1,0);assert(e.attack&&e.parry);
+ buttons.consume();assert(buttons.suppressAttack());
+ assert(!buttons.sample(true,true,true,1,0).attack&&buttons.suppressAttack());
+ buttons.sample(false,false,true,1,0);assert(!buttons.suppressAttack());
+ assert(!buttons.sample(true,true,false,1,0).attack);
+ assert(!buttons.sample(true,true,true,1,0).attack);
+ buttons.sample(false,false,true,1,0);assert(!buttons.sample(true,true,true,2,0).attack);
+ buttons.sample(false,false,true,2,0);assert(!buttons.sample(true,true,true,2,1).attack);
+ SCNativeAction::Completion done;done.begin(100);
+ assert(!done.update(false,true,true,100));assert(!done.update(false,true,true,699));assert(done.update(false,true,true,700));
+ done.begin(100);assert(!done.update(true,true,true,200));assert(!done.update(true,true,true,15000));
+ assert(!done.update(false,true,true,15001));assert(!done.update(false,true,false,16000));
+ assert(!done.update(false,true,true,16001));assert(done.update(false,true,true,16101));
+ puts("PASS native action boundaries: no held/focus/device/actor replay, no timed interruption, rejected request recovery");
  assert(SCQA::meleeFixture(13,11,11,11,16,13,11,11,11));
  assert(!SCQA::meleeFixture(65,11,11,11,16,13,11,11,11));
  assert(!SCQA::meleeFixture(13,11,11,11,40,13,11,11,11));

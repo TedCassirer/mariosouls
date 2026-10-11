@@ -15,7 +15,8 @@
     "item_prop",
     "equipment",
     "death_pose",
-    "melee_families"
+    "melee_families",
+    "native_combat"
   ],
   "automatic_attack": "stomp",
   "base_power": 100,

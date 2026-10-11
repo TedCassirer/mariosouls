@@ -1,5 +1,7 @@
 #pragma once
 #include "equipment_family.h"
+#include <vector>
+#include <unordered_map>
 // PTDE 1.0.2.0 equipment reads and native damage dispatch. No inventory edits.
 // All addresses are host-private. Adapters receive only SDK equipment snapshots.
 struct NativeEquipmentAttack {
@@ -33,17 +35,24 @@ static uintptr_t equipmentParamRow(int slot,const char* expected,int id){
  if(strcmp(type,expected))return 0;
  int count=read<uint16_t>(param+10);
  if(count<1||count>20000)return 0;
- int low=0,high=count-1;
- while(low<=high){
-  int mid=low+(high-low)/2,key=-1;
-  if(!get(param+0x30+mid*12,key))return 0;
-  if(key<id)low=mid+1;else if(key>id)high=mid-1;else{
-   uint32_t offset=read<uint32_t>(param+0x34+mid*12);
-   if(offset<0x30+count*12||offset>16*1024*1024)return 0;
-   return param+offset;
-  }
+ // The game's behavior/attack directories contain appended unsorted groups.
+ // Cache only directory indices, then re-read and verify the entry every use.
+ struct Directory {uintptr_t address=0;int count=0;std::unordered_map<int,int> indices;};
+ static Directory directories[36];auto& cache=directories[slot];
+ if(cache.address!=param||cache.count!=count){cache={};cache.address=param;cache.count=count;}
+ auto found=cache.indices.find(id);int index=found==cache.indices.end()?-1:found->second;
+ int entry[3]={};
+ if(index<0||!get(param+0x30+index*12,entry)||entry[0]!=id){
+  std::vector<int> entries(count*3);SIZE_T got=0;
+  if(!ReadProcessMemory(GetCurrentProcess(),(void*)(param+0x30),entries.data(),entries.size()*sizeof(int),&got)||got!=entries.size()*sizeof(int))return 0;
+  cache.indices.clear();
+  for(int i=0;i<count;i++)if(!cache.indices.emplace(entries[i*3],i).second){cache.indices.clear();return 0;}
+  found=cache.indices.find(id);if(found==cache.indices.end())return 0;
+  index=found->second;memcpy(entry,entries.data()+index*3,sizeof(entry));
  }
- return 0;
+ uint32_t offset=uint32_t(entry[1]);
+ if(offset<0x30+count*12||offset>16*1024*1024)return 0;
+ return param+offset;
 }
 static NativeEquipmentAttack equipmentAttack(int variation,int judge){
  NativeEquipmentAttack a;

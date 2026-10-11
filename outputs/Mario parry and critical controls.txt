@@ -1,0 +1,28 @@
+MARIO: PARRIES AND CRITICAL ATTACKS
+
+Equip a supported one-handed melee weapon and a parry-capable shield.
+
+Parry: RT on controller, Tab on keyboard.
+Backstab: get close behind an enemy, face it, release guard, then tap B/RB
+          (left mouse button on keyboard/mouse).
+Riposte: parry successfully, step close in front, release guard, then tap attack.
+Guard + attack also submits an explicit native critical attempt.
+
+Dark Souls decides whether the position, timing, shield and enemy permit it.
+An ineligible attempt may become an ordinary swing. Parry does not grant blanket
+invincibility. Wait for the full native recovery before moving or attacking again.
+
+Mario stays visible throughout. Empty-hand combat keeps Mario's moveset;
+unarmed criticals and empty-hand parries are not included in this update.
+Critical poses are authored for Mario, but native paired enemy animations can
+still clip against his smaller body.
+
+Live verified on Mario QA: Longsword backstab and parry/riposte, Plank Shield
+parry, correct native stamina, damage, soul rewards, and return to jumping/swinging.
+Other melee families passed offline animation/attachment tests. Physical RT was
+not tested in this pass; controller routing passed automated checks.
+
+Recovery checkpoint: checkpoint-2026-10-11-criticals
+Close Dark Souls normally, then run Restore critical combat checkpoint.cmd.
+This restores the runtime, not character saves. Keep the project folder and its
+private work/checkpoints archive together. The previous checkpoints still exist.

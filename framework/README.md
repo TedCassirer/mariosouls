@@ -1,4 +1,10 @@
-# Souls Character Framework 0.6.0
+# Souls Character Framework 0.7.0
+
+Native combat follow-up: adapters can opt into native parries, backstabs and
+ripostes while supplying their own visible poses. Mario uses RT/Tab to parry
+with a supported shield and the normal attack button for a nearby critical
+opportunity. Native eligibility, stamina, damage and paired enemy animation
+remain authoritative. See the validation record for measured coverage.
 
 Animation follow-up: six weapon families now have individually fitted windups,
 strikes and recoveries, with torso movement and planted feet. The SDK-based
@@ -24,8 +30,8 @@ An empty right hand retains Mario's original moves and independent attack power.
 The host owns damage and guard rules; adapters own their arm poses and sockets.
 
 This equipment implementation covers two grounded light attacks per family
-and held blocking. Parrying, two-handing and the remaining weapon families are not
-implemented. Temporary weapon-buff parity is not verified. Props are suppressed during hurt
+and held blocking, plus the optional native parry/critical path. Two-handing and
+the remaining weapon families are not implemented. Temporary weapon-buff parity is not verified. Props are suppressed during hurt
 reactions and native interactions. Wind Waker Link does not yet opt into equipment
 fitting. See [verification](docs/VALIDATION.md) for measured in-game coverage.
 

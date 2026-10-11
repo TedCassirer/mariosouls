@@ -104,5 +104,14 @@ def main():
             lines.append('  },')
         lines.append(' },')
     lines.append('};')
-    Path(args.output).write_text('\n'.join(lines)+'\n');print(f'Authored 12 swings; largest glove-target error {maximum:.2f} cm')
+    lines.append('static const s16 scCriticalKeys[6][5][12]={')
+    thrust=[REST,([175,270,20],[0,0,1],-18,-4),([80,260,185],[0,0,1],15,9),([140,270,45],[.05,.3,.95],-7,0),REST]
+    for kind in (1,3,4,5,6,7):
+        previous=seed.copy();values=[]
+        for key in (thrust if kind<6 else CHOP):
+            angle,previous,error=fit(base,key,previous);values.append(angle);maximum=max(maximum,error)
+        values[-1]=values[0].copy();lines.append(' {')
+        lines.extend('  {'+','.join(map(str,row))+'},' for row in values);lines.append(' },')
+    lines.append('};')
+    Path(args.output).write_text('\n'.join(lines)+'\n',encoding='utf-8');print(f'Authored 12 swings and 6 criticals; largest glove-target error {maximum:.2f} cm')
 if __name__=='__main__':main()

@@ -45,7 +45,12 @@ class Host:
    rx=b''.join(b'.' if x=='?' else re.escape(bytes([int(x,16)])) for x in pat.split());hits=list(re.finditer(rx,data,re.S))
    if len(hits)!=1:raise StateError('Protection signature is not unique: '+name)
    out[name]=struct.unpack_from('<I',data,hits[0].start()+off)[0]
+  camera=list(re.finditer(b'\\xd9\\x45\\x08\\xa1....\\x51\\xd9\\x1c\\x24\\x50',data,re.S))
+  if len(camera)!=1:raise StateError('Camera signature is not unique')
+  out['camera']=struct.unpack_from('<I',data,camera[0].start()+4)[0]
   return out
+ def camera_forward(self):
+  return self.v(self.chain(self.protection_slots['camera'],0,0x3c,0x60)+0x30)
  def tracks(self,p):
   t=self.chain(p,0x28,0x18)
   return [[j,self.i(t+j*0x9c)] for j in range(29) if self.u(t+j*0x9c+4)!=0xffffffff]

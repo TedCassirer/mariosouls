@@ -438,3 +438,19 @@ Installation completed with user authorization after game closure. Full offline
 suite, doctor and installer checks passed; installed host/adapter/runtime hashes
 match the tested files. Backup: before-framework-20261011-212057-142685. No live
 controls were used; actual Dark Souls terrain feel remains for user testing.
+
+## 2026-10-11: Reviewed player bug reports and named test results
+
+- Added host-independent bounded diagnostic history and schema-1 serialization
+  in `core/diagnostics.h`. The DS1 host collects SDK/native state read-only;
+  there are no character switches, SDK ABI changes or automatic QA actions.
+- F11 captures a snapshot and opens a local review page, with an explicit button
+  for a prefilled GitHub draft. A worker saves JSON/HTML in Local AppData. No
+  credentials, raw logs, saves, assets or automatic issue submission are involved.
+- Added offline history/transition, finite-data, focus, clock-wrap, injection,
+  filesystem, build-identity and CI-failure regression checks. Shared checks now
+  retain named logs, JSON results and JUnit XML, including on early failure.
+- Browser verification used synthetic context and confirmed editable title/body
+  in GitHub's new-issue page; no issue was created. Full offline framework tests
+  passed during development. Live F11 in Dark Souls has not been verified and
+  this development pass did not drive the game or modify any save.

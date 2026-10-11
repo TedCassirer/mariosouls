@@ -1,5 +1,8 @@
 # Framework diagnostic overlay (0.4.2, ABI 3)
 
+The current framework also provides **F11** for a reviewed bug-report draft,
+independently of this overlay. See [bug reporting](../../docs/BUG_REPORTING.md).
+
 F8 toggles the overlay. F9 cycles Combat, Terrain, Objects, All. F10 toggles
 through-walls drawing. F6 still toggles the character and F7 still rebuilds the
 guest session. Debug keys are focus-gated and edge-triggered; a held key when

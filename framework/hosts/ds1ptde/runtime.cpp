@@ -22,6 +22,9 @@
 #include "../../core/motion.h"
 #include "../../core/session.h"
 #include "../../core/context_action.h"
+#include "../../core/diagnostics.h"
+static void diagnosticEvent(SCDiagnostics::Kind kind,int before=0,int after=0);
+static bool diagnosticEnabled=true;
 static void combatReset();
 static bool deathBegin(double& acc);
 static int currentMap();
@@ -246,6 +249,7 @@ static bool lineClear(Vec a,Vec b){
 #include "debug_view.h"
 #include "launcher.h"
 #include "presentation.h"
+#include "diagnostics.h"
 static void updateGameplay(){
  static LARGE_INTEGER freq={},prev={};if(!freq.QuadPart)QueryPerformanceFrequency(&freq);LARGE_INTEGER now;QueryPerformanceCounter(&now);double dt=prev.QuadPart?double(now.QuadPart-prev.QuadPart)/freq.QuadPart:0;prev=now;static double acc=0;acc=std::min(acc+std::min(dt,.1),.1);
  player=chain(playerSlot,{0,4,0});cam=chain(cameraSlot,{0,0x3c,0x60});uintptr_t mp=read<uint32_t>(player+0x28);posData=read<uint32_t>(mp+0x1c);
@@ -324,7 +328,7 @@ static void updateGameplay(){
  worldPause(!focus);
  Vec host=read<Vec>(posData+0x10),expected=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;if(dot(host-expected,host-expected)>64){logf("native warp/load detected");releaseControl(true);return;}
  bool resolvedTick=false;
- if(!worldReconcile(resolvedTick)){logf("WORLD invalid handoff; native controls restored");releaseControl();return;}
+ if(!worldReconcile(resolvedTick)){diagnosticEvent(SCDiagnostics::Kind::MotionRejected);logf("WORLD invalid handoff; native controls restored");releaseControl();return;}
  worldHostSurfaces();
  if(fabsf(state.position[0])>4000||fabsf(state.position[2])>4000||fabsf(state.position[1])>5000){Vec shift={state.position[0],state.position[1],state.position[2]};origin=origin+shift*.01f;rebuildSurfaces();guest->setPosition(character,0,0,0);for(size_t i=0;i<geo.numTrianglesUsed*3;i++){gpos[i*3]-=shift.x;gpos[i*3+1]-=shift.y;gpos[i*3+2]-=shift.z;}state.position[0]=state.position[1]=state.position[2]=0;logf("collision origin rebased");}
  feedbackPoll();
@@ -347,7 +351,7 @@ static void updateGameplay(){
  else if(characterClock.take(worldReady())){
   input=characterInput.take(GetTickCount());if(testFrames>0){input.moveX=-testX;input.moveY=-testY;input.jump=!!(testButtons&1);input.attack=!!(testButtons&2);input.crouch=!!(testButtons&4);input.guard=!!(testButtons&8);--testFrames;}harnessInput(input);if(equipmentActionButtons.suppressAttack())input.attack=0;feedbackPause.filter(input,GetTickCount());if(!launcherBusy()){combatInput(input);equipmentInput(input);}uint32_t old=state.rawAction;
   guest->nativeDamage(character,pendingNativeHurt);pendingNativeHurt=0;
-  if(!guestStep(character,&input,&state,&geo)){logf("Adapter frame rejected; restoring native controls");releaseControl();return;}stepped=true;harnessAfterStep(old,input);pumpAudio();
+  if(!guestStep(character,&input,&state,&geo)){diagnosticEvent(SCDiagnostics::Kind::FrameRejected);logf("Adapter frame rejected; restoring native controls");releaseControl();return;}stepped=true;harnessAfterStep(old,input);pumpAudio();
   if(launcherApi)launcherApi->query(character,&launcherState);
   launcherCameraTick();
   if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);
@@ -360,7 +364,7 @@ static void updateGameplay(){
  if(stepped&&!worldSubmit(stepFrom,p)){logf("WORLD rejected movement request; native controls restored");releaseControl();return;}
  if(hideNative){put(player+0x258,0.f);put(player+0x1fc,read<uint32_t>(player+0x1fc)&~0x800000u);}
 }
-static void update(){updateGameplay();presentationTick();}
+static void update(){updateGameplay();presentationTick();diagnosticsTick();}
 static D3DMATRIX identity(){D3DMATRIX m={};m._11=m._22=m._33=m._44=1;return m;}
 static D3DMATRIX viewMatrix(Vec eye,Vec at){Vec z=unit(at-eye),x=unit(cross({0,1,0},z)),y=cross(z,x);D3DMATRIX m={};m._11=x.x;m._12=y.x;m._13=z.x;m._21=x.y;m._22=y.y;m._23=z.y;m._31=x.z;m._32=y.z;m._33=z.z;m._41=-dot(x,eye);m._42=-dot(y,eye);m._43=-dot(z,eye);m._44=1;return m;}
 struct Vertex{float x,y,z;DWORD color,shade;float u,v;};

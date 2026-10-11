@@ -17,6 +17,16 @@ compiles the host, Mario adapter and runtime. It does not run gameplay.
 cannot authorize installation. Rendering is skipped on hosted CI; `--render`
 adds the D3D9 check on a local machine with a graphics device.
 
+Each shared check has a named result, duration and separate output log under
+`work/framework-build/test-results/`. `results.json` records suite status;
+`junit.xml` provides machine-readable results, including early build failures.
+CI uploads these alongside compiler logs even on failure. They describe offline
+checks, not live gameplay coverage.
+
+The [bug reporter](BUG_REPORTING.md) adds regression fixtures for transitions,
+health changes and unavailable positions, plus bounded histories, clock wrap,
+privacy fields, HTML escaping, report-file failures and build identity.
+
 ## Full local tests
 
 Follow [Development](DEVELOPMENT.md) for the ROM-backed command. The suite includes

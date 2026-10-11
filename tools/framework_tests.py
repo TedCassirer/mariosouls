@@ -6,13 +6,30 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 import framework as f
+from test_results import Results
 
 
 def shared_tests(render=False):
     (f.BUILD/'shared-test-report.json').unlink(missing_ok=True)
+    results=Results(f.BUILD/'test-results')
+    results.write('running')
+    try:
+        with patch.object(f,'run',results.run):
+            _shared_tests(render)
+        results.write('passed')
+    except BaseException as error:
+        results.write('failed',error)
+        raise
+
+
+def _shared_tests(render=False):
     f.architecture_check()
     f.run([sys.executable,f.ROOT/'tools/test_framework_install.py'])
     f.run([sys.executable,f.ROOT/'tools/test_release_tools.py'])
+    f.run([sys.executable,f.ROOT/'tools/test_test_results.py'])
+    f.compile_cpp(f.FRAMEWORK/'tests/diagnostics_test.cpp',f.BUILD/'diagnostics-test.exe')
+    f.run([f.BUILD/'diagnostics-test.exe'])
+    f.run([sys.executable,f.ROOT/'tools/test_diagnostics.py',f.BUILD/'diagnostics-test.exe'])
     f.run([sys.executable,f.ROOT/'tools/check_docs.py'])
     f.run([sys.executable,f.FRAMEWORK/'tests/collision_test.py'])
     f.run([sys.executable,f.FRAMEWORK/'tests/equipment_assets_test.py'])

@@ -38,3 +38,4 @@ jobs:
           path: |
             work/framework-build/shared-test-report.json
             work/framework-build/**/*.build.log
+            work/framework-build/test-results/

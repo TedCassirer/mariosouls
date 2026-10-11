@@ -33,6 +33,7 @@ compatibility. See the [validation record](framework/docs/VALIDATION.md).
 | Add another character | [Adapter guide](framework/docs/ADDING_A_CHARACTER.md) |
 | Report a problem or contribute | [Contributing](CONTRIBUTING.md) |
 | Understand tests and CI | [Testing](docs/TESTING.md) |
+| Report a bug while playing | [F11 bug reports](docs/BUG_REPORTING.md) |
 | Prepare a future release | [Release process](docs/RELEASING.md) |
 | Recover an earlier version | [Git history and installation backups](docs/RECOVERY.md) |
 

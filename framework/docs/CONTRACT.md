@@ -596,3 +596,11 @@ or recycled targets are skipped without disabling the damage hooks. Native HP,
 defenses, blocks, death and rewards remain authoritative. Script IDs remain in
 harness hit-attempt telemetry; impact receipt target fields now identify handles.
 No SDK ABI or character adapter changes are needed.
+
+## Read-only diagnostic reporting
+
+The host's bug reporter uses the existing descriptor identifier and opaque
+`SC_State` diagnostics without interpreting guest-specific action IDs. No new
+adapter capability or ABI change is required. Shared history and serialization
+live in `core/diagnostics.h`; platform collection and file/browser operations
+belong to the host. Reports never call guest simulation or write native memory.

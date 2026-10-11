@@ -96,6 +96,7 @@ static void combatPay(){
  char fields[350];snprintf(fields,sizeof(fields),",\"move\":\"%s\",\"serial\":%d,\"paid\":%s,\"stamina_before\":%d,\"cost\":%d,\"power\":%.3f,\"strength\":%d,\"dexterity\":%d,\"upgrade\":%d",attackName(move),characterWindow.serial,paid?"true":"false",stamina,characterWindow.charged,power,str,dex,characterBalance.upgrade);
  size_t len=strlen(fields);snprintf(fields+len,sizeof(fields)-len,",\"equipment_weight\":%.2f,\"required_cost\":%d,\"recovery_ms\":%d",weight,cost,characterRecoveryDelay);
  harnessEvent("character_attack",fields);logf("Character attack%s",fields);
+ diagnosticEvent(paid?SCDiagnostics::Kind::StaminaCharged:SCDiagnostics::Kind::AttackExhausted,stamina,stamina-characterWindow.charged);
 }
 static void combat(){
  if(!combatEnabled||!nativeDamage||!characterDamageReady||(harness.armed&&harness.suppressOutgoing))return;

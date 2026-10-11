@@ -156,7 +156,7 @@ static void debugDraw(IDirect3DDevice9*d){
  quad(581,17,431,258,0xff101b24,0,0,0,0);d->DrawPrimitiveUP(D3DPT_TRIANGLELIST,2,text.data(),sizeof(V));text.clear();
  const char* layers[]={"COMBAT","TERRAIN","OBJECTS","ALL"};char s[160];
  snprintf(s,sizeof(s),"FRAMEWORK DEBUG / %s / %s",layers[debugLayer],debugXray?"THROUGH WALLS":"DEPTH TEST");line(24,0xffffffff,s);
- line(43,0xffb8c5cf,"F8 ON/OFF   F9 VIEW   F10 THROUGH WALLS");
+ line(43,0xffb8c5cf,"F8 ON/OFF F9 VIEW F10 XRAY F11 REPORT");
  line(64,0xff45dcff,"CYAN: NATIVE MOVEMENT CAPSULE");line(80,0xffff63d5,"PINK: SECONDARY BODY CONTACT CAPSULE");
  line(96,0xffff6666,"RED: ENEMY BODY   PURPLE: OTHER ACTOR");
  line(112,0xffffbd46,"AMBER: ATTACK LIMIT   GREEN: PROBE SAMPLES");

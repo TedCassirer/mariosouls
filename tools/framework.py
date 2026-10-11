@@ -100,9 +100,33 @@ def compile_cpp(source,dest,includes=(),extra=()):
         print(log.read_text()[-14000:]);raise RuntimeError('Build failed: '+str(source))
 
 
+def build_identity(sources):
+    fingerprint=hashlib.sha256(json.dumps(sources,sort_keys=True).encode()).hexdigest()
+    commit='unknown';dirty=False
+    if (ROOT/'.git').exists():
+        try:
+            revision=subprocess.run(['git','rev-parse','HEAD'],cwd=ROOT,text=True,capture_output=True)
+            if revision.returncode==0 and re.fullmatch('[0-9a-f]{40,64}',revision.stdout.strip()):commit=revision.stdout.strip()
+            status=subprocess.run(['git','status','--porcelain','--untracked-files=normal'],cwd=ROOT,text=True,capture_output=True)
+            dirty=status.returncode==0 and bool(status.stdout.strip())
+        except OSError:pass
+    elif (ROOT/'package-manifest.json').is_file():
+        data=json.loads((ROOT/'package-manifest.json').read_text())
+        if re.fullmatch('[0-9a-f]{40,64}',str(data.get('commit',''))):commit=data['commit']
+    return commit,dirty,fingerprint
+
+
 def build(character,adapter_only=False,with_runtime=False):
     folder,p=load_profile(character);out=BUILD/'characters'/character;out.mkdir(parents=True,exist_ok=True)
     (out/'build.json').unlink(missing_ok=True)
+    source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.c','.cpp','.def','.py','.json','.in'])
+    source_paths.extend([ROOT/'dependencies.lock.json',ROOT/'release/project.json'])
+    sources={path.relative_to(ROOT).as_posix():sha(path) for path in source_paths}
+    version=json.loads((ROOT/'release/project.json').read_text())['version']
+    commit,dirty,fingerprint=build_identity(sources)
+    (BUILD/'build.generated.h').write_text('\n'.join(['#pragma once',
+        '#define SC_BUILD_VERSION '+json.dumps(version),'#define SC_BUILD_COMMIT '+json.dumps(commit),
+        '#define SC_BUILD_SOURCE '+json.dumps(fingerprint),'#define SC_BUILD_DIRTY '+('true' if dirty else 'false')])+'\n')
     if with_runtime:
         script=folder/'build_runtime.py'
         if not script.is_file():raise ValueError('This adapter has no runtime build script')
@@ -114,11 +138,9 @@ def build(character,adapter_only=False,with_runtime=False):
         for name in ['buffer','hook','trampoline','hde/hde32']:
             source=ROOT/'work/minhook/src'/f'{name}.c';obj=BUILD/(source.stem+'.o')
             run([ZIG,'cc','-target','x86-windows-gnu','-O2','-c',source,'-o',obj]);objects.append(obj)
-        compile_cpp(FRAMEWORK/'hosts/ds1ptde/runtime.cpp',BUILD/'dinput8.dll',extra=['-shared',FRAMEWORK/'hosts/ds1ptde/proxy.def',*objects,'-ld3d9','-ldxguid','-luser32','-lwinmm','-lgdi32'])
-    source_paths=sorted(p for base in [FRAMEWORK,ROOT/'tools'] for p in base.rglob('*') if p.is_file() and p.suffix in ['.h','.c','.cpp','.def','.py','.json','.in'])
-    source_paths.extend([ROOT/'dependencies.lock.json',ROOT/'release/project.json'])
+        compile_cpp(FRAMEWORK/'hosts/ds1ptde/runtime.cpp',BUILD/'dinput8.dll',[BUILD],extra=['-shared',FRAMEWORK/'hosts/ds1ptde/proxy.def',*objects,'-ld3d9','-ldxguid','-luser32','-lwinmm','-lgdi32','-lshell32'])
     receipt={'framework_version':json.loads((ROOT/'release/project.json').read_text())['version'],'abi':4,'character':character,'profile':p,'built_at':datetime.datetime.now().astimezone().isoformat(),
-        'adapter_sha256':sha(out/'character.dll'),'source_sha256':{f.relative_to(ROOT).as_posix():sha(f) for f in source_paths}}
+        'adapter_sha256':sha(out/'character.dll'),'source_sha256':sources,'commit':commit,'dirty':dirty,'source_fingerprint':fingerprint}
     if not adapter_only:receipt['host_sha256']=sha(BUILD/'dinput8.dll')
     (out/'build.json').write_text(json.dumps(receipt,indent=2))
     print('Built framework host + '+character if not adapter_only else 'Built adapter '+character)

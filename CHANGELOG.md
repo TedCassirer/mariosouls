@@ -7,6 +7,11 @@ see [recovery](docs/RECOVERY.md).
 
 ### Release preparation
 
+- F11 bug-report review page with prefilled GitHub drafts, bounded structured
+  diagnostic history and source build identity; no automatic submission/upload.
+- Named shared-test logs and JSON/JUnit results, plus diagnostic regression and
+  report-file failure checks. Live game validation remains separate.
+
 - Use Git history for source recovery; retire the separate checkpoint command
   and historical manifests from new source checkouts.
 - Keep automatic installation backups, including rollback support for older

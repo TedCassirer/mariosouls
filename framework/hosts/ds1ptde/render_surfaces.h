@@ -16,10 +16,12 @@ inline bool scene(const D3DSURFACE_DESC&s,const D3DSURFACE_DESC&z,const D3DVIEWP
 static IDirect3DSurface9* sceneDepth=nullptr;
 static IDirect3DTexture9* characterLayer=nullptr;
 static uint64_t sceneDepthArea=0;
+static int diagnosticSceneWidth=0,diagnosticSceneHeight=0;
 static void renderDepthEndFrame(){
  if(sceneDepth){sceneDepth->Release();sceneDepth=nullptr;}sceneDepthArea=0;
 }
 static void renderSurfacesReset(){
+ diagnosticSceneWidth=diagnosticSceneHeight=0;
  renderDepthEndFrame();if(characterLayer){characterLayer->Release();characterLayer=nullptr;}
 }
 static void renderDepthObserve(IDirect3DDevice9*d){
@@ -28,6 +30,7 @@ static void renderDepthObserve(IDirect3DDevice9*d){
  if(color)color->GetDesc(&c);if(depth)depth->GetDesc(&z);
  uint64_t area=uint64_t(c.Width)*c.Height;
  if(depth&&SCRender::scene(c,z,v)&&area>=sceneDepthArea){
+  diagnosticSceneWidth=int(c.Width);diagnosticSceneHeight=int(c.Height);
   if(sceneDepth)sceneDepth->Release();sceneDepth=depth;depth=nullptr;sceneDepthArea=area;
  }
  if(color)color->Release();if(depth)depth->Release();

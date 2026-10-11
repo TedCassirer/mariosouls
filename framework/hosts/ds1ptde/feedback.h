@@ -48,6 +48,7 @@ static void feedbackConfirmed(const SCFeedback::Receipt&r,int after,DWORD now){
  if(feedbackFlashEnabled){if(feedbackFlashes.size()>=8)feedbackFlashes.erase(feedbackFlashes.begin());feedbackFlashes.push_back({{r.x,r.y,r.z},now,e,r.serial});}
  char fields[360];snprintf(fields,sizeof(fields),",\"serial\":%d,\"move\":\"%s\",\"target\":%d,\"object\":%s,\"hp_before\":%d,\"hp_after\":%d,\"latency_ms\":%lu,\"group_first\":%s,\"stop_ms\":%u",r.serial,attackName(r.move),r.id,r.object?"true":"false",r.before,after,now-r.began,first?"true":"false",first&&feedbackStopEnabled?e.stopMs:0);
  harnessEvent("impact_confirmed",fields);logf("Impact confirmed%s",fields);
+ diagnosticEvent(SCDiagnostics::Kind::HitConfirmed,r.before,after);
 }
 static void feedbackPoll(){
  if(!feedbackEnabled)return;DWORD now=GetTickCount();

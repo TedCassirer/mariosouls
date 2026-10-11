@@ -27,6 +27,7 @@ menus retain their own controls, and existing configuration can override binding
 | Crouch | LT | Left Ctrl |
 | Use selected item | X | E |
 | Toggle character mode | Hold both stick buttons | F6 |
+| Review and report a bug | Keyboard shortcut | F11 |
 
 An empty right hand uses Mario's moveset. Supported equipped melee weapons use
 native weapon damage and fitted swing animations. A selected Pyromancy Flame
@@ -34,6 +35,8 @@ enables Fire Mario's appearance; Fireball still needs to be attuned and consumes
 native spell uses.
 
 ## Known limits
+
+See [bug reporting](BUG_REPORTING.md) for F11, privacy details and diagnostic history.
 
 - Collision, area transitions and scripted events need more full-game testing.
 - Weapon support does not cover every family, two-handing or every attack type.

@@ -10,9 +10,6 @@ import argparse
 import json
 import math
 import time
-from host import Host, GAME
-from bridge import command
-from um.win import Drive, Recorder
 
 
 def main():
@@ -23,6 +20,11 @@ def main():
     p.add_argument("--output", required=True)
     p.add_argument("--record", action="store_true")
     args = p.parse_args()
+
+    from host import Host, GAME
+    from bridge import command
+    from um.win import Drive, Recorder
+
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=False)
     h = Host(args.pid, write=True)

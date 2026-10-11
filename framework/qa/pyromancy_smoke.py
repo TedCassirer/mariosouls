@@ -10,9 +10,6 @@ import argparse
 import json
 import time
 import math
-from host import Host, GAME
-from bridge import command
-from um.win import Recorder, shot, Drive
 
 
 def main():
@@ -36,6 +33,11 @@ def main():
         help="Courtyard throw heading, radians; enemy fixture overrides this",
     )
     a = p.parse_args()
+
+    from host import Host, GAME
+    from bridge import command
+    from um.win import Recorder, shot, Drive
+
     out = Path(a.output)
     out.mkdir(parents=True, exist_ok=False)
     h = Host(a.pid, write=True)

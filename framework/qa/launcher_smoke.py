@@ -9,8 +9,6 @@ import argparse
 import json
 import math
 import time
-from host import Host
-from um.win import Drive, shot, Recorder
 
 
 def main():
@@ -24,6 +22,10 @@ def main():
     p.add_argument("--output", required=True)
     p.add_argument("--record", action="store_true")
     a = p.parse_args()
+
+    from host import Host
+    from um.win import Drive, shot, Recorder
+
     assert 0 <= a.seconds <= 15 and 0 <= a.aim_up_ms <= 1000
     if a.walk:
         assert all(math.isfinite(x) for x in a.walk) and math.dist(a.walk, [-45, 56]) < 10

@@ -21,6 +21,8 @@ build workflows. Character asset recipes stay with their adapters under
 `framework/characters/`. Host asset recipes stay under `framework/hosts/`.
 Live-game checks are separate from offline tests; see
 [the QA guide](../framework/qa/README.md).
+`python tools/framework.py qa` lists the maintained live scenarios without
+opening the game; append a scenario and `--help` to inspect its arguments.
 
 Install `requirements-dev.txt` for source formatting, then use:
 

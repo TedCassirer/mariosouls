@@ -34,6 +34,12 @@ native ABI constraints and non-obvious decisions. Avoid narrating simple code.
 Keep developer tests in `tools/tests/` and gameplay policy tests in
 `framework/tests/`; do not add one-off scripts or generated output to source.
 
+Add live regression scenarios to the registry in `framework/qa/__main__.py`.
+They must expose help and remain safe to import without native game-access
+dependencies. Parse and validate arguments before importing those dependencies;
+keep the existing test-character and focus guards in the scenario itself.
+The [QA guide](framework/qa/README.md) explains the fixtures and command.
+
 Do not add game assets, dependency checkouts, generated caches, binaries, secrets
 or personal saves. The `.gitignore` uses an allowlist; new source directories
 need an explicit entry. Preserve existing checkpoint tags and local archives.

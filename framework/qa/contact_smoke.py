@@ -9,10 +9,6 @@ import argparse
 import json
 import math
 import time
-from host import Host, GAME
-from bridge import command
-from contact_probe import observe
-from um.win import Drive, shot
 
 
 def main():
@@ -21,6 +17,12 @@ def main():
     p.add_argument("stage", choices=["door", "boss"])
     p.add_argument("--output", type=Path, required=True)
     a = p.parse_args()
+
+    from host import Host, GAME
+    from bridge import command
+    from contact_probe import observe
+    from um.win import Drive, shot
+
     a.output.mkdir(parents=True, exist_ok=True)
     h = Host(a.pid, write=True)
     d = Drive("DARKSOULS")

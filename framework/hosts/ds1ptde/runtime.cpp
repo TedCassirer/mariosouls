@@ -645,16 +645,18 @@ static bool lineClear(Vec a, Vec b) {
 #include "presentation.h"
 #include "diagnostics.h"
 
-static void updateGameplay() {
-    static LARGE_INTEGER freq = {}, prev = {};
-    if (!freq.QuadPart)
-        QueryPerformanceFrequency(&freq);
-    LARGE_INTEGER now;
-    QueryPerformanceCounter(&now);
-    double dt = prev.QuadPart ? double(now.QuadPart - prev.QuadPart) / freq.QuadPart : 0;
-    prev = now;
-    static double acc = 0;
-    acc = std::min(acc + std::min(dt, .1), .1);
+// One render-frame observation is shared by every phase. Input routing may
+// consume jump/interact edges, so later simulation sees the routed controller.
+struct GameplayFrame {
+    bool focus;
+    DWORD inputTime;
+    SCController::Sample pad;
+    SCController::Input controller;
+    bool padToggle;
+    SCSession::Identity identity;
+};
+
+static GameplayFrame pollGameplayFrame() {
     player = chain(playerSlot, {0, 4, 0});
     cam = chain(cameraSlot, {0, 0x3c, 0x60});
     uintptr_t mp = read<uint32_t>(player + 0x28);
@@ -684,16 +686,21 @@ static void updateGameplay() {
     if (padToggle)
         logf("controller Character toggle");
     SCSession::Identity identity = {player, posData, mp, currentMap()};
+    return {focus, inputTime, pad, controller, padToggle, identity};
+}
+
+// Resolve map/actor replacement and death before any input reaches an adapter.
+static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
     if (characterSession.character() && !nativeReaction && !equipmentActionOwned && cam &&
-        !characterSession.matches(identity) && characterSession.sameActor(identity)) {
-        if (loadMap() && characterSession.changeMap(identity)) {
+        !characterSession.matches(frame.identity) && characterSession.sameActor(frame.identity)) {
+        if (loadMap() && characterSession.changeMap(frame.identity)) {
             rebuildSurfaces();
             worldActivate();
             logf("SESSION seamless map=%d; character rig, movement and attack windows preserved",
-                 identity.map);
+                 frame.identity.map);
         }
     }
-    if (characterOwned() && (!characterSession.matches(identity) || !cam)) {
+    if (characterOwned() && (!characterSession.matches(frame.identity) || !cam)) {
         logf("SESSION native actor changed; clearing pending work");
         releaseControl(true);
     }
@@ -707,7 +714,7 @@ static void updateGameplay() {
         releaseControl(true);
         acc = 0;
     }
-    if ((focus && pressed(VK_F6)) || padToggle) {
+    if ((frame.focus && pressed(VK_F6)) || frame.padToggle) {
         classSelection.manual(player);
         // A pending load request is not a visible character. Pressing the toggle
         // while still human should enable the guest, not cancel automatic activation.
@@ -717,62 +724,68 @@ static void updateGameplay() {
         } else {
             characterSession.request(true);
             if (!activate())
-                characterSession.failed(inputTime);
+                characterSession.failed(frame.inputTime);
         }
     }
     cameraTick();
     if (!equipmentActionOwned || characterSession.death())
         projectileRateRelease();
     if (characterSession.death()) {
-        deathTick(acc, pad.slot);
-        return;
+        deathTick(acc, frame.pad.slot);
+        return false;
     }
     if (!characterOwned() && characterSession.requested()) {
-        bool safe = focus && identity.valid() && cam && read<int>(player + 0x2d4) > 0;
+        bool safe = frame.focus && frame.identity.valid() && cam && read<int>(player + 0x2d4) > 0;
         if (safe) {
             auto o = nativeInteractionState();
             safe = o.valid && !o.menu && !o.event && !o.ladder &&
                    nativeActiveAllowed(player, false) == 1;
         }
-        if (characterSession.canRetry(identity, safe, inputTime)) {
+        if (characterSession.canRetry(frame.identity, safe, frame.inputTime)) {
             if (activate())
                 logf("SESSION character resumed after stable native actor");
             else
-                characterSession.failed(inputTime);
+                characterSession.failed(frame.inputTime);
         }
     }
+    return true;
+}
+
+// Contextual actions get first refusal on input (for example A at a bonfire).
+static void routeGameplayActions(GameplayFrame &frame) {
     static bool previousInteract = false, previousItem = false, previousActionFocus = false;
     static int previousActionSlot = -1;
-    bool yDown = pad.connected && (pad.pad.wButtons & XINPUT_GAMEPAD_Y),
-         xDown = pad.connected && (pad.pad.wButtons & XINPUT_GAMEPAD_X);
+    bool yDown = frame.pad.connected && (frame.pad.pad.wButtons & XINPUT_GAMEPAD_Y),
+         xDown = frame.pad.connected && (frame.pad.pad.wButtons & XINPUT_GAMEPAD_X);
     bool qPressed = pressed('Q'), ePressed = pressed('E');
-    bool padEdgeReady = previousActionFocus && previousActionSlot == pad.slot;
+    bool padEdgeReady = previousActionFocus && previousActionSlot == frame.pad.slot;
     bool padInteract = padEdgeReady && yDown && !previousInteract,
          padItem = padEdgeReady && xDown && !previousItem;
-    bool interactPressed = focus && previousActionFocus && (padInteract || qPressed),
-         itemPressed = focus && previousActionFocus && (padItem || ePressed);
+    bool interactPressed = frame.focus && previousActionFocus && (padInteract || qPressed),
+         itemPressed = frame.focus && previousActionFocus && (padItem || ePressed);
     previousInteract = yDown;
     previousItem = xDown;
-    previousActionFocus = focus;
-    previousActionSlot = pad.slot;
-    if (!focus) {
+    previousActionFocus = frame.focus;
+    previousActionSlot = frame.pad.slot;
+    if (!frame.focus) {
         actionCancelPulse();
         equipmentReset();
     }
     if (characterOwned() && !nativeActionOwned() && !equipmentActionOwned) {
         auto native = nativeInteractionState();
         if (native.valid && (native.menu || native.ladder || native.event))
-            beginInteraction(pad.slot, false);
+            beginInteraction(frame.pad.slot, false);
     }
-    launcherObserve(focus);
-    if (launcherBusy() && focus && pad.connected)
-        controller = SCController::aim(pad.pad);
+    launcherObserve(frame.focus);
+    if (launcherBusy() && frame.focus && frame.pad.connected)
+        frame.controller = SCController::aim(frame.pad.pad);
     static SCContext::Button contextA;
-    auto context = contextA.update(controller.jump, focus && pad.connected, player, pad.slot,
-                                   characterOwned() && !nativeActionOwned() && !nativeReaction,
-                                   !launcherBusy() && (actionEligible(1) || launcherTarget));
+    auto context =
+        contextA.update(frame.controller.jump, frame.focus && frame.pad.connected, player,
+                        frame.pad.slot, characterOwned() && !nativeActionOwned() && !nativeReaction,
+                        !launcherBusy() && (actionEligible(1) || launcherTarget));
     InterlockedExchange(&actionBlockHeldA, context.blockNative);
-    controller.jump = context.jump;
+    frame.controller.jump = context.jump;
     if (context.interact) {
         if (!launcherInteract())
             requestAction(1, true);
@@ -783,7 +796,7 @@ static void updateGameplay() {
         if (characterOwned() && !nativeActionOwned())
             requestAction(1, padInteract);
         else if (nativeActionOwned() && actionCurrentRoute() == ActionRoute::Menu)
-            actionQueue(1, inputTime, padInteract);
+            actionQueue(1, frame.inputTime, padInteract);
     }
     if (itemPressed && !launcherBusy() && characterOwned() && !nativeActionOwned())
         requestAction(2, padItem);
@@ -791,6 +804,11 @@ static void updateGameplay() {
         logf("Action request unanswered; Character retained");
         actionRequestKind = 0;
     }
+}
+
+// Test commands retain their focus and dedicated-character guards. Keeping the
+// opt-in wire protocol here avoids mixing automation with ordinary input.
+static void pollTestCommands(const GameplayFrame &frame) {
     static DWORD configTime = 0;
     static int command = 0;
     if (GetTickCount() - configTime > 200) {
@@ -798,7 +816,7 @@ static void updateGameplay() {
         int serial = GetPrivateProfileIntA("Test", "Serial", 0, ini);
         if (serial != command) {
             command = serial;
-            if (!focus || !harnessIdentity()) {
+            if (!frame.focus || !harnessIdentity()) {
                 logf("test command rejected: focus/identity guard");
             } else {
                 int mode = GetPrivateProfileIntA("Test", "Mode", 0, ini);
@@ -818,7 +836,7 @@ static void updateGameplay() {
                     releaseControl(false);
                 }
                 if (mode == 4 && characterOwned())
-                    beginInteraction(pad.slot);
+                    beginInteraction(frame.pad.slot);
                 testFrames =
                     std::clamp<int>(GetPrivateProfileIntA("Test", "Frames", 0, ini), 0, 150);
                 testButtons = GetPrivateProfileIntA("Test", "Buttons", 0, ini);
@@ -829,6 +847,9 @@ static void updateGameplay() {
             }
         }
     }
+}
+
+static void refreshGameplaySettings(const GameplayFrame &frame) {
     static DWORD lastLog = 0;
     if (GetTickCount() - lastLog > 2000) {
         lastLog = GetTickCount();
@@ -839,11 +860,16 @@ static void updateGameplay() {
         Vec p = read<Vec>(posData + 0x10), c = cameraEye();
         logf(
             "state active=%d focus=%d player=%08x cam=%08x xyz=%.3f %.3f %.3f eye=%.3f %.3f %.3f action=%08x tris=%u",
-            characterOwned(), focus, (unsigned)player, (unsigned)cam, p.x, p.y, p.z, c.x, c.y, c.z,
-            state.rawAction, geo.numTrianglesUsed);
+            characterOwned(), frame.focus, (unsigned)player, (unsigned)cam, p.x, p.y, p.z, c.x, c.y,
+            c.z, state.rawAction, geo.numTrianglesUsed);
     }
+}
+
+// Native actions and reactions own their frames. Reconcile the native motion
+// acknowledgement before evaluating damage or beginning another guest tick.
+static bool prepareCharacterSimulation(const GameplayFrame &frame, double &acc) {
     InterlockedExchange(&controllerOwnedSlot,
-                        (characterOwned() || nativeActionOwned()) ? pad.slot : -1);
+                        (characterOwned() || nativeActionOwned()) ? frame.pad.slot : -1);
     if (!nativeActionOwned())
         InterlockedExchange(&actionRoute,
                             LONG(characterOwned() ? ActionRoute::Character : ActionRoute::Free));
@@ -853,38 +879,38 @@ static void updateGameplay() {
         filteredLogged = true;
     }
     if (nativeActionOwned()) {
-        updateInteraction(acc, focus, pad.slot);
-        return;
+        updateInteraction(acc, frame.focus, frame.pad.slot);
+        return false;
     }
     if (!characterOwned()) {
         acc = 0;
-        return;
+        return false;
     }
     if (arenaRefresh())
         rebuildSurfaces();
-    if (focus && pressed(VK_F7)) {
+    if (frame.focus && pressed(VK_F7)) {
         releaseControl();
         if (!activate())
-            return;
+            return false;
     }
-    if (equipmentActionsTick(acc, focus))
-        return;
-    if (nativeReactionTick(acc, focus))
-        return;
-    worldPause(!focus);
+    if (equipmentActionsTick(acc, frame.focus))
+        return false;
+    if (nativeReactionTick(acc, frame.focus))
+        return false;
+    worldPause(!frame.focus);
     Vec host = read<Vec>(posData + 0x10),
         expected = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
     if (dot(host - expected, host - expected) > 64) {
         logf("native warp/load detected");
         releaseControl(true);
-        return;
+        return false;
     }
     bool resolvedTick = false;
     if (!worldReconcile(resolvedTick)) {
         diagnosticEvent(SCDiagnostics::Kind::MotionRejected);
         logf("WORLD invalid handoff; native controls restored");
         releaseControl();
-        return;
+        return false;
     }
     worldHostSurfaces();
     if (fabsf(state.position[0]) > 4000 || fabsf(state.position[2]) > 4000 ||
@@ -915,38 +941,44 @@ static void updateGameplay() {
     lastHP = hp;
     if (resolvedTick && hazardObserve(read<Vec>(posData + 0x10))) {
         environmentKill(acc, "native_kill_surface");
-        return;
+        return false;
     }
     if (resolvedTick && !pendingNativeHurt) {
         if (!combatEnvironment(acc))
-            return;
+            return false;
         combat();
         combatObjects();
         equipmentContact();
         feedbackPoll();
     }
+    return true;
+}
+
+// Advance the guest at its fixed rate and submit motion for the native host to
+// resolve. The next frame consumes that acknowledgement before opening contacts.
+static void simulateCharacter(const GameplayFrame &frame, double dt, double &acc) {
     SC_Input input = {};
     Vec look = cameraForward();
     input.camLookX = look.x;
     input.camLookZ = look.z;
-    if (focus) {
+    if (frame.focus) {
         input.moveX = ((GetAsyncKeyState('D') & 0x8000) ? 1.f : 0) -
                       ((GetAsyncKeyState('A') & 0x8000) ? 1.f : 0);
         input.moveY = ((GetAsyncKeyState('W') & 0x8000) ? 1.f : 0) -
                       ((GetAsyncKeyState('S') & 0x8000) ? 1.f : 0);
         if (input.moveX == 0 && input.moveY == 0) {
-            input.moveX = controller.x;
-            input.moveY = controller.y;
+            input.moveX = frame.controller.x;
+            input.moveY = frame.controller.y;
         }
         float n = sqrtf(input.moveX * input.moveX + input.moveY * input.moveY);
         if (n > 1) {
             input.moveX /= n;
             input.moveY /= n;
         }
-        input.jump = controller.jump || !!(GetAsyncKeyState(VK_SPACE) & 0x8000);
-        input.attack = controller.attack || !!(GetAsyncKeyState(VK_LBUTTON) & 0x8000);
-        input.crouch = controller.crouch || !!(GetAsyncKeyState(VK_CONTROL) & 0x8000);
-        input.guard = controller.guard ||
+        input.jump = frame.controller.jump || !!(GetAsyncKeyState(VK_SPACE) & 0x8000);
+        input.attack = frame.controller.attack || !!(GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+        input.crouch = frame.controller.crouch || !!(GetAsyncKeyState(VK_CONTROL) & 0x8000);
+        input.guard = frame.controller.guard ||
                       (actionKeyboardGuardReady && !!(GetAsyncKeyState(VK_RBUTTON) & 0x8000));
     }
     SC_Input specialInput = input;
@@ -957,25 +989,28 @@ static void updateGameplay() {
         specialInput.crouch = !!(testButtons & 4);
     }
     bool parry =
-        focus && ((pad.connected && pad.pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
-                  !!(GetAsyncKeyState(VK_TAB) & 0x8000) || (testFrames > 0 && (testButtons & 16)));
-    if (!launcherBusy() && equipmentActionsInput(specialInput, parry, focus, pad.slot)) {
+        frame.focus &&
+        ((frame.pad.connected && frame.pad.pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
+         !!(GetAsyncKeyState(VK_TAB) & 0x8000) || (testFrames > 0 && (testButtons & 16)));
+    if (!launcherBusy() &&
+        equipmentActionsInput(specialInput, parry, frame.focus, frame.pad.slot)) {
         acc = 1. / SC_FIXED_HZ;
-        equipmentActionsTick(acc, focus);
+        equipmentActionsTick(acc, frame.focus);
         return;
     }
     if (equipmentActionButtons.suppressAttack())
         input.attack = 0;
     static int lastPadInput = -1;
     static DWORD padLogTime = 0;
-    int padInput = (fabsf(controller.x) + fabsf(controller.y) > .01f ? 8 : 0) |
-                   (controller.jump ? 1 : 0) | (controller.attack ? 2 : 0) |
-                   (controller.crouch ? 4 : 0);
-    if (padInput != lastPadInput && DWORD(inputTime - padLogTime) >= 100) {
-        logf("controller input stick=%.2f %.2f buttons=%d%d%d", controller.x, controller.y,
-             controller.jump, controller.attack, controller.crouch);
+    int padInput = (fabsf(frame.controller.x) + fabsf(frame.controller.y) > .01f ? 8 : 0) |
+                   (frame.controller.jump ? 1 : 0) | (frame.controller.attack ? 2 : 0) |
+                   (frame.controller.crouch ? 4 : 0);
+    if (padInput != lastPadInput && DWORD(frame.inputTime - padLogTime) >= 100) {
+        logf("controller input stick=%.2f %.2f buttons=%d%d%d", frame.controller.x,
+             frame.controller.y, frame.controller.jump, frame.controller.attack,
+             frame.controller.crouch);
         lastPadInput = padInput;
-        padLogTime = inputTime;
+        padLogTime = frame.inputTime;
     }
     // Capture short taps even on render frames without a simulation tick. Consume
     // paused time instead of accumulating a catch-up burst. The host keeps running.
@@ -983,7 +1018,7 @@ static void updateGameplay() {
     characterClock.advance(dt);
     bool stepped = false;
     Vec stepFrom = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
-    if (!focus) {
+    if (!frame.focus) {
         characterInput.clear();
         characterClock.clear();
         testFrames = 0;
@@ -1051,6 +1086,28 @@ static void updateGameplay() {
         put(player + 0x258, 0.f);
         put(player + 0x1fc, read<uint32_t>(player + 0x1fc) & ~0x800000u);
     }
+}
+
+static void updateGameplay() {
+    static LARGE_INTEGER freq = {}, prev = {};
+    if (!freq.QuadPart)
+        QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    double dt = prev.QuadPart ? double(now.QuadPart - prev.QuadPart) / freq.QuadPart : 0;
+    prev = now;
+    static double acc = 0;
+    acc = std::min(acc + std::min(dt, .1), .1);
+
+    auto frame = pollGameplayFrame();
+    if (!updateCharacterLifecycle(frame, acc))
+        return;
+    routeGameplayActions(frame);
+    pollTestCommands(frame);
+    refreshGameplaySettings(frame);
+    if (!prepareCharacterSimulation(frame, acc))
+        return;
+    simulateCharacter(frame, dt, acc);
 }
 
 static void update() {

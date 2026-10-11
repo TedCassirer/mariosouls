@@ -28,6 +28,7 @@ def _shared_tests(render=False):
     f.run([sys.executable, f.ROOT / "tools/tests", "test_release_tools"])
     f.run([sys.executable, f.ROOT / "tools/tests", "test_results"])
     f.run([sys.executable, f.ROOT / "tools/tests", "test_profiles"])
+    f.run([sys.executable, f.ROOT / "tools/tests", "test_qa_cli"])
     f.compile_cpp(f.FRAMEWORK / "tests/diagnostics_test.cpp", f.BUILD / "diagnostics-test.exe")
     f.run([f.BUILD / "diagnostics-test.exe"])
     f.run([sys.executable, f.ROOT / "tools/tests", "test_diagnostics"])

@@ -9,8 +9,24 @@ python tools/framework.py test --shared-only
 ```
 
 Live scenarios require the installed mod, Windows, the optional Universal Modder
-Python tooling, backups and a current handoff of the controls. Each script's
-`--help` describes its arguments. Never use these against a player's ordinary
+Python tooling, backups and a current handoff of the controls. List scenarios
+through the same entry point used for other development commands:
+
+```powershell
+python tools/framework.py qa
+python tools/framework.py qa contact --help
+python tools/framework.py qa body --help
+```
+
+Each scenario's `--help` describes its arguments and runs without optional game
+dependencies. Listing and help never open the game or acquire controls. For
+example, after a control handoff with a prepared Mario QA fixture:
+
+```powershell
+python tools/framework.py qa contact 12345 door --output work/qa/door-run
+```
+
+Replace the example PID with the running game process ID. Never use these against a player's ordinary
 save or bypass a character/level guard to make a test run.
 
 ## Shared infrastructure
@@ -36,12 +52,16 @@ gain native memory access through them.
 | `launcher_smoke.py` | Firelink cannon aim and launch |
 | `body_probe.py` / `contact_probe.py` | Read-only body and contact measurements |
 | `starting_class.py` | Read-only starting stats for Mario Class QA |
-| `quit.py` | Native save-and-quit dialog verification |
 | `render_equipment.py` | Offline rendering of private SDK pose dumps |
 
 Most scenarios require Mario QA; the body probe and starting-class probe have
 their own narrow fixture identities. The guards in each scenario are the source
 of truth. No scenario should target the owner's level-65 character.
+
+The renderer is part of the supported `preview-equipment` workflow, not a live
+scenario. The old screenshot-dependent quit helper has been retired; exit the
+game through its native menu. Historical screenshot fixtures are not required by
+the maintained QA tools.
 
 Write captures and measurements to ignored `work/` or `outputs/`. Do not commit
 saves, raw process observations or game-derived images. Record concise findings

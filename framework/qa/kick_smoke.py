@@ -9,9 +9,6 @@ import argparse
 import json
 import time
 import math
-from host import Host, GAME
-from bridge import command
-from um.win import Drive, Recorder, shot
 
 
 def main():
@@ -23,6 +20,11 @@ def main():
     p.add_argument("--output", required=True)
     p.add_argument("--record", action="store_true")
     a = p.parse_args()
+
+    from host import Host, GAME
+    from bridge import command
+    from um.win import Drive, Recorder, shot
+
     assert 0.5 <= a.distance <= 5
     out = Path(a.output)
     out.mkdir(parents=True, exist_ok=False)

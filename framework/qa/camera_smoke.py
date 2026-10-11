@@ -5,9 +5,6 @@ import argparse
 import json
 import math
 import time
-from host import Host
-from bridge import command
-from um.win import Drive, shot
 
 
 def observe(h):
@@ -35,6 +32,11 @@ def main():
     p.add_argument("pid", type=int)
     p.add_argument("--output", required=True)
     a = p.parse_args()
+
+    from host import Host
+    from bridge import command
+    from um.win import Drive, shot
+
     out = Path(a.output)
     out.mkdir(parents=True, exist_ok=False)
     h = Host(a.pid)

@@ -5,10 +5,11 @@ Does not broaden Host.snapshot guards or grant harness/inventory access.
 import argparse
 import json
 from pathlib import Path
-from host import Host, StateError
 
 
 def observe(host):
+    from host import StateError
+
     state = host.snapshot(require_test=False)
     stats = host.chain(0x1378700, 0, 8)
     slot = host.read(stats + 0xC6, 1)[0]
@@ -41,6 +42,8 @@ def main():
     parser.add_argument("pid", type=int)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
+    from host import Host
+
     host = Host(args.pid)
     try:
         state = observe(host)

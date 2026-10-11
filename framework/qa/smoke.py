@@ -8,11 +8,12 @@ from pathlib import Path
 import argparse
 import json
 import time
-from host import Host
-from bridge import command
 
 
 def main(pid):
+    from host import Host
+    from bridge import command
+
     h = Host(pid)
     evidence = []
 

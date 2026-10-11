@@ -311,6 +311,9 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     p = commands.add_parser("format", help="Format active source or check its style")
     p.add_argument("--check", action="store_true")
+    p = commands.add_parser("qa", help="List or run a guarded live-game regression scenario")
+    p.add_argument("scenario", nargs="?")
+    p.add_argument("arguments", nargs=argparse.REMAINDER)
     for name in ["build", "doctor", "test", "install"]:
         p = commands.add_parser(name)
         p.add_argument("--character", default="mario64")
@@ -354,6 +357,15 @@ def main():
     args = parser.parse_args()
     if args.command == "format":
         format_sources(args.check)
+    elif args.command == "qa":
+        run(
+            [
+                sys.executable,
+                FRAMEWORK / "qa",
+                *([args.scenario] if args.scenario else []),
+                *args.arguments,
+            ]
+        )
     elif args.command == "new-character":
         scaffold(args.id, args.name)
     elif args.command == "prepare-collision":

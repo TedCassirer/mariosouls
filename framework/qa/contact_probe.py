@@ -2,8 +2,7 @@
 
 import json
 import struct
-import sys
-from host import Host, StateError
+import argparse
 
 
 def geometry(h, actor):
@@ -33,6 +32,8 @@ def geometry(h, actor):
 
 
 def observe(h, target=1810800):
+    from host import StateError
+
     s = h.snapshot(target)
     actor = int(s["player"]["reference"], 16)
     physics = h.chain(actor, 0x28, 0x1C)
@@ -60,9 +61,19 @@ def observe(h, target=1810800):
     return s
 
 
-if __name__ == "__main__":
-    h = Host(int(sys.argv[1]))
+def main(arguments=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("pid", type=int)
+    parser.add_argument("target", nargs="?", type=int, default=1810800)
+    args = parser.parse_args(arguments)
+    from host import Host
+
+    host = Host(args.pid)
     try:
-        print(json.dumps(observe(h, int(sys.argv[2]) if len(sys.argv) > 2 else 1810800), indent=2))
+        print(json.dumps(observe(host, args.target), indent=2))
     finally:
-        h.close()
+        host.close()
+
+
+if __name__ == "__main__":
+    main()

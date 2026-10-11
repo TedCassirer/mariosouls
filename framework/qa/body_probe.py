@@ -2,8 +2,7 @@
 
 import json
 import struct
-import sys
-from host import Host
+import argparse
 
 
 def inspect(h):
@@ -43,9 +42,18 @@ def inspect(h):
     )
 
 
-if __name__ == "__main__":
-    h = Host(int(sys.argv[1]))
+def main(arguments=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("pid", type=int)
+    args = parser.parse_args(arguments)
+    from host import Host
+
+    host = Host(args.pid)
     try:
-        print(json.dumps(inspect(h), indent=2))
+        print(json.dumps(inspect(host), indent=2))
     finally:
-        h.close()
+        host.close()
+
+
+if __name__ == "__main__":
+    main()

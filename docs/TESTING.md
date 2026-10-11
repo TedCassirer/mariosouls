@@ -45,6 +45,11 @@ character and level guard; never use the owner's level-65 character. Obtain a
 current control handoff before automated input. Do not leave invincibility or
 QA controls enabled after a test.
 
+`python tools/framework.py qa` lists the maintained scenarios. See the
+[live QA guide](../framework/qa/README.md) for fixtures and arguments. Scenario
+discovery and help are tested in CI without loading native game-access tools;
+that does not constitute a live run of those scenarios.
+
 Record build hash, character, map, equipment, steps, expected result, actual
 result, enemy HP changes, stamina, timing and stagger where applicable. Keep
 private captures and saves out of Git. Add concise verified findings to the

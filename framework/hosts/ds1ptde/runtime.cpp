@@ -70,7 +70,7 @@ static SCSession::Session characterSession;
 static SCMotion::Clock characterClock;
 static SCMotion::InputLatch characterInput;
 static bool characterOwned(){return characterSession.visible();}
-static bool nativeActionOwned(){return characterSession.action();}
+static bool nativeActionOwned(){return characterSession.action()||characterSession.death();}
 static Vec interactionPrevious;
 static int interactionMap=-1;
 static SCController::Reader controllerReader;
@@ -166,7 +166,7 @@ static void releaseControl(bool preserveRequest=false){
  characterSession.release();if(audioOut)waveOutReset(audioOut);if(character>=0){guest->destroy(character);character=-1;}geo.numTrianglesUsed=0;logf("native controls restored; character requested=%d",characterSession.requested());
 }
 static bool activate(){
- if(!player||!posData||!cam||!ready||!loadMap())return false;
+ if(!player||!posData||!cam||read<int>(player+0x2d4)<=0||!ready||!loadMap())return false;
  if(!actionInputReady){logf("Character refused: native action input filter unavailable");return false;}
  if(GetPrivateProfileIntA("World","NativeMotion",1,ini)!=1||!worldMotionReady){logf("Character refused: native collision bridge required");return false;}
  origin=read<Vec>(posData+0x10);if(!isfinite(origin.x)||!isfinite(origin.y)||!isfinite(origin.z))return false;
@@ -202,6 +202,7 @@ static bool lineClear(Vec a,Vec b){
 #include "object_combat.h"
 #include "equipment.h"
 #include "native_reaction.h"
+#include "death.h"
 #include "debug_view.h"
 static void update(){
  static LARGE_INTEGER freq={},prev={};if(!freq.QuadPart)QueryPerformanceFrequency(&freq);LARGE_INTEGER now;QueryPerformanceCounter(&now);double dt=prev.QuadPart?double(now.QuadPart-prev.QuadPart)/freq.QuadPart:0;prev=now;static double acc=0;acc=std::min(acc+std::min(dt,.1),.1);
@@ -214,8 +215,13 @@ static void update(){
  harnessTick(focus,pad.connected);
  bool padToggle=controllerToggle.update(pad,focus,inputTime);if(padToggle)logf("controller Character toggle");
  SCSession::Identity identity={player,posData,mp,currentMap()};
- if(characterOwned()&&(!characterSession.matches(identity)||!cam||read<int>(player+0x2d4)<=0)){logf("SESSION native actor changed/dead; clearing pending work");releaseControl(true);}
+ if(characterOwned()&&(!characterSession.matches(identity)||!cam)){logf("SESSION native actor changed; clearing pending work");releaseControl(true);}
+ if(characterOwned()&&read<int>(player+0x2d4)<=0&&!characterSession.death()){
+  if(!deathBegin(acc))releaseControl(true);
+ }
+ if(characterSession.death()&&read<int>(player+0x2d4)>0){logf("Death presentation complete: native respawn");releaseControl(true);acc=0;}
  if((focus&&pressed(VK_F6))||padToggle){if(characterOwned()||characterSession.requested()){characterSession.request(false);releaseControl();}else{characterSession.request(true);if(!activate())characterSession.failed(inputTime);}}
+ if(characterSession.death()){deathTick(acc,pad.slot);return;}
  if(!characterOwned()&&characterSession.requested()){
   bool safe=focus&&identity.valid()&&cam&&read<int>(player+0x2d4)>0;
   if(safe){auto o=nativeInteractionState();safe=o.valid&&o.idle&&!o.menu&&!o.event&&!o.ladder;}

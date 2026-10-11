@@ -146,6 +146,18 @@ switches or inventory/reward writes are involved.
 it suppresses the native human-hand prop/effect. Add character-specific fittings
 in the adapter, never in host code.
 
+`SC_CAP_DEATH_POSE` opts into `SC_POSE_DEATH`. After authoritative native HP
+reaches zero, the host stops guest gameplay, clears pending combat/input, returns
+physics ownership to the host, and samples this pose at 30 Hz with `phase=-1`.
+The adapter plays its character-specific animation once and holds its final pose;
+it must return no interaction/attack flags or attachment sockets. Death visuals
+must not run guest death warps, alter either game's rewards, or delay native
+respawn. Native identity/map changes, HP returning above zero, invalid transforms
+or a 15-second presentation limit release the old guest. The requested character
+can reactivate only after the ordinary living/idle stability checks. Unsupported
+adapters retain native death presentation. This optional capability extends ABI 4
+without changing struct layouts; older hosts reject the new capability bit.
+
 ## Attack contract
 
 `character.json` generates the compiled descriptor; editing installed JSON alone

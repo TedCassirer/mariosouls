@@ -19,6 +19,7 @@ extern "C" {
 #define SC_CAP_TEXTURE_MODULATE 4u
 #define SC_CAP_ALPHA_TEST 8u
 #define SC_CAP_EQUIPMENT 16u
+#define SC_CAP_DEATH_POSE 32u
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u
@@ -84,7 +85,8 @@ typedef struct SC_Init {
     SC_Log log;
 } SC_Init;
 enum SC_PoseKind { SC_POSE_NEUTRAL, SC_POSE_CLIMB, SC_POSE_DRINK, SC_POSE_REST,
-    SC_POSE_DOOR, SC_POSE_WALK, SC_POSE_DOWNED, SC_POSE_TALK, SC_POSE_STAGGER };
+    SC_POSE_DOOR, SC_POSE_WALK, SC_POSE_DOWNED, SC_POSE_TALK, SC_POSE_STAGGER,
+    SC_POSE_DEATH };
 typedef struct SC_Pose {
     uint32_t kind;
     float position[3], yaw, phase, travelCm;

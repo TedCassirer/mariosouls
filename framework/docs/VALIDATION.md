@@ -1,3 +1,33 @@
+# Mario death presentation (2026-10-11)
+
+Supported full runtime/host/adapter build and test passed. The shared session
+checks cover death from locomotion and native interaction, no resume/handoff
+from death, no live reactivation while death is owned, identity mismatch and
+stable reactivation after release. Mario's actual owned-ROM test plays animation
+0x32 through frames 0..95 twice across destruction/recreation. It asserts one
+voice callback per death, finite animated geometry, identical terminal meshes for
+the remaining 90 ticks, no attack/interaction flags or equipment sockets, and
+successful jumping after a fresh life. SDK structs and ABI4 layouts are unchanged.
+
+Installed exact tested host/adapter/runtime; previous contextual-A and equipment
+checkpoints remain immutable. Only Mario QA level6 was loaded, with saves backed
+up. Native enemy melee took HP594 to0; guest death presentation began at native
+zero HP, while native tracks6000/6100 continued. Inspected collapse/final-pose
+screenshots and recorded contact sheets: Mario remains visible beneath YOU DIED,
+and the game loads and respawns normally. The session log confirms old-actor
+release and automatic reactivation after the native actor becomes stable.
+Observed respawn HP594/souls0, then a keyboard jump rising2.10m at the sampled
+instant. Actual bloodstain recovery restored212 souls; bonfire rest/Leave passed.
+Mario QA was saved and the game closed normally with HP594/souls212.
+
+This pass verified melee death. Drowning, kill planes, airborne death, death
+during a ladder/menu, controller inputs held across death and F6 mid-death were
+not separately exercised live. Those cases use the same guarded ownership path;
+no claims of special death variants are made. Adapters without death_pose retain
+the previous native death fallback. No health/inventory/reward writes were added.
+Private evidence: work/death-qa/melee-trace.json, game.log, screenshots and recording.
+Preview: outputs/Mario death animation.mp4.
+
 # Contextual A and interaction stance fix (2026-10-11)
 
 Read-only observation of the reported failure found an active native prompt,

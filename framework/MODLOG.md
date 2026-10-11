@@ -1,3 +1,29 @@
+# Death presentation, 2026-10-11
+
+Baseline c64a462 / immutable contextual-A checkpoint. The immediate HP<=0
+release destroyed Mario before any death animation could render. Added a shared
+NativeDeath lifecycle state and optional ABI4 death_pose capability. The PTDE
+host releases motion/capsules and transient combat/input, retains only the guest
+presentation, and lets native HP/death animations 6000/6100, bloodstain creation,
+loading and respawn proceed. Identity loss or native revival destroys the old
+guest; the existing living/idle stability gate can recreate it.
+
+Mario uses owned-ROM animation 0x32, frames 0..95, with the original dead eyes
+and one dying voice. A narrow staged-runtime patch gives host pose style 8 a
+nonlooping terminal frame. Guest death actions/warps are never executed. Existing
+runtime source and prior checkpoint archives are unchanged.
+
+Offline: full supported build/test/doctor, two ROM-backed death lifecycles,
+monotonic frame progression, stable final mesh, one-shot voice callback, cleared
+attack/interaction/socket flags, recreate/resume jump and session ownership tests.
+Live: Mario QA only; native melee HP 594->0, visible collapse/final pose under
+YOU DIED, native respawn HP594/souls0, automatic Mario reactivation and 2.10 m
+observed jump rise. Recovered all212 souls through the actual bloodstain prompt;
+bonfire rest/Leave passed and the character was saved normally with HP594/souls212.
+Early bonfire requests were outside its active prompt after respawn; repositioning
+to the existing fixture restored the prompt. They were rejected without handoff.
+Evidence work/death-qa, preview outputs/Mario death animation.mp4.
+
 # Framework equipment work, 2026-10-11
 
 Baseline: 0.4.2, d3f03f6, immutable checkpoint runtime archive and tag retained.

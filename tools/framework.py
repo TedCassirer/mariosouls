@@ -19,7 +19,7 @@ BUILD=ROOT/'work/framework-build'
 ZIG=ROOT/'work/tools/zig-windows-x86_64-0.13.0/zig.exe'
 GAME=Path(r'C:\Program Files (x86)\Steam\steamapps\common\Dark Souls Prepare to Die Edition\DATA')
 FLAGS={'automatic':1,'radial':2,'no_objects':4}
-CAPS={'audio':1,'item_prop':2,'texture_modulate':4,'alpha_test':8,'equipment':16}
+CAPS={'audio':1,'item_prop':2,'texture_modulate':4,'alpha_test':8,'equipment':16,'death_pose':32}
 BODY_DEFAULTS=dict(model_scale=1.,radius_cm=0.,height_cm=0.,hurt_radius_cm=0.,hurt_height_cm=0.,fall_damage_scale=1.,fall_damage_max_hp_fraction=1.,nonlethal_falls=False)
 
 

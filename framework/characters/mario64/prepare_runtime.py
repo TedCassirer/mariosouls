@@ -37,11 +37,15 @@ def prepare(repo):
     staged('libsm64.c',[
         ('s16 lastPose[63],blendFrom[63];u16 poseIndices[126];',
          's16 lastPose[63],blendFrom[63];u16 poseIndices[126];\n    uint32_t equipmentRight,equipmentLeft,equipmentSwing,equipmentValid;\n    float equipmentPhase,equipmentGuard,equipmentRightHand[16],equipmentLeftHand[16];',1),
-        ('#include "host_pose.h"','#include "sc_equipment.h"\n#include "host_pose.h"',1),
+        ('#include "host_pose.h"','#include "decomp/include/mario_geo_switch_case_ids.h"\n#include "sc_equipment.h"\n#include "host_pose.h"',1),
         ('    update_button( inputs->buttonA, A_BUTTON );',
          '    sc_equipment_before_tick((struct MarioInstance *)s_mario_instance_pool.objects[marioId]);\n    update_button( inputs->buttonA, A_BUTTON );',1),
     ])
     staged('host_pose.h',[
+        ('else {frame++;if(frame>=a->loopEnd)frame=a->loopStart;}',
+         'else {frame++;if(frame>=a->loopEnd)frame=(style&8)?a->loopEnd-1:a->loopStart;}',1),
+        ('    host_render(instance,buffers,1+animation+(style<<9),target);',
+         '    if(style&8){\n        m->marioBodyState->eyeState=MARIO_EYES_DEAD;\n        if(instance->poseKey!=1+animation+(style<<9))play_sound(SOUND_MARIO_DYING,m->marioObj->header.gfx.cameraToObject);\n    }\n    host_render(instance,buffers,1+animation+(style<<9),target);',1),
         ('struct AnimInfo *info=&gMarioState->marioObj->header.gfx.animInfo;',
          'sc_equipment_begin(instance);\n    struct AnimInfo *info=&gMarioState->marioObj->header.gfx.animInfo;',1),
         ('geo_process_root_hack_single_node(s_mario_graph_node);',

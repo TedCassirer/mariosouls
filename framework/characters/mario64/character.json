@@ -13,7 +13,8 @@
   "capabilities": [
     "audio",
     "item_prop",
-    "equipment"
+    "equipment",
+    "death_pose"
   ],
   "automatic_attack": "stomp",
   "base_power": 100,

@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 namespace SCSession {
-enum class Owner {Native,Character,NativeAction};
+enum class Owner {Native,Character,NativeAction,NativeDeath};
 struct Identity {
  uintptr_t actor=0,physics=0,movement=0;int map=-1;
  bool valid()const{return actor&&physics&&movement&&map>=0;}
@@ -15,6 +15,7 @@ public:
  bool visible()const{return mode!=Owner::Native;}
  bool character()const{return mode==Owner::Character;}
  bool action()const{return mode==Owner::NativeAction;}
+ bool death()const{return mode==Owner::NativeDeath;}
  bool requested()const{return wanted;}
  uint32_t generation()const{return epoch;}
  bool matches(Identity next)const{return identity.valid()&&identity==next;}
@@ -22,6 +23,7 @@ public:
  void activate(Identity next){identity=next;mode=Owner::Character;wanted=true;settling=false;++epoch;}
  bool handoff(){if(!character())return false;mode=Owner::NativeAction;++epoch;return true;}
  bool resume(){if(!action())return false;mode=Owner::Character;++epoch;return true;}
+ bool die(){if(!visible()||death())return false;mode=Owner::NativeDeath;settling=false;++epoch;return true;}
  void release(){mode=Owner::Native;identity={};settling=false;++epoch;}
  bool canRetry(Identity next,bool safe,uint32_t now){
   if(!wanted||visible()||!next.valid()||!safe||(retryAt&&int32_t(now-retryAt)<0)){settling=false;return false;}

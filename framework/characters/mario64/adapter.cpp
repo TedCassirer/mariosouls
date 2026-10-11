@@ -184,9 +184,11 @@ static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
         case SC_POSE_WALK:anim=0x48;break;
         case SC_POSE_DOWNED:anim=0x19;break;
         case SC_POSE_STAGGER:anim=0x74;break;
+        case SC_POSE_DEATH:anim=0x32;style=8;break;
     }
     libPose(id,p->position[0],p->position[1],p->position[2],p->yaw,anim,phase,style,&raw,&g);
     mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);
+    if(p->kind==SC_POSE_DEATH){out->flags=0;out->attackId=out->interruptedAttackId=-1;out->landingRecoveryTicks=0;}
     if(p->kind==SC_POSE_DRINK&&p->phase>.02f)flask(*mesh);
     return 1;
 }

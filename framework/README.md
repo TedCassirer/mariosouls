@@ -1,5 +1,10 @@
 # Souls Character Framework 0.5.0
 
+Death presentation follow-up: Mario now plays his original SM64 collapse and
+death voice once, then holds the final pose while Dark Souls handles "YOU DIED"
+and respawning. This uses the optional SDK death-pose capability and shared
+session lifecycle. It does not add a second health pool or guest respawn logic.
+
 Interaction follow-up: controller A now interacts at eligible native prompts
 and jumps elsewhere. Y remains an interaction alias. A weapon-stance idle check
 that rejected animation 120000 has been fixed. The user confirmed A recovered

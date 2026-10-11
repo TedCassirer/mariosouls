@@ -44,6 +44,9 @@ that check.
    Report `SC_CAN_INTERACT` and `SC_GROUNDED` accurately. The shared controller-A
    policy chooses native interaction at an eligible prompt or guest jump elsewhere;
    adapters must not independently turn that interaction press into a jump.
+   Opt into `death_pose` only when `SC_POSE_DEATH` actually plays and holds a
+   character-specific death animation. Keep guest death/respawn logic disabled;
+   the host still owns the dead actor. Test terminal hold and new-life reset.
 5. Run a full `build --character <id>`, then `test --character <id>` with required
    `--asset` and `--runtime` paths. The common suite checks lifecycle, bounds,
    floor, movement/jump, all poses, resume and damage/audio callbacks. Add engine-

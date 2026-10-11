@@ -10,7 +10,7 @@ def command(pid,mode=0,frames=0,buttons=0,x=0,y=0,host=None):
  try:
   state=h.snapshot()
   if not state['focus'] or state['player']['hp']<=0:raise RuntimeError('Requires focused, living Mario QA')
-  if mode not in range(6) or not 0<=frames<=150 or not 0<=buttons<=31 or x not in (-1,0,1) or y not in (-1,0,1):raise ValueError('Invalid bounded test command')
+  if mode not in range(7) or not 0<=frames<=150 or not 0<=buttons<=31 or x not in (-1,0,1) or y not in (-1,0,1):raise ValueError('Invalid bounded test command')
   path=GAME/'mariosouls.ini';cfg=configparser.ConfigParser();cfg.optionxform=str;cfg.read(path)
   if 'Test' not in cfg:cfg['Test']={}
   # The retained legacy wire format has reversed axes; this public helper uses

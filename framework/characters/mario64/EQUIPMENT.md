@@ -1,5 +1,34 @@
 # Mario equipment presentation
 
+## Fire Flower
+
+Selecting an equipped Pyromancy Flame transforms the outfit into white hat and
+shirt with red overalls, and places an original procedural Fire Flower in that
+hand. Hair, shoes, gloves and skin retain their original colors. Switching away
+from both flames restores ordinary Mario. Native interaction poses retain the
+costume while hiding hand props when necessary.
+
+Attune Fireball at a bonfire and select it with the native spell selector.
+Right flower: B/RB/left mouse. Left flower: RT/Tab. The left input takes the
+place of parrying while that hand holds a flame; a shield still uses it to parry.
+LB/Shift remains the held-block input, not the flower cast control. A/Space
+retains contextual interaction/jumping. Empty right hand retains Mario attacks.
+One-handed use only; sorcery/miracle catalysts and two-handing are not supported.
+
+The host invokes the actual native cast. It does not grant unlimited fireballs,
+fabricate impact damage, or use Mario's punch power for the spell. Native charges,
+attunement, flame reinforcement/scaling, collision and rewards remain authoritative.
+Inventory/HUD name and icon still say Pyromancy Flame. Only the held representation
+and character appearance change. Other pyromancies are not individually verified.
+
+`author_flower.py` fits original arm keys to the owned skeleton. The flower mesh
+is authored in `fire_flower.h`; neither asset is a downloaded Nintendo model.
+Use the normal `preview-equipment` workflow with `--actions casting` for private
+front/rear cast sheets. The normalized animation schedule is approximate; actual
+native casting speed, recovery and projectile origin are retained.
+
+## Shared equipment presentation
+
 The Mario adapter layers authored upper-body rotations over the ordinary guest animation
 without changing movement, attack actions or animation timing. The host owns
 equipment selection, attack timing, stamina, native damage and guard confirmation.

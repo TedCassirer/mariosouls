@@ -10,7 +10,7 @@ sys.path.insert(0,str(ROOT/'work/python-deps'))
 import numpy as np
 from PIL import Image,ImageDraw
 
-NAMES={1:'Longsword',3:'Dagger',4:'Scimitar',5:'Claymore',6:'Battle Axe',7:'Mace'}
+NAMES={1:'Longsword',3:'Dagger',4:'Scimitar',5:'Claymore',6:'Battle Axe',7:'Mace',8:'Pyromancy (right)',9:'Pyromancy (left)'}
 MODELS={1:201,3:100,4:400,5:266,6:505,7:606}
 
 def read_dump(path):
@@ -64,7 +64,7 @@ def render(frame,texture,props,size=400,yaw=35):
             image[lo[1]:hi[1]+1,lo[0]:hi[0]+1][mask]=np.clip(rgb*shade[:,:,None]*255,0,255).astype(np.uint8)[mask];region[mask]=zz[mask]
     # Actual guest mesh; host model scaling is 0.9 and units are centimetres.
     draw(frame['p']*.009,frame['normal'],frame['color'],frame['uv'],texture,True)
-    for side,model in [(0,MODELS[frame['kind']]),(1,1523)]:
+    for side,model in ([(0,MODELS[frame['kind']]),(1,1523)] if frame['kind'] in MODELS else []):
         if model not in props:continue
         v,tex=props[model];m=frame['hands'][side]
         p=v[:,:3]@m[:3,:3].T*.9+m[:3,3]*.009
@@ -78,8 +78,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('dump');p.add_argument('--props',required=True);p.add_argument('--sheet',required=True);p.add_argument('--frames');p.add_argument('--size',type=int,default=320);p.add_argument('--yaw',type=float,default=35);args=p.parse_args()
     texture,frames=read_dump(args.dump);directory=Path(args.props)
     props={m:read_prop(directory/f'wp_a_{m:04d}.scprop') for m in [*MODELS.values(),1523] if (directory/f'wp_a_{m:04d}.scprop').exists()}
-    size=args.size;sheet=Image.new('RGB',(size*5,size*6));phases=[0,.20,.37,.55,.85]
-    for row,kind in enumerate(NAMES):
+    kinds=[k for k in NAMES if any(f['kind']==k for f in frames)]
+    size=args.size;sheet=Image.new('RGB',(size*5,size*len(kinds)));phases=[0,.20,.37,.55,.85]
+    for row,kind in enumerate(kinds):
         available=[f for f in frames if f['kind']==kind and f['combo']==1]
         for col,phase in enumerate(phases):
             frame=min(available,key=lambda f:abs(f['phase']-phase));sheet.paste(render(frame,texture,props,size,args.yaw),(col*size,row*size))

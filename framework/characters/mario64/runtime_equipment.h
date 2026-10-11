@@ -26,18 +26,21 @@ static void sc_equipment_rotation(const s16 *from,const s16 *to,float t,s16 *out
 
 /* Authored full upper-body key poses. No guest action or root motion is changed. */
 #include "sc_equipment_keys.h"
+#include "sc_flower_keys.h"
 static unsigned sc_equipment_family(unsigned kind){return kind==1?0:kind-2;}
 static void sc_equipment_keys(struct MarioInstance *instance,const s16 **from,const s16 **to,float *blend){
-    const s16 (*keys)[12]=scWeaponKeys[sc_equipment_family(instance->equipmentRight)][instance->equipmentSwing==2?1:0];
+    const s16 (*keys)[12]=instance->equipmentRight==8?scFlowerKeys:scWeaponKeys[sc_equipment_family(instance->equipmentRight)][instance->equipmentSwing==2?1:0];
     float p=instance->equipmentPhase;int first=0,second=0;*blend=0;
-    if(instance->equipmentSwing==3||instance->equipmentSwing==4){
+    if(instance->equipmentRight==8){
+        if(instance->equipmentSwing==6){const float marks[5]={0,.36f,.52f,.7f,1};first=p<marks[1]?0:p<marks[2]?1:p<marks[3]?2:3;second=first+1;*blend=sc_equipment_smooth((p-marks[first])/(marks[second]-marks[first]));}
+    }else if(instance->equipmentSwing==3||instance->equipmentSwing==4){
         keys=scCriticalKeys[sc_equipment_family(instance->equipmentRight)];
         // Windup, decisive insertion/impact, withdrawal, recovery. The phase
         // comes from the host animation clock, never a damage timing guess.
         const float marks[5]={0,.10f,.28f,.68f,1};
         first=p<marks[1]?0:p<marks[2]?1:p<marks[3]?2:3;second=first+1;
         *blend=sc_equipment_smooth((p-marks[first])/(marks[second]-marks[first]));
-    }else if(instance->equipmentSwing&&instance->equipmentSwing!=5){
+    }else if(instance->equipmentSwing&&instance->equipmentSwing!=5&&instance->equipmentSwing!=7){
         if(p<.20f){first=0;second=1;*blend=sc_equipment_smooth(p/.20f);}
         else if(p<=.55f){
             // Ease across the WHOLE strike, keeping speed through its middle.
@@ -104,6 +107,11 @@ void sc_mario_equipment_rotation(int attributeOffset,s16 *rotation) {
         }
     }else if(instance->equipmentRight&&channel>=18&&channel<27){
         sc_equipment_rotation(from+3+channel-18,to+3+channel-18,blend,rotation);
+    }else if(instance->equipmentLeft==8&&channel>=30&&channel<39){
+        float p=instance->equipmentPhase,blend=0;int a=0,b=0;
+        if(instance->equipmentSwing==7){const float marks[5]={0,.36f,.52f,.7f,1};a=p<marks[1]?0:p<marks[2]?1:p<marks[3]?2:3;b=a+1;blend=sc_equipment_smooth((p-marks[a])/(marks[b]-marks[a]));}
+        s16 value[3];sc_equipment_rotation(scFlowerKeys[a]+3+channel-30,scFlowerKeys[b]+3+channel-30,blend,value);
+        rotation[0]=-value[0];rotation[1]=-value[1];rotation[2]=value[2];
     }else if(instance->equipmentLeft==2&&channel>=30&&channel<39){
         float blend=sc_equipment_smooth(instance->equipmentGuard);
         sc_equipment_rotation(scShieldKeys[0]+channel-30,scShieldKeys[1]+channel-30,blend,rotation);
@@ -126,7 +134,7 @@ void sc_mario_equipment_hand(int attributeOffset,const float *matrix) {
     if(!instance)return;
     unsigned bit;float *out;
     if(attributeOffset==54&&instance->equipmentRight!=0){bit=1;out=instance->equipmentRightHand;}
-    else if(attributeOffset==78&&instance->equipmentLeft==2){bit=2;out=instance->equipmentLeftHand;}
+    else if(attributeOffset==78&&instance->equipmentLeft!=0){bit=2;out=instance->equipmentLeftHand;}
     else return;
     memset(out,0,sizeof(float)*16);
     for(int column=0;column<3;column++){
@@ -145,10 +153,10 @@ void sc_mario_equipment_hand(int attributeOffset,const float *matrix) {
 }
 
 SM64_LIB_FN uint32_t sm64_mario_equipment(int32_t id,uint32_t right,uint32_t left,uint32_t swing,float phase,float guard) {
-    if(id<0||id>=s_mario_instance_pool.size||!s_mario_instance_pool.objects[id]||(right!=0&&right!=1&&(right<3||right>7))||(left!=0&&left!=2)||swing>5||!isfinite(phase)||!isfinite(guard))return 0;
+    if(id<0||id>=s_mario_instance_pool.size||!s_mario_instance_pool.objects[id]||(right!=0&&right!=1&&(right<3||right>8))||(left!=0&&left!=2&&left!=8)||swing>7||!isfinite(phase)||!isfinite(guard))return 0;
     struct MarioInstance *instance=s_mario_instance_pool.objects[id];
     instance->equipmentRight=right;instance->equipmentLeft=left;
-    instance->equipmentSwing=(right||swing==5)?swing:0;instance->equipmentPhase=sc_equipment_unit(phase);instance->equipmentGuard=left?sc_equipment_unit(guard):0;
+    instance->equipmentSwing=(right||swing==5||swing==7)?swing:0;instance->equipmentPhase=sc_equipment_unit(phase);instance->equipmentGuard=left?sc_equipment_unit(guard):0;
     if(!right&&!left)instance->equipmentValid=0;
     return 1;
 }

@@ -131,6 +131,7 @@ static void preview(const SC_CharacterAPI*api,const char*asset,const char*runtim
     }
     fclose(f);api->destroy(id);api->shutdown();
 }
+#include "fire_flower_test.h"
 int main(int argc,char**argv){
     if(argc!=4&&argc!=5){fprintf(stderr,"usage: equipment_test character.dll owned-rom.z64 sm64.dll [private-preview.bin]\n");return 2;}
     HMODULE module=LoadLibraryA(argv[1]);require(module!=nullptr,"load adapter");auto get=(SC_GetAPI)GetProcAddress(module,"SoulsCharacterGetAPI");require(get!=nullptr,"adapter entrypoint");
@@ -154,5 +155,5 @@ int main(int argc,char**argv){
         if(baseline[i].geometry!=equipped[i].geometry)changed++;
     }
     require(changed>150,"rendered arms actually change");printf("Melee kind %u: movement parity and rigid attachments passed\n",kind);}
-    nativeCombatPoses(api,argv[2],argv[3]);armedIdle(api,argv[2],argv[3]);if(argc==5)preview(api,argv[2],argv[3],argv[4]);FreeLibrary(module);puts("PASS: Mario equipment movement/action parity, rendered arm poses, finite rigid sockets, correction/rebase, interaction/hurt lifecycle, armed-idle wake policy");return 0;
+    fireFlowerTest(api,argv[2],argv[3]);nativeCombatPoses(api,argv[2],argv[3]);armedIdle(api,argv[2],argv[3]);if(argc==5)preview(api,argv[2],argv[3],argv[4]);FreeLibrary(module);puts("PASS: Mario equipment movement/action parity, rendered arm poses, finite rigid sockets, correction/rebase, interaction/hurt lifecycle, armed-idle wake policy");return 0;
 }

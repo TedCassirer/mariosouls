@@ -26,3 +26,19 @@ static void qaMeleeArsenal(){
  put<int>(stats+0x50,16);put<int>(stats+0x58,13);put<int>(stats+0x88,13);
  logf("QA arsenal complete: Mario QA level13 STR16 DEX13; other attributes unchanged");
 }
+
+static void qaPyromancyKit(){
+ static bool granted=false;
+ uintptr_t stats=chain(0x1378700,{0,8});wchar_t name[20]={};
+ if(granted||!stats||!get(stats+0xa0,name)||wcscmp(name,L"Mario QA")||currentMap()!=1801||
+    !player||player!=lastPlayer||read<int>(player+0x2d4)<=0||characterOwned()||!harnessIdentity()||read<int>(stats+0x88)!=13)return;
+ auto o=nativeInteractionState();if(!o.valid||!o.idle||o.menu||o.event||o.ladder)return;
+ const unsigned char expected[]={0x55,0x8b,0xec,0x83,0xe4,0xf8,0x83,0xec,0x34,0x8b,0x4d,0x0c,0x53,0x8b,0x5d,0x08,0x56,0x83,0xc8,0xff,0x33,0xf6,0x81,0xf9,0,0,0,0x20};
+ unsigned char actual[sizeof(expected)]={};
+ if(!get(uintptr_t(0xc0b700),actual)||memcmp(actual,expected,sizeof(actual))||!equipmentItem(1330000).pyromancy||!equipmentParamRow(3,"EQUIP_PARAM_GOODS_ST",4000))return;
+ using Acquire=int(__stdcall*)(uintptr_t,int,int,int,int,int);
+ auto acquire=reinterpret_cast<Acquire>(0xc0b700);granted=true;
+ int flame=acquire(stats+0x1b8,0,1330000,1,1,0);
+ int spell=acquire(stats+0x1b8,0x40000000,4000,1,1,0);
+ logf("QA native pyromancy kit flame=%d fireball=%d; attune/equip through native menus",flame,spell);
+}

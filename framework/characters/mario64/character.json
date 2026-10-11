@@ -4,7 +4,7 @@
   "display_name": "Mario 64",
   "status": "implemented",
   "source": "adapter.cpp",
-  "max_triangles": 1024,
+  "max_triangles": 1536,
   "texture": [
     704,
     64
@@ -16,7 +16,8 @@
     "equipment",
     "death_pose",
     "melee_families",
-    "native_combat"
+    "native_combat",
+    "pyromancy"
   ],
   "automatic_attack": "stomp",
   "base_power": 100,

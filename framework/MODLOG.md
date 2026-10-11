@@ -107,3 +107,17 @@ front shield block and rear/unblocked damage; exhaustion/guard break; unarmed
 attack restore; equipment change and native interaction lifecycle; debug view;
 Mario QA only, backed-up saves and current user control handoff. Failure to prove
 native guard or weapon ownership is not a functioning feature.
+# Fire Flower / native pyromancy, 2026-10-11
+
+Framework 0.8 adds an optional ABI4 pyromancy capability and native left-light
+input pulse. Either hand can request a native cast, with guest contacts suspended
+until native recovery. The Mario adapter owns the procedural flower, material
+color changes and original fitted throw poses. No character switch was added to
+the DS host. Existing native guards and source-specific input release remain tested.
+
+Mario QA received a base Pyromancy Flame and Fireball through the guarded native
+acquisition helper, then attuned/equipped them through actual game menus. Saves
+were backed up first. Native HP loss and death occurred during an early hostile
+test setup; that interrupted cast is not counted as a pass. Three-metre rear
+placement produced a native baseline kill and matching Mario kills from each hand.
+See docs/VALIDATION.md for evidence, final-build checks and limits.

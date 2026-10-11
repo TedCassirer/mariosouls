@@ -1,4 +1,11 @@
-# Souls Character Framework 0.7.0
+# Souls Character Framework 0.8.0
+
+Fire Flower follow-up: selecting a Pyromancy Flame in either hand gives Mario
+a procedural flower, white hat/shirt and red overalls. With Fireball attuned,
+B/RB/left-click casts from the right hand; RT/Tab casts from the left. The native
+game owns spell charges, projectile collision, damage and rewards. The optional
+SDK pyromancy capability keeps host casting separate from adapter props/poses.
+Fireball is verified on Mario QA; other spells need additional coverage.
 
 Native combat follow-up: adapters can opt into native parries, backstabs and
 ripostes while supplying their own visible poses. Mario uses RT/Tab to parry

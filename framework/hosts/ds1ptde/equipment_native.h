@@ -9,7 +9,7 @@ struct NativeEquipmentAttack {
  bool valid=false;
 };
 struct NativeEquipmentItem {
- bool valid=false,empty=false,melee=false,shield=false;
+ bool valid=false,empty=false,melee=false,shield=false,pyromancy=false;
  uint32_t kind=SC_EQUIPMENT_NONE;
  int id=-1,rowId=-1,model=-1,variation=-1,category=-1,animation=-1,guardAnimation=-1;
  int upgrade=0,reinforce=-1,requiredStrength=0,requiredDexterity=0;
@@ -95,6 +95,9 @@ static NativeEquipmentItem equipmentItem(int id){
  item.stability=stability*multipliers[19];
  if(!isfinite(item.stability)||item.stability<0||item.stability>100)return item;
  item.kind=equipmentFamily(item.category,item.animation);item.melee=item.kind!=SC_EQUIPMENT_NONE;
+ // Owned weapon params: category8 / animation41 and CanCastPyromancy bit.
+ item.pyromancy=item.category==8&&item.animation==41&&(bytes[0x101]&1);
+ if(item.pyromancy)item.kind=SC_EQUIPMENT_PYROMANCY;
  // Guard animation1 is a greatshield, outside the first supported family.
  item.shield=item.category==12&&(item.guardAnimation==0||item.guardAnimation==2)&&(bytes[0x100]&0x20);
  if(item.melee){

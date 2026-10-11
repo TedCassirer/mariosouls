@@ -139,3 +139,12 @@ never write host memory or infer a successful critical from proximity. Exercise
 both accepted throws and rejected attempts, interrupted parries, held-input
 release, menu/focus boundaries and native death. Adapters without the capability
 continue using the existing optional equipment path.
+
+For native pyromancy, opt into `pyromancy` as well. Handle equipment kind8 in
+either hand, cast actions6/7, and native combat poses with no guest hits. Supply
+your own prop inside the adapter mesh and matching hand sockets; the host does
+not load a character-specific flower. Preserve the outfit during native poses
+if desired, but remove it when the native equipment snapshot becomes empty.
+Test both hands, mixed melee/caster equipment, recovery, rejected/empty casts,
+palette restoration and bounded mesh capacity. The host owns native spell
+selection, charges, projectiles and damage. Do not add a second spell inventory.

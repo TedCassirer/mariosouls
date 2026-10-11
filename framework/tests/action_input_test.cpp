@@ -70,6 +70,8 @@ int main(){
  actionQueue(4,GetTickCount(),true);p={};actionFilterPad(p);assert(p.wButtons==XINPUT_GAMEPAD_RIGHT_SHOULDER&&!p.bLeftTrigger);
  actionQueue(3,GetTickCount(),false);memset(k,0,sizeof(k));actionDeviceState(nullptr,256,k);assert(k[DIK_TAB]==0x80&&!k[DIK_H]&&!k[DIK_E]);
  actionQueue(4,GetTickCount(),false);actionDeviceState(nullptr,256,k);assert(k[DIK_H]==0x80&&!k[DIK_TAB]&&!k[DIK_E]);
- actionCancelPulse();actionDeviceState(nullptr,256,k);assert(!k[DIK_H]&&!k[DIK_TAB]);
+ actionQueue(5,GetTickCount(),true);p={};actionFilterPad(p);assert(p.wButtons==XINPUT_GAMEPAD_LEFT_SHOULDER&&!p.bLeftTrigger);
+ actionQueue(5,GetTickCount(),false);actionDeviceState(nullptr,256,k);assert(k[DIK_LSHIFT]==0x80&&!k[DIK_H]&&!k[DIK_TAB]);
+ actionCancelPulse();actionDeviceState(nullptr,256,k);assert(!k[DIK_H]&&!k[DIK_TAB]&&!k[DIK_LSHIFT]);
  puts("PASS: source-specific native parry/light attack pulses, no item/guard leakage and complete release");
 }

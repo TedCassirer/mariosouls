@@ -375,3 +375,29 @@ an approximation and does not alter native hit frames. It is not native skeleton
 retargeting. Native contact volumes remain native during these sequences.
 The first supported scope is one-handed fitted melee weapons and small/medium
 parrying shields; unarmed Mario attacks retain the independent guest moveset.
+
+## Native pyromancy (optional ABI4 extension, framework 0.8)
+
+`SC_CAP_PYROMANCY` (256, manifest `pyromancy`) requires `native_combat` and
+equipment support. It adds equipment kind `SC_EQUIPMENT_PYROMANCY` (8) in either
+hand and actions `SC_EQUIPMENT_CAST_RIGHT` (6) / `SC_EQUIPMENT_CAST_LEFT` (7).
+No struct layout changes. The adapter owns the caster prop and may change its
+costume from the selected equipment. Native interaction/hurt/death posing may
+hide the prop while retaining the current costume; a subsequent equipment
+snapshot or instance destruction clears the selection. None means ordinary
+appearance. Callbacks do not create a projectile, grant a spell, debit a charge,
+or modify native memory.
+
+PTDE identifies the native flame by its verified weapon category, animation
+category and CanCastPyromancy flag, including upgraded variants. Right attack
+casts from the right flame; the parry input casts from a left flame. The native
+RB/LB pulse reads the current saved keyboard binding or routes to the selected
+controller. Native spell selection, attunement, charges, flame scaling, cast
+eligibility, projectile creation/collision and damage remain authoritative.
+Ordinary jumps remain available; initiating casts requires grounded eligibility.
+No extra guest contact attacks or stamina debit run during casting ownership.
+
+The host presents the observed native windup/release track with a normalized
+visual phase. This does not change native cast speed or interruption/recovery.
+Fireball is the initial live-test target; other pyromancies require additional
+presentation and gameplay coverage. Sorcery and miracle catalysts are not added.

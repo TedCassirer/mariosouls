@@ -8,10 +8,13 @@ static SC_Attachments equipmentHands={sizeof(SC_Attachments)};
 static bool equipmentConfirmedGuard=false,equipmentBroken=false,equipmentPreviousBlade=false;
 static Vec equipmentBladeA{},equipmentBladeB{},equipmentOldBladeA{},equipmentOldBladeB{};
 static bool equipmentCapable(){return profile&&(profile->capabilities&SC_CAP_EQUIPMENT)&&guest&&guest->equipment&&guest->attachments;}
+static bool equipmentPyromancy(){return equipmentCapable()&&(profile->capabilities&SC_CAP_PYROMANCY);}
+static uint32_t equipmentCasterKind(const NativeEquipmentItem&item){return equipmentPyromancy()&&item.pyromancy?uint32_t(SC_EQUIPMENT_PYROMANCY):0u;}
 static void equipmentReset(){
+ SC_EquipmentPose appearance={sizeof(appearance),equipmentCasterKind(equipmentCurrent.right),equipmentCasterKind(equipmentCurrent.left)};
  InterlockedExchange(&equipmentGuardInput,0);equipmentSwing.reset();equipmentHands={sizeof(SC_Attachments)};
  equipmentConfirmedGuard=false;equipmentPreviousBlade=false;equipmentCurrent={};
- if(equipmentCapable()&&character>=0){SC_EquipmentPose pose={sizeof(pose)};guest->equipment(character,&pose);}
+ if(equipmentCapable()&&character>=0){guest->equipment(character,&appearance);}
 }
 static bool equipmentMelee(){return (equipmentCurrent.right.kind==SC_EQUIPMENT_SWORD||(profile&&(profile->capabilities&SC_CAP_MELEE_FAMILIES)))&&!equipmentBroken&&equipmentCurrent.valid&&equipmentCurrent.oneHanded&&equipmentCurrent.right.melee&&equipmentProp(equipmentCurrent.right.model);}
 static bool equipmentShield(){return !equipmentBroken&&equipmentCurrent.valid&&equipmentCurrent.oneHanded&&equipmentCurrent.left.shield&&equipmentProp(equipmentCurrent.left.model);}
@@ -30,7 +33,7 @@ static void equipmentInput(SC_Input&input){
    logf("Equipment swing serial=%d weapon=%d combo=%d cost=%d stamina=%d->%d behavior=%d",equipmentSwing.serial,equipmentSwingItem.id,combo,cost,stamina,stamina-cost,equipmentSwingItem.attacks[combo].behavior);
   }else logf("Equipment swing exhausted cost=%d stamina=%d",cost,stamina);
  }
- if(sword)input.attack=0;
+ if(sword||equipmentCasterKind(equipmentCurrent.right))input.attack=0;
  bool guarding=shield&&grounded&&!equipmentSwing.running()&&!input.jump&&!input.attack&&!input.crouch&&read<int>(player+0x2e4)>0&&input.guard;
  InterlockedExchange(&equipmentGuardInput,guarding?1:0);
  equipmentConfirmedGuard=guarding&&equipmentNativeGuard();
@@ -39,7 +42,7 @@ static void equipmentInput(SC_Input&input){
   input.moveX=input.moveY=0;input.jump=input.crouch=0;
   characterRecoveryUntil=GetTickCount()+500;characterStaminaCeiling=std::min(characterStaminaCeiling,read<int>(player+0x2e4));
  }else if(guarding){input.moveX*=.35f;input.moveY*=.35f;}
- SC_EquipmentPose pose={sizeof(pose),sword?equipmentCurrent.right.kind:uint32_t(SC_EQUIPMENT_NONE),shield?SC_EQUIPMENT_SHIELD:SC_EQUIPMENT_NONE,equipmentSwing.running()?uint32_t(equipmentSwing.combo+1):0,equipmentSwing.phase(),equipmentConfirmedGuard?1.f:0.f};
+ SC_EquipmentPose pose={sizeof(pose),sword?equipmentCurrent.right.kind:equipmentCasterKind(equipmentCurrent.right),shield?uint32_t(SC_EQUIPMENT_SHIELD):equipmentCasterKind(equipmentCurrent.left),equipmentSwing.running()?uint32_t(equipmentSwing.combo+1):0,equipmentSwing.phase(),equipmentConfirmedGuard?1.f:0.f};
  if(!guest->equipment(character,&pose)){logf("Equipment presentation rejected; disabling equipment");equipmentBroken=true;equipmentReset();}
 }
 static bool equipmentGetHands(){

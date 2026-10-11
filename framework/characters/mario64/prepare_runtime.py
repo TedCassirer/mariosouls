@@ -34,6 +34,7 @@ def prepare(repo):
             source=source.replace(before,after)
         path.write_text(source)
     (repo/'src/sc_equipment_keys.h').write_bytes(Path(__file__).with_name('equipment_keys.h').read_bytes())
+    (repo/'src/sc_flower_keys.h').write_bytes(Path(__file__).with_name('flower_keys.h').read_bytes())
     (repo/'src/sc_equipment.h').write_bytes(Path(__file__).with_name('runtime_equipment.h').read_bytes())
     staged('libsm64.c',[
         ('s16 lastPose[63],blendFrom[63];u16 poseIndices[126];',

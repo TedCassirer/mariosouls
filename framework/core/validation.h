@@ -15,8 +15,9 @@ inline bool descriptor(const SC_Descriptor *d){
     if(d->attackCount>SC_MAX_ATTACKS||d->automaticAttackId< -1||d->automaticAttackId>=int(d->attackCount))return false;
     if(!std::isfinite(d->basePower)||d->basePower<1||!std::isfinite(d->upgradePower)||d->upgradePower<0||!std::isfinite(d->dexterityWeight)||d->dexterityWeight<0)return false;
     if((d->capabilities&SC_CAP_AUDIO)&&(d->audioRate<8000||d->audioRate>192000))return false;
+    if((d->capabilities&SC_CAP_PYROMANCY)&&!(d->capabilities&SC_CAP_NATIVE_COMBAT))return false;
     if((d->capabilities&(SC_CAP_MELEE_FAMILIES|SC_CAP_NATIVE_COMBAT))&&!(d->capabilities&SC_CAP_EQUIPMENT))return false;
-    if(d->capabilities&~(SC_CAP_AUDIO|SC_CAP_ITEM_PROP|SC_CAP_TEXTURE_MODULATE|SC_CAP_ALPHA_TEST|SC_CAP_EQUIPMENT|SC_CAP_DEATH_POSE|SC_CAP_MELEE_FAMILIES|SC_CAP_NATIVE_COMBAT)||!SCBody::valid(d->body))return false;
+    if(d->capabilities&~(SC_CAP_AUDIO|SC_CAP_ITEM_PROP|SC_CAP_TEXTURE_MODULATE|SC_CAP_ALPHA_TEST|SC_CAP_EQUIPMENT|SC_CAP_DEATH_POSE|SC_CAP_MELEE_FAMILIES|SC_CAP_NATIVE_COMBAT|SC_CAP_PYROMANCY)||!SCBody::valid(d->body))return false;
     for(unsigned i=0;i<d->attackCount;i++){
         const auto&a=d->attacks[i];if(!identifier(a.name,sizeof(a.name))||!std::isfinite(a.multiplier)||a.multiplier<0||a.multiplier>10||!std::isfinite(a.poise)||a.poise<0||a.staminaCost>1000||a.maxTargets<1||a.maxTargets>64||!std::isfinite(a.rangeCm)||a.rangeCm<=0||a.rangeCm>1000)return false;
         for(unsigned j=0;j<i;j++)if(!strcmp(a.name,d->attacks[j].name))return false;

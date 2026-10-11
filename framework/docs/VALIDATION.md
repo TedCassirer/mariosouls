@@ -1,3 +1,76 @@
+# Fire Flower and native Fireball (2026-10-11)
+
+Framework 0.8.0, optional pyromancy capability on ABI4. Tested only on Mario QA,
+the existing exact level-13 fixture, with the native base Pyromancy Flame and
+attuned Fireball. Save backup: work/um-state/backups/dark-souls-before-fire-flower/
+20261011-142826.zip. The level-65 character was not loaded. The flame/spell kit
+was acquired once through the guarded native item routine; native menus handled
+equipping and attunement. No HP, projectile, spell-charge or reward writes.
+
+Observed on the final gameplay build:
+- Right flame: native windup6304 on lanes6/17, release6504 on lane22; SDK action6
+  throughout those stages. Hollow1810103 HP69->0, playerHP594 unchanged,
+  stamina93 unchanged, souls96->120 (+24). Native recovery completed before
+  the same Mario instance resumed. Charge counter8->7.
+- Left flame alongside Claymore: windup6204, release6404, SDK action7. Hollow
+  HP69->0, playerHP594 unchanged, stamina93 unchanged, souls72->96 (+24).
+  Native charge8->7. Right weapon remained held, not an extra melee attack.
+- Real keyboard Tab produced seven further left casts, exhausting the remaining
+  uses. The next attempt played native failed-cast6299, emitted no projectile,
+  and returned normally. Video covers the last two projectiles and failed attempt.
+- Bonfire rest replenished Fireball to8, healed and reset enemies through the
+  native game. No extra framework stamina cost was charged for this native spell.
+- Switching away from the selected flame restored red hat/shirt and blue
+  overalls; selecting it restored the white/red outfit and flower. Hair and
+  shoes remain brown. The costume persisted during resting/casting.
+- Switching the right weapon to empty retained the left flower and ordinary
+  Mario punch. A navigation jump used no stamina (93 throughout), followed by
+  return to equipment use. Returning the Claymore allowed its normal swing.
+- Protection observations had no global no-damage, no-dead, no-stamina, no-hit
+  or player no-dead overrides. Ordinary jumping did not add protection.
+
+The same three-metre rear fixture was first tested with Mario disabled: native
+Fireball killed the same69-HP hollow. Earlier cell/rear1.2m attempts consumed
+charges and visibly hit scenery/missed, not the target; those are not damage
+passes. A front-side setup allowed the hostile hollow to hit Mario before the
+cast and one early cleanup failure led to QA's native death (lost284 QA souls).
+The helper now attempts retreat without requiring idle first. No save was
+restored to hide that result. Fixed setup and successful final traces are separate.
+
+The live comparison exposed distinct left/right native stage IDs. The final
+host uses6204/6404 for left and6304/6504 for right; preliminary left casts did
+damage but had incorrect visual staging. Fitted throw poses and unchanged-brown
+material matching are included in the final tested gameplay build.
+
+Offline build/test/doctor passed: both-hand sockets, finite mesh/capacity,
+cast geometry changes without guest hit flags, palette restoration, native
+interaction outfit, input-source isolation/cancellation (including held guard),
+and existing movement/death/melee/critical/collision suites. Private SDK casting
+sheets were inspected using preview-equipment --actions casting.
+
+After a whitespace cleanup, the rebuilt host, adapter and runtime matched the
+live-tested binaries byte for byte after normalizing only PE timestamps and
+CodeView PDB identifiers. Executable code/data were unchanged. Comparison is in
+work/fire-flower-qa/live-build-comparison.json. The final exact build passed the
+full suite and was installed after a normal save/quit. The private 92-file
+runtime checkpoint was verified against both its archive and installed files.
+Its manifest is checkpoints/framework-fire-flower.json. A temporary verifier
+mapping initially blocked file replacement; closing its PE mappings resolved the
+lock, and the complete final installation/checkpoint verification then succeeded.
+
+Evidence: work/fire-flower-qa/{native-three,mario-three,left-final,right-final,
+exhaust}, switch-jump.json, unequipped.png and switch-take.mp4. Final traces,
+game logs and game-only audiovisual recordings are kept locally outside Git.
+
+Limits: only base flame + Fireball against one ordinary hollow was damage-tested.
+Other spells, reinforcement levels, bosses, resistances, and PvP are not a newly
+verified matrix. Physical controller was disconnected; controller mappings passed
+executable tests, keyboard Tab and native input pulses were exercised live.
+The cast poses use an approximate normalized native clock; projectile origin
+and enemy collision retain native human-skeleton behavior. This is not full
+hand-to-projectile retargeting. HUD/inventory icon/name remain Pyromancy Flame.
+Two-handing, sorcery and miracles are outside this implementation.
+
 # Native parry and critical attacks (2026-10-11)
 
 Framework 0.7.0 adds an optional native_combat capability without changing ABI4

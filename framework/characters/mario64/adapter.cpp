@@ -34,6 +34,8 @@ static uint32_t (*libEquipment)(int32_t,uint32_t,uint32_t,uint32_t,float,float);
 static uint32_t (*libEquipmentHands)(int32_t,float*,float*);
 static SC_Attachments equipmentHands={sizeof(SC_Attachments)};
 static SC_EquipmentPose equipmentPose={sizeof(SC_EquipmentPose)};
+static bool fireAppearance=false;
+static void firePresentation(SC_Mesh&,bool);
 static decltype(&sm64_set_mario_position) libPosition;
 static decltype(&sm64_set_mario_velocity) libVelocity;
 static decltype(&sm64_set_mario_forward_velocity) libForward;
@@ -101,7 +103,7 @@ static void captureEquipment(int32_t id){
     equipmentHands.valid=libEquipmentHands(id,equipmentHands.right,equipmentHands.left);
     // Native shield bind geometry has its pointed bottom along local +X.
     // Roll that asset frame onto the glove without changing its outward normal.
-    if(equipmentHands.valid&2)for(int row=0;row<3;row++){
+    if((equipmentHands.valid&2)&&equipmentPose.leftKind==SC_EQUIPMENT_SHIELD)for(int row=0;row<3;row++){
         float x=equipmentHands.left[row];equipmentHands.left[row]=-equipmentHands.left[4+row];equipmentHands.left[4+row]=x;
     }
 }
@@ -115,7 +117,7 @@ static void shiftEquipment(float x,float y,float z){
 static void shutdown(){
     clearEquipment(active);
     if(initialized){if(active>=0)libDestroy(active);libShutdown();}
-    initialized=false;active=-1;raw={};rom.clear();if(runtime)FreeLibrary(runtime);runtime=nullptr;
+    initialized=false;active=-1;fireAppearance=false;raw={};rom.clear();if(runtime)FreeLibrary(runtime);runtime=nullptr;
 }
 static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
     if(initialized||!init||init->size!=sizeof(*init)||!texture||!texture->rgba||texture->capacityBytes<SM64_TEXTURE_WIDTH*SM64_TEXTURE_HEIGHT*4)return 0;
@@ -141,14 +143,14 @@ static uint32_t initialize(const SC_Init* init,SC_Texture*texture){
 }
 static int32_t create(float x,float y,float z,float yaw){
     if(!initialized||active>=0)return -1;
-    active=libCreate(x,y,z);if(active>=0){raw={};previousAction=0;clearEquipment(active);libHealth(active,0);libAction(active,0x0c400201);libFace(active,yaw);}return active;
+    active=libCreate(x,y,z);if(active>=0){fireAppearance=false;raw={};previousAction=0;clearEquipment(active);libHealth(active,0);libAction(active,0x0c400201);libFace(active,yaw);}return active;
 }
 static void destroy(int32_t id){if(id>=0&&id==active){clearEquipment(id);libDestroy(id);active=-1;}}
 static uint32_t step(int32_t id,const SC_Input*in,SC_State*out,SC_Mesh*mesh){
     if(id!=active||id<0||!in||!out)return 0;SM64MarioGeometryBuffers g;
     if(!geometry(mesh,g))return 0;
     SM64MarioInputs input={in->camLookX,in->camLookZ,-in->moveX,-in->moveY,in->jump,in->attack,in->crouch};
-    libTick(id,&input,&raw,&g);mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);captureEquipment(id);return 1;
+    libTick(id,&input,&raw,&g);mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);captureEquipment(id);firePresentation(*mesh,true);return 1;
 }
 
 struct Vec{float x,y,z;Vec operator+(Vec b)const{return{x+b.x,y+b.y,z+b.z};}Vec operator-(Vec b)const{return{x-b.x,y-b.y,z-b.z};}Vec operator*(float s)const{return{x*s,y*s,z*s};}};
@@ -172,6 +174,7 @@ static void flask(SC_Mesh&mesh){
         }
     }
 }
+#include "fire_flower.h"
 static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
     if(id!=active||id<0||!p||!out)return 0;SM64MarioGeometryBuffers g;if(!geometry(mesh,g))return 0;
     if(p->kind!=SC_POSE_NATIVE_COMBAT)clearEquipment(id);
@@ -190,6 +193,7 @@ static uint32_t pose(int32_t id,const SC_Pose*p,SC_State*out,SC_Mesh*mesh){
     mesh->numTrianglesUsed=g.numTrianglesUsed;state(out);
     if(p->kind==SC_POSE_NATIVE_COMBAT)captureEquipment(id);
     if(p->kind==SC_POSE_DEATH||p->kind==SC_POSE_NATIVE_COMBAT){out->flags=0;out->attackId=out->interruptedAttackId=-1;out->landingRecoveryTicks=0;}
+    firePresentation(*mesh,p->kind==SC_POSE_NATIVE_COMBAT);
     if(p->kind==SC_POSE_DRINK&&p->phase>.02f)flask(*mesh);
     return 1;
 }
@@ -226,9 +230,10 @@ static uint32_t resolveMotion(int32_t id,const SC_MotionResolution*r,SC_State*ou
     for(int k=0;k<3;k++){out->position[k]=raw.position[k];out->velocity[k]=raw.velocity[k]*SC_FIXED_HZ;}out->forwardSpeed=raw.forwardVelocity*SC_FIXED_HZ;return 1;
 }
 static uint32_t equipment(int32_t id,const SC_EquipmentPose*p){
-    if(id!=active||id<0||!p||p->size!=sizeof(*p)||(p->rightKind!=SC_EQUIPMENT_NONE&&p->rightKind!=SC_EQUIPMENT_SWORD&&(p->rightKind<SC_EQUIPMENT_DAGGER||p->rightKind>SC_EQUIPMENT_HAMMER))||(p->leftKind!=SC_EQUIPMENT_NONE&&p->leftKind!=SC_EQUIPMENT_SHIELD)||p->swing>SC_EQUIPMENT_PARRY||!std::isfinite(p->swingPhase)||!std::isfinite(p->guard)||p->swingPhase<0||p->swingPhase>1||p->guard<0||p->guard>1)return 0;
+    if(id!=active||id<0||!p||p->size!=sizeof(*p)||(p->rightKind!=SC_EQUIPMENT_NONE&&p->rightKind!=SC_EQUIPMENT_SWORD&&(p->rightKind<SC_EQUIPMENT_DAGGER||p->rightKind>SC_EQUIPMENT_PYROMANCY))||(p->leftKind!=SC_EQUIPMENT_NONE&&p->leftKind!=SC_EQUIPMENT_SHIELD&&p->leftKind!=SC_EQUIPMENT_PYROMANCY)||p->swing>SC_EQUIPMENT_CAST_LEFT||!std::isfinite(p->swingPhase)||!std::isfinite(p->guard)||p->swingPhase<0||p->swingPhase>1||p->guard<0||p->guard>1)return 0;
     if(!libEquipment(id,p->rightKind,p->leftKind,p->swing,p->swingPhase,p->guard))return 0;
     if(p->rightKind!=equipmentPose.rightKind||p->leftKind!=equipmentPose.leftKind||(!p->rightKind&&!p->leftKind))equipmentHands={sizeof(SC_Attachments)};
+    fireAppearance=p->rightKind==SC_EQUIPMENT_PYROMANCY||p->leftKind==SC_EQUIPMENT_PYROMANCY;
     equipmentPose=*p;return 1;
 }
 static uint32_t attachments(int32_t id,SC_Attachments*out){

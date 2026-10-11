@@ -57,12 +57,12 @@ static void actionRefreshGuardBinding(){
  actionKeyboardGuardReady=valid;actionGuardKeyCount=valid?count:0;
  if(valid)memcpy(actionGuardKeys,scans,sizeof(scans));
 }
-static unsigned actionCombatKeys[2][7]={},actionCombatCounts[2]={};
+static unsigned actionCombatKeys[3][7]={},actionCombatCounts[3]={};
 static bool actionCombatBindingReady(int pulse){
- if(pulse!=3&&pulse!=4)return false;
+ if(pulse<3||pulse>5)return false;
  unsigned guard=0,binding=0;uint32_t manager=0,config=0;
  if(!actionReadGuardBinding(guard)||!get(uintptr_t(0x1378458),manager)||!get(uintptr_t(manager)+0x2c,config)||
-    !get(uintptr_t(config)+(pulse==3?0x54:0x48),binding))return false;
+    !get(uintptr_t(config)+(pulse==3?0x54:pulse==4?0x48:0x50),binding))return false;
  return actionDecodeGuardBinding(binding,actionCombatKeys[pulse-3],actionCombatCounts[pulse-3]);
 }
 static void actionQueue(int button,DWORD now,bool fromPad=false){
@@ -79,7 +79,7 @@ static void actionFilterPad(XINPUT_GAMEPAD& p){
   p.wButtons&=~(XINPUT_GAMEPAD_A|XINPUT_GAMEPAD_B|XINPUT_GAMEPAD_X|XINPUT_GAMEPAD_Y|XINPUT_GAMEPAD_LEFT_SHOULDER|XINPUT_GAMEPAD_RIGHT_SHOULDER);
  }else {p.wButtons&=~XINPUT_GAMEPAD_Y;if(InterlockedCompareExchange(&actionBlockHeldA,0,0))p.wButtons&=~XINPUT_GAMEPAD_A;}
  if(route==ActionRoute::Character&&InterlockedCompareExchange(&equipmentGuardInput,0,0))p.wButtons|=XINPUT_GAMEPAD_LEFT_SHOULDER;
- int pulse=actionPulse(true);if(pulse==1)p.wButtons|=XINPUT_GAMEPAD_A;if(pulse==2)p.wButtons|=XINPUT_GAMEPAD_X;if(pulse==3)p.bLeftTrigger=255;if(pulse==4)p.wButtons|=XINPUT_GAMEPAD_RIGHT_SHOULDER;
+ int pulse=actionPulse(true);if(pulse==1)p.wButtons|=XINPUT_GAMEPAD_A;if(pulse==2)p.wButtons|=XINPUT_GAMEPAD_X;if(pulse==3)p.bLeftTrigger=255;if(pulse==4)p.wButtons|=XINPUT_GAMEPAD_RIGHT_SHOULDER;if(pulse==5)p.wButtons|=XINPUT_GAMEPAD_LEFT_SHOULDER;
 }
 using ActionDeviceStateFn=HRESULT(WINAPI*)(IDirectInputDevice8W*,DWORD,LPVOID);
 static ActionDeviceStateFn actionOriginalDeviceState=nullptr;
@@ -98,10 +98,10 @@ static HRESULT WINAPI actionDeviceState(IDirectInputDevice8W*d,DWORD size,LPVOID
    for(unsigned i=0;i<actionGuardKeyCount;i++)keys[actionGuardKeys[i]]=0;
    if(route==ActionRoute::Character&&actionKeyboardGuardReady&&InterlockedCompareExchange(&equipmentGuardInput,0,0))for(unsigned i=0;i<actionGuardKeyCount;i++)keys[actionGuardKeys[i]]=0x80;
   }
-  if(route!=ActionRoute::Menu)for(int p=3;p<=4;p++){
+  if(route!=ActionRoute::Menu)for(int p=3;p<=5;p++){
    for(unsigned i=0;i<actionCombatCounts[p-3];i++)keys[actionCombatKeys[p-3][i]]=0;
    bool ready=actionCombatBindingReady(p);
-   if(ready)for(unsigned i=0;i<actionCombatCounts[p-3];i++)keys[actionCombatKeys[p-3][i]]=actionPulse(false)==p?0x80:0;
+   if(ready)for(unsigned i=0;i<actionCombatCounts[p-3];i++)keys[actionCombatKeys[p-3][i]]=(actionPulse(false)==p||(p==5&&route==ActionRoute::Character&&InterlockedCompareExchange(&equipmentGuardInput,0,0)))?0x80:0;
   }
   // Q/E cannot leak through ahead of the action eligibility check.
   if(actionKeys[10]<256)keys[actionKeys[10]]=0;if(route!=ActionRoute::Menu&&actionKeys[11]<256)keys[actionKeys[11]]=0;

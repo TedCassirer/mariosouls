@@ -1,16 +1,80 @@
 {
   "files": [
     {
-      "sha256": "A0B3272E4B2B4B1E9652E9BDE3F5ABFC3392EC5CFC1B87E29556B9286A09B53E",
+      "sha256": "795727D5080292C292BEF6AF0F3B66C56A1A673E6BD1C5D725351D1ACD01EC9D",
       "path": "work/framework-build/dinput8.dll"
     },
     {
-      "sha256": "7A46DDCF992271C6791F81FA136DD0B2A62A15F3194DBE9AE4BE6FBD644C294A",
+      "sha256": "58C2382745C49A019BB86584431D1835AE8FAF8076510EDE4AA83FDD9A1F24C6",
       "path": "work/framework-build/characters/mario64/character.dll"
     },
     {
       "sha256": "A67D59C6080AAE322A373243232E1424681601A089CD6D115EE50E2FEC7EACBF",
       "path": "work/framework-build/characters/mario64/sm64.dll"
+    },
+    {
+      "sha256": "25EC84AA69E8965E8019995A32528018D7B9AB79DE1B5698A9BC4959181EE56F",
+      "path": "work/hazard-cache-v2/combined/manifest.json"
+    },
+    {
+      "sha256": "79C9586AC2E8A79DCABB04C27BE7C2A33C1B62FA3559589E1AA0972E9F2371A4",
+      "path": "work/hazard-cache-v2/combined/m10_00_00_00.bin"
+    },
+    {
+      "sha256": "F8F334E818C032A8C91D4BB3BCF7F2CC8171457669E4D4ADF60FD7997C9964A2",
+      "path": "work/hazard-cache-v2/combined/m10_01_00_00.bin"
+    },
+    {
+      "sha256": "83F42E2BB3A267E811FAAF5F6C0037576E5C50228BD2EA1549D256CE0A7BCB68",
+      "path": "work/hazard-cache-v2/combined/m10_02_00_00.bin"
+    },
+    {
+      "sha256": "2FD97B426311344C9A77EABA0F3E787879C0C75F2E14BD25CCCFB0E87172823C",
+      "path": "work/hazard-cache-v2/combined/m11_00_00_00.bin"
+    },
+    {
+      "sha256": "5E5FA6384C3CAD281DCC09EEB0A0FF71960B53EFA9E148B1CD3FD24ACF5E281A",
+      "path": "work/hazard-cache-v2/combined/m12_01_00_00.bin"
+    },
+    {
+      "sha256": "A226A95863FBA352F7CAA6E2049A5D400FD494A0B737911C4AE2876924CCFB92",
+      "path": "work/hazard-cache-v2/combined/m13_00_00_00.bin"
+    },
+    {
+      "sha256": "413144D9CB4AEB3870C0AFF62DF4DF80489AA537D8E19FB5805A6238703D5EEA",
+      "path": "work/hazard-cache-v2/combined/m13_01_00_00.bin"
+    },
+    {
+      "sha256": "6039C6E1CEDE9945E8CCEA263F56F5E2D679741D5E630BF45CAEB4C18A4015C7",
+      "path": "work/hazard-cache-v2/combined/m14_00_00_00.bin"
+    },
+    {
+      "sha256": "E094360B23E519D86AEDB2EC580634C8A4FC5E16842B25D34E95D265A64E28C6",
+      "path": "work/hazard-cache-v2/combined/m14_01_00_00.bin"
+    },
+    {
+      "sha256": "38488074ABCA5AE54544FE5A9D0C9D7222FA54DF3FC1ADC5318CBAE0DDCC66CC",
+      "path": "work/hazard-cache-v2/combined/m15_00_00_00.bin"
+    },
+    {
+      "sha256": "B0E0CD76601241D1653B627C4C6F918728222B94DE10D1A55891ABF81E1960BA",
+      "path": "work/hazard-cache-v2/combined/m15_01_00_00.bin"
+    },
+    {
+      "sha256": "EC2110442B82FFFD9941947DCD7A95E18D23EC2DF00A4D78A7D9903CBA166131",
+      "path": "work/hazard-cache-v2/combined/m16_00_00_00.bin"
+    },
+    {
+      "sha256": "CEF4ADB44D06046C529AEDD690335A4BBCEF534AC8EE2EED49CDB504C4069CF5",
+      "path": "work/hazard-cache-v2/combined/m17_00_00_00.bin"
+    },
+    {
+      "sha256": "27396624BFB7D9AA3200F3AEC675CA40D87F9C3F89DFF6AF463EBD96DDC8F166",
+      "path": "work/hazard-cache-v2/combined/m18_00_00_00.bin"
+    },
+    {
+      "sha256": "0303A863206F9D2CD069DAAA6FE26644A79A991C2E02A9DBFC21596C18F33CA1",
+      "path": "work/hazard-cache-v2/combined/m18_01_00_00.bin"
     }
   ]
 }

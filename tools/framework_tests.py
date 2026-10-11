@@ -21,6 +21,8 @@ def test(character,asset,runtime):
     f.run([f.BUILD/'class-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/aim_camera_test.cpp',f.BUILD/'aim-camera-test.exe')
     f.run([f.BUILD/'aim-camera-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/hazard_host_test.cpp',f.BUILD/'hazard-host-test.exe')
+    f.run([f.BUILD/'hazard-host-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/core_test.cpp',f.BUILD/'core-test.exe')
     f.run([f.BUILD/'core-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/context_action_test.cpp',f.BUILD/'context-action-test.exe')

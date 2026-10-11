@@ -14,6 +14,9 @@ class CollisionPolicy(unittest.TestCase):
     def test_unknown_entity_rejected(self):
         with self.assertRaisesRegex(ValueError,'parameterized'):
             controlled_collisions({1:N(instructions=[self.command(0,replacements=[0])])})
+    def test_parameterized_target_retains_all_candidates_natively(self):
+        events={1:N(instructions=[self.command(0,replacements=[0])])}
+        self.assertEqual(controlled_collisions(events,[-1,123,456]),{123,456})
     def test_parameterized_enable_keeps_literal_entity(self):
         self.assertEqual(controlled_collisions({1:N(instructions=[self.command(123,replacements=[1])])}),{123})
 

@@ -52,6 +52,14 @@ class Installation(unittest.TestCase):
   cache=self.cache();installer.install('fixture',None,str(self.runtime),False,str(cache))
   self.assertEqual((cache/'m18_01_00_00.bin').read_bytes(),(self.game/'SoulsCharacterFramework/collision/m18_01_00_00.bin').read_bytes())
   self.call();self.assertIn('CollisionDirectory = ',(self.game/'mariosouls.ini').read_text())
+ def test_typed_collision_filters(self):
+  cache=self.cache();file=cache/'m18_01_00_00.bin';manifest=cache/'manifest.json'
+  for filter_id,coordinate,valid in [(15,0.,True),(13,0.,True),(256,0.,False),(15,float('nan'),False)]:
+   file.write_bytes(b'MSC2'+struct.pack('<II9f',1,filter_id,coordinate,*([0.]*8)))
+   m=json.loads(manifest.read_text());m['files'][file.name]=f.sha(file);manifest.write_text(json.dumps(m))
+   if valid:self.assertIn(self.game/'SoulsCharacterFramework/collision'/file.name,installer.collision_files(cache))
+   else:
+    with self.assertRaisesRegex(RuntimeError,'filter or geometry'):installer.collision_files(cache)
  def test_collision_hash_rejection(self):
   cache=self.cache();(cache/'m18_01_00_00.bin').write_bytes(b'wrong')
   with self.assertRaisesRegex(RuntimeError,'hash mismatch'):installer.install('fixture',None,str(self.runtime),False,str(cache))

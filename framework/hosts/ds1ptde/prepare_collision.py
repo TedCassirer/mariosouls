@@ -1,7 +1,7 @@
 """Export static guest geometry; event-controlled colliders stay native-owned.
 
 Uses the user's installed MSB/Havok/event data. No game-derived data goes in Git.
-Parameterized collision-control commands are refused until resolved, never guessed.
+Unknown script targets remain native-owned by excluding every named candidate.
 """
 from pathlib import Path
 import argparse, hashlib, json, re, struct, sys
@@ -10,13 +10,16 @@ ROOT=Path(__file__).resolve().parents[3]
 sys.path[:0]=[str(ROOT/'work/soulstruct-source/src'),str(ROOT/'work/python-deps')]
 from archive import Archives
 
-def controlled_collisions(events):
+def controlled_collisions(events, possible_ids=None):
     ids=set()
     for event in events.values():
         for instruction in event.instructions:
             if instruction.category==2011 and instruction.index in (1,2):
                 if any(r.arg_index==0 for r in instruction.event_arg_replacements):
-                    raise ValueError('Resolve parameterized native collision ID before exporting this map')
+                    if possible_ids is None:raise ValueError('Resolve parameterized native collision ID before exporting this map')
+                    # A script argument can address any named collision. Keep all
+                    # candidates native-owned rather than baking an unknown state.
+                    ids.update(i for i in possible_ids if i>=0);continue
                 ids.add(int(instruction.args_list[0]))
     return ids
 
@@ -33,13 +36,13 @@ def prepare(game, map_id, output):
     archive=Archives(game)
     msb=MSB.from_bytes(archive.read(f'/map/MapStudio/{map_id}.msb'))
     event_bytes=archive.read(f'/event/{map_id}.emevd.dcx')
-    controlled=controlled_collisions(EMEVD.from_bytes(event_bytes).events)
+    controlled=controlled_collisions(EMEVD.from_bytes(event_bytes).events,[p.entity_id for p in msb.collisions])
     # Common scripts can also contain literal map entity IDs.
-    controlled|=controlled_collisions(EMEVD.from_bytes(archive.read('/event/common.emevd.dcx')).events)
+    controlled|=controlled_collisions(EMEVD.from_bytes(archive.read('/event/common.emevd.dcx')).events,[p.entity_id for p in msb.collisions])
     stem=f'/map/{map_id}/h{map_id[1:]}'
     binder=Binder.from_bytes(archive.read(stem+'.hkxbhd'),bdt_data=archive.read(stem+'.hkxbdt'))
     entries={Path(e.path.replace('\\','/')).name.lower():e for e in binder.entries}
-    triangles=[];native=[]
+    triangles=[];filters=[];native=[]
     for part in msb.collisions:
         if part.entity_id in controlled:
             native.append(dict(name=part.name,entity_id=part.entity_id));continue
@@ -50,13 +53,16 @@ def prepare(game, map_id, output):
             name=candidates[0]
         model=MapCollisionModel.from_bytes(entries[name].get_uncompressed_data())
         rot=np.array(Matrix3.from_euler_angles_deg(part.rotate).data);offset=np.array(list(part.translate))
-        for mesh in model.meshes:triangles.append((mesh.vertices3D@rot.T+offset)[mesh.face_vertex_indices].astype('<f4'))
+        for mesh in model.meshes:
+            tri=(mesh.vertices3D@rot.T+offset)[mesh.face_vertex_indices].astype('<f4')
+            triangles.append(tri);filters.extend([int(part.hit_filter_id)]*len(tri))
     data=np.concatenate(triangles)
     if not np.isfinite(data).all() or not 0<len(data)<2000000:raise ValueError('Invalid collision geometry')
-    target=output/(map_id+'.bin');target.write_bytes(b'MSC1'+struct.pack('<I',len(data))+data.tobytes())
+    records=np.empty(len(data),dtype=[('filter','<u4'),('triangle','<f4',(3,3))]);records['filter']=filters;records['triangle']=data
+    target=output/(map_id+'.bin');target.write_bytes(b'MSC2'+struct.pack('<I',len(data))+records.tobytes())
     sha=lambda p:hashlib.sha256(Path(p).read_bytes()).hexdigest()
     manifest=dict(schema=1,policy='event-colliders-native',game_exe_sha256=sha(game/'DARKSOULS.exe'),
-                  files={target.name:sha(target)},maps={map_id:dict(triangles=len(data),native_owned=native)})
+                  files={target.name:sha(target)},maps={map_id:dict(triangles=len(data),hit_filters={str(i):filters.count(i) for i in set(filters)},native_owned=native)})
     (output/'manifest.json').write_text(json.dumps(manifest,indent=2))
     print(f'Exported {len(data)} triangles; {len(native)} event-controlled colliders remain native-owned: {native}')
 

@@ -27,7 +27,11 @@ def collision_files(directory):
         source=directory/name
         if not source.resolve().is_relative_to(directory.resolve()) or f.sha(source)!=digest:raise RuntimeError('Collision cache hash mismatch')
         data=source.read_bytes()
-        if len(data)<8 or data[:4]!=b'MSC1' or not 0<struct.unpack_from('<I',data,4)[0]<2000000 or len(data)!=8+36*struct.unpack_from('<I',data,4)[0]:raise RuntimeError('Invalid collision cache format')
+        stride={b'MSC1':36,b'MSC2':40}.get(data[:4],0)
+        if len(data)<8 or not stride or not 0<struct.unpack_from('<I',data,4)[0]<2000000 or len(data)!=8+stride*struct.unpack_from('<I',data,4)[0]:raise RuntimeError('Invalid collision cache format')
+        if stride==40:
+            for record in struct.iter_unpack('<I9f',data[8:]):
+                if record[0]>255 or not all(math.isfinite(v) for v in record[1:]):raise RuntimeError('Invalid collision filter or geometry')
         sources[f.GAME/'SoulsCharacterFramework/collision'/name]=source
     return sources
 

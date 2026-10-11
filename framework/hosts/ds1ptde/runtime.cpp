@@ -23,6 +23,7 @@
 #include "../../core/session.h"
 #include "../../core/context_action.h"
 static void combatReset();
+static bool deathBegin(double& acc);
 static void launcherConfigure();
 static void launcherCancel();
 static bool launcherVisible();
@@ -130,6 +131,7 @@ static void pumpAudio(){
 static bool guestStep(int id,const SC_Input*input,SC_State*s,SC_Mesh*m){return guest->step(id,input,s,m)&&SC::frame(*s,*m,*profile);}
 static bool guestPose(int id,const SC_Pose*p,SC_State*s,SC_Mesh*m){return guest->pose(id,p,s,m)&&SC::frame(*s,*m,*profile);}
 #include "body.h"
+#include "hazards.h"
 #include "world.h"
 #include "character_visibility.h"
 using DamageFn=int(WINAPI*)(int,int,int,float,float,float);
@@ -151,7 +153,23 @@ static bool loadMap(){
  char prepared[MAX_PATH]={},directory[MAX_PATH]={};GetPrivateProfileStringA("Framework","CollisionDirectory","",directory,sizeof(directory),ini);
  FILE*f=nullptr;if(directory[0]){snprintf(prepared,sizeof(prepared),"%s\\m%02d_%02d_00_00.bin",directory,map/100,map%100);f=fopen(prepared,"rb");if(f)logf("Native-owned event collision cache: %s",prepared);}
  if(!f)f=fopen(file,"rb");if(!f){logf("No collision cache for map %d",map);return false;}
- char magic[4];uint32_t count=0;bool ok=fread(magic,1,4,f)==4&&memcmp(magic,"MSC1",4)==0&&fread(&count,4,1,f)==1&&count>0&&count<2000000;std::vector<Vec> data;if(ok){data.resize(count*3);ok=fread(data.data(),sizeof(Vec),count*3,f)==count*3;}fclose(f);if(!ok)return false;mapVertices.swap(data);loadedMap=map;arenaLoad();arenaRefresh();logf("map=%d collision triangles=%u",map,count);return true;
+ char magic[4];uint32_t count=0;bool ok=fread(magic,1,4,f)==4;bool typed=ok&&!memcmp(magic,"MSC2",4);
+ ok=ok&&(typed||!memcmp(magic,"MSC1",4))&&fread(&count,4,1,f)==1&&count>0&&count<2000000;
+ std::vector<Vec> data;std::vector<SCHazard::Triangle> hazards;
+ if(ok)for(unsigned i=0;i<count;i++){
+  uint32_t filter=8;Vec triangle[3];
+  if((typed&&fread(&filter,4,1,f)!=1)||filter>255||fread(triangle,sizeof(Vec),3,f)!=3){ok=false;break;}
+  for(auto p:triangle)if(!isfinite(dot(p,p)))ok=false;
+  if(!ok)break;
+  if(hazardLethal(filter)){SCHazard::Triangle t;for(int v=0;v<3;v++)t.p[v]={triangle[v].x,triangle[v].y,triangle[v].z};hazards.push_back(t);}
+  // Retain terminal surfaces for guest floor queries (some engines reject
+  // movement without a floor below). Contact is fatal before combat/another step.
+  // Camera-only trigger surfaces must not stop the fall above the kill plane.
+  if(!hazardTrigger(filter)||hazardLethal(filter))data.insert(data.end(),triangle,triangle+3);
+ }
+ if(ok&&fgetc(f)!=EOF)ok=false;fclose(f);if(!ok||data.empty())return false;
+ mapVertices.swap(data);mapHazards.swap(hazards);hazardPreviousValid=false;
+ logf("Map hazard metadata=%d lethal triangles=%u",typed,unsigned(mapHazards.size()));loadedMap=map;arenaLoad();arenaRefresh();logf("map=%d collision triangles=%u",map,count);return true;
 }
 static void rebuildSurfaces(){
  std::vector<SC_Surface> surfaces;surfaces.reserve(mapVertices.size()/3);bool flip=GetPrivateProfileIntA("MarioSouls","FlipWinding",1,ini)!=0;
@@ -159,6 +177,7 @@ static void rebuildSurfaces(){
 }
 #include "loader.h"
 static void releaseControl(bool preserveRequest=false){
+ hazardPreviousValid=false;
  launcherCancel();
  projectileRateRelease();
  cameraRelease();
@@ -179,7 +198,7 @@ static bool activate(){
  if(!player||!posData||!cam||read<int>(player+0x2d4)<=0||!ready||!loadMap())return false;
  if(!actionInputReady){logf("Character refused: native action input filter unavailable");return false;}
  if(GetPrivateProfileIntA("World","NativeMotion",1,ini)!=1||!worldMotionReady){logf("Character refused: native collision bridge required");return false;}
- origin=read<Vec>(posData+0x10);if(!isfinite(origin.x)||!isfinite(origin.y)||!isfinite(origin.z))return false;
+ hazardPreviousValid=false;origin=read<Vec>(posData+0x10);if(!isfinite(origin.x)||!isfinite(origin.y)||!isfinite(origin.z))return false;
  rebuildSurfaces();float floor=guest->floorHeight(0,100,0);logf("activate origin=%.3f %.3f %.3f map=%d floor=%.3f",origin.x,origin.y,origin.z,loadedMap,floor);
  if(floor < -300||floor > 200){logf("unsafe floor; refusing movement");return false;}
  character=guest->create(0,40,0,read<float>(posData+4)-3.14159265f);if(character<0)return false;combatReset();guest->nativeDamage(character,0);state={};state.attackId=state.interruptedAttackId=-1;state.position[1]=40;
@@ -291,7 +310,8 @@ static void update(){
  if(fabsf(state.position[0])>4000||fabsf(state.position[2])>4000||fabsf(state.position[1])>5000){Vec shift={state.position[0],state.position[1],state.position[2]};origin=origin+shift*.01f;rebuildSurfaces();guest->setPosition(character,0,0,0);for(size_t i=0;i<geo.numTrianglesUsed*3;i++){gpos[i*3]-=shift.x;gpos[i*3+1]-=shift.y;gpos[i*3+2]-=shift.z;}state.position[0]=state.position[1]=state.position[2]=0;logf("collision origin rebased");}
  feedbackPoll();
  int hp=read<int>(player+0x2d4);bool hurt=hp<lastHP&&hp>0;if(hurt){feedbackPause.clear();combatReset();int lost=lastHP-hp;pendingNativeHurt=std::max(pendingNativeHurt,lost>=read<int>(player+0x2d8)/5?2u:1u);logf("native damage %d -> %d; host-confirmed hurt, no extra i-frames",lastHP,hp);}lastHP=hp;
- if(resolvedTick&&!pendingNativeHurt){if(!combatEnvironment())return;combat();combatObjects();equipmentContact();feedbackPoll();}
+ if(resolvedTick&&hazardObserve(read<Vec>(posData+0x10))){environmentKill(acc,"native_kill_surface");return;}
+ if(resolvedTick&&!pendingNativeHurt){if(!combatEnvironment(acc))return;combat();combatObjects();equipmentContact();feedbackPoll();}
  SC_Input input={};Vec look=cameraForward();input.camLookX=look.x;input.camLookZ=look.z;
  if(focus){input.moveX=((GetAsyncKeyState('D')&0x8000)?1.f:0)-((GetAsyncKeyState('A')&0x8000)?1.f:0);input.moveY=((GetAsyncKeyState('W')&0x8000)?1.f:0)-((GetAsyncKeyState('S')&0x8000)?1.f:0);if(input.moveX==0&&input.moveY==0){input.moveX=controller.x;input.moveY=controller.y;}float n=sqrtf(input.moveX*input.moveX+input.moveY*input.moveY);if(n>1){input.moveX/=n;input.moveY/=n;}input.jump=controller.jump||!!(GetAsyncKeyState(VK_SPACE)&0x8000);input.attack=controller.attack||!!(GetAsyncKeyState(VK_LBUTTON)&0x8000);input.crouch=controller.crouch||!!(GetAsyncKeyState(VK_CONTROL)&0x8000);input.guard=controller.guard||(actionKeyboardGuardReady&&!!(GetAsyncKeyState(VK_RBUTTON)&0x8000));}
  SC_Input specialInput=input;
@@ -314,7 +334,8 @@ static void update(){
   if(old!=state.rawAction)logf("action %08x -> %08x xyz=%.3f %.3f %.3f buttons=%d%d%d",old,state.rawAction,state.position[0],state.position[1],state.position[2],input.jump,input.attack,input.crouch);
  }
  Vec p=origin+Vec{state.position[0],state.position[1],state.position[2]}*.01f;
- if(!isfinite(p.x)||!isfinite(p.y)||!isfinite(p.z)||p.y< -1000){logf("invalid/outside test area; disabled");releaseControl();return;}
+ if(p.y< -1000&&isfinite(p.y)){environmentKill(acc,"outside_world");return;}
+ if(!isfinite(p.x)||!isfinite(p.y)||!isfinite(p.z)){logf("invalid/outside test area; disabled");releaseControl();return;}
  actionFlags(false);
  put(lastMap+0xc4,read<uint32_t>(lastMap+0xc4)&~0x10u);
  if(stepped&&!worldSubmit(stepFrom,p)){logf("WORLD rejected movement request; native controls restored");releaseControl();return;}

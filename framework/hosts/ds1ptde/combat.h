@@ -57,7 +57,14 @@ static bool combatTestDrop(int height){
  put(posData+0x10,p);put(lastMap+0xd0,p);put<uint8_t>(lastMap+0xc8,1);worldActivate();characterClock.clear();characterInput.clear();characterFalling=true;characterPeakY=p.y;
  harnessEvent("test_drop");return true;
 }
-static bool combatEnvironment(){
+static bool environmentKill(double& acc,const char* reason){
+ if(!characterOwned()||nativeActionOwned()||player!=lastPlayer||chain(playerSlot,{0,4,0})!=player)return false;
+ int hp=read<int>(player+0x2d4);if(hp<=0)return false;
+ if(!put<int>(player+0x2d4,0))return false;
+ logf("Environmental death reason=%s hp=%d -> 0",reason,hp);harnessEvent("environmental_death");
+ launcherCancel();if(!deathBegin(acc))releaseControl(true);return true;
+}
+static bool combatEnvironment(double& acc){
  float y=origin.y+state.position[1]*.01f;
  bool grounded=bool(state.flags&SC_GROUNDED);
  if(!grounded){if(!characterFalling){characterPeakY=y;characterFalling=true;}characterPeakY=std::max(characterPeakY,y);}
@@ -70,7 +77,7 @@ static bool combatEnvironment(){
   if(damage>0&&hp>0&&maxHP>0&&maxHP<100000&&(read<uint32_t>(player+0x1fc)&0x4000)&&player==lastPlayer){
    int after=std::max(0,hp-damage);put<int>(player+0x2d4,after);
    char fields[220];snprintf(fields,sizeof(fields),",\"drop_meters\":%.3f,\"before\":%d,\"after\":%d,\"damage\":%d",drop,hp,after,hp-after);harnessEvent("environmental_fall_damage",fields);logf("Character fall%s",fields);
-   if(after==0){if(harness.armed)harnessObserve(true,pollController(GetTickCount()).connected);releaseControl(true);return false;}
+   if(after==0){if(harness.armed)harnessObserve(true,pollController(GetTickCount()).connected);if(!deathBegin(acc))releaseControl(true);return false;}
   }
  }return true;
 }

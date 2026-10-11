@@ -61,8 +61,8 @@ extern "C" __attribute__((used,noinline)) void characterWorldMotion(uintptr_t ph
  float angle=read<float>(physics+4),cs=cosf(angle),sn=sinf(angle);float vectors[12]={cs*delta.x-sn*delta.z,delta.y,sn*delta.x+cs*delta.z,0,0,0,0,0,1,1,1,0};SIZE_T n;WriteProcessMemory(GetCurrentProcess(),(void*)motion,vectors,sizeof(vectors),&n);
  ReleaseSRWLockExclusive(&worldLock);
 }
-static void worldRelease(){AcquireSRWLockExclusive(&worldLock);worldMailbox.reset();worldBinding={};worldPaused=false;ReleaseSRWLockExclusive(&worldLock);worldContacts.clear();}
-static void worldActivate(){AcquireSRWLockExclusive(&worldLock);worldMode=1;worldMailbox.bind();worldBinding={player,posData,lastMap,loadedMap};worldHeartbeat=GetTickCount();worldPaused=false;ReleaseSRWLockExclusive(&worldLock);}
+static void worldRelease(){hazardPreviousValid=false;AcquireSRWLockExclusive(&worldLock);worldMailbox.reset();worldBinding={};worldPaused=false;ReleaseSRWLockExclusive(&worldLock);worldContacts.clear();}
+static void worldActivate(){hazardStart(read<Vec>(posData+0x10));AcquireSRWLockExclusive(&worldLock);worldMode=1;worldMailbox.bind();worldBinding={player,posData,lastMap,loadedMap};worldHeartbeat=GetTickCount();worldPaused=false;ReleaseSRWLockExclusive(&worldLock);}
 static void worldPause(bool paused){AcquireSRWLockExclusive(&worldLock);worldHeartbeat=GetTickCount();if(paused!=worldPaused){worldMailbox.bind();worldPaused=paused;}ReleaseSRWLockExclusive(&worldLock);}
 static bool worldReady(){AcquireSRWLockShared(&worldLock);bool ok=worldMailbox.ready()&&!worldPaused;ReleaseSRWLockShared(&worldLock);return ok;}
 static bool worldReconcile(bool& resolvedTick){

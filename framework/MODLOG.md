@@ -272,3 +272,36 @@ or new verified-checkpoint tag. Installer also includes the earlier prepared
 Mario load and cannon aim changes; prior immutable checkpoint remains intact.
 
 Validation: full framework build, offline tests (including real D3D9 pixel readback and device reset), and doctor all passed for this revision.
+
+
+## 2026-10-11: pit death versus protected landing (prepared)
+
+User reported survival below Firelink. Read-only log/owned-map comparison located
+feet at (-34.604,-69.853,40.252), within 0.006m of hit filter13 (death-camera) at
+Y=-69.847. Filter15 kill terrain exists ten metres below at Y=-79.847; normal
+filter8 terrain is farther down at -98.363. MSC1 discarded filters, making the
+camera trigger a guest floor. It intercepted the fall before native kill terrain.
+This disproves the earlier untested claim that all pits remained dangerous.
+
+MSC2 preserves native filter IDs. The host removes camera-only geometry and
+performs a winding-independent swept feet test against lethal filters, bypassing
+nonlethal landing protection. Terminal geometry is retained for guest floor
+queries but is never a survivable landing. Native HP becomes zero once, then the
+existing death presentation returns physics and respawn to Dark Souls. The
+out-of-world cutoff also uses death instead of releasing control alive. Motion
+handbacks reset the sweep origin. Existing landing scaling stays unchanged.
+
+Prepared all 15 locally cached maps in private work/hazard-cache-v2/combined,
+including Asylum and Firelink, with original event ownership retained. Unknown
+script collision targets conservatively retain all named candidates in the native
+engine. A threaded parser attempt revealed non-thread-safe source metadata;
+final caches were regenerated in separate processes. No derived assets in Git.
+
+Checks added: MSC2 installer validation including invalid filters/nonfinite data,
+conservative event targets, lethal/camera filter distinction, fast sweeps, nearby
+safe points, winding/degenerate triangles, reset across native handbacks, and a
+real Mario runtime falling onto host lethal geometry with nonlethalFalls enabled.
+No live game input or installation; user previously chose to test personally.
+Live death/respawn and all-map navigation remain unverified for this build.
+
+Final validation: build, full offline test suite, doctor and the hash-pinned installer check-only all passed. No installation or game controls performed.

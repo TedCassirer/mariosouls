@@ -10,11 +10,11 @@ foreach ($taskFile in $taskManifest.files) {
     }
 }
 if (-not $CheckOnly -and (Get-Process DARKSOULS -ErrorAction SilentlyContinue)) { throw 'Save and close Dark Souls before installing.' }
-$taskArgs = @('tools/framework.py', 'install', '--character', 'mario64', '--asset', 'C:/Users/Ted/Downloads/Super Mario 64 (USA)/Super Mario 64 (USA).z64', '--runtime', 'work/framework-build/characters/mario64/sm64.dll')
+$taskArgs = @('tools/framework.py', 'install', '--character', 'mario64', '--asset', 'C:/Users/Ted/Downloads/Super Mario 64 (USA)/Super Mario 64 (USA).z64', '--runtime', 'work/framework-build/characters/mario64/sm64.dll', '--collision', 'work/hazard-cache-v2/combined')
 if ($CheckOnly) { $taskArgs += '--check-only' }
 Push-Location -LiteralPath $taskRepo
 try {
     & $taskPython @taskArgs
     if ($LASTEXITCODE -ne 0) { throw 'Installation checks failed. Read the message above.' }
-    if (-not $CheckOnly) { Write-Host 'Mario rendering, cannon aiming and character loading fixes installed. Start Dark Souls normally.' }
+    if (-not $CheckOnly) { Write-Host 'Mario pit death, rendering, cannon aiming and loading fixes installed. Start Dark Souls normally.' }
 } finally { Pop-Location }

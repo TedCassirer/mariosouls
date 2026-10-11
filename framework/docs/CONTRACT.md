@@ -528,3 +528,24 @@ resources. There is no after-UI fallback that would cover prompts with character
 The stock render-graph selector excludes square shadow/portrait passes, keeps
 the largest rectangular matching color/depth pair, and ignores downsampled
 passes. Multisampled and replacement render graphs require separate validation.
+
+
+### Native lethal terrain and protected landings
+
+PTDE collision caches now support MSC2: magic, little-endian uint32 triangle
+count, then records of uint32 native hit-filter ID and nine float32 coordinates.
+MSC1 still loads, but has no lethal-surface metadata and must be regenerated to
+receive this fix. The exporter preserves hit filters from the owned MSB data.
+Death-camera surfaces (13) do not enter guest geometry. Lethal-fall/kill surfaces
+(14/15) remain queryable for guest engines requiring a floor underneath; the host
+checks swept native feet against these surfaces before allowing another gameplay
+step. Contact sets native HP to zero and begins the existing native-owned death
+lifecycle, bypassing landing multipliers/caps. No adapter writes HP. Ordinary
+landings retain the profile's reduced/nonlethal damage. A position below the
+host's existing -1000m world bound now kills rather than merely disabling the mod.
+
+Event-controlled collisions remain native-owned. When an event argument's target
+cannot be resolved, all named collision candidates are conservatively excluded
+from the static cache; their current state is not guessed. Hazard sweep history
+resets at native-motion handbacks so teleports/ladders cannot create a false hit
+along an old-to-new straight line. ABI and guest contracts are unchanged.

@@ -9,6 +9,7 @@
 #include "../sdk/character_api.h"
 #include "../core/validation.h"
 #include "../core/camera.h"
+#include "../core/hazard.h"
 #include "../core/projectile.h"
 #include "../core/impact.h"
 #include "../sdk/launcher_api.h"
@@ -75,6 +76,18 @@ int main(int argc,char**argv){
   assert(a->probeContact(id,0,0,0)&SC_CONTACT_AUTOMATIC);a->commitContact(id,0,0,0,160);
   for(int k=0;k<3;k++)resolution.position[k]=state.position[k];
   assert(a->resolveMotion(id,&resolution,&state,&m));step();assert(state.velocity[1]>0);
+  // A terminal floor is still queryable by engines that require a floor,
+  // but the host must detect contact before a protected landing can continue.
+  SC_Surface terminal[2]={floor[0],floor[1]};for(auto& t:terminal)for(auto& v:t.vertices)v[1]=-1500;
+  a->surfaces(terminal,2,0);a->resume(id,0,0,0,0);a->command(id,SC_COMMAND_FALL);input={0,1,0,0,0,0,0,0};
+  SCHazard::Triangle kill={{{-160,-15,-160},{-160,-15,160},{160,-15,160}}};
+  SCHazard::Point previous={0,0,0};bool terminalContact=false;
+  for(int i=0;i<180;i++){
+   a->nativeDamage(id,0);step();SCHazard::Point next={state.position[0]*.01f,state.position[1]*.01f,state.position[2]*.01f};
+   if(SCHazard::touches(previous,next,kill)){terminalContact=true;break;}previous=next;
+  }
+  assert(terminalContact);assert(d->body.nonlethalFalls);
+  puts("PASS real guest fall reaches host lethal surface despite nonlethal landing protection");
   // Real guest collision queries must match the descriptor, not retain the
   // old 50 cm wall radius / 160 cm ceiling height beneath a smaller host body.
   SC_Surface walls[6]={floor[0],floor[1],

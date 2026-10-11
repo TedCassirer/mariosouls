@@ -815,3 +815,13 @@ The legacy harness transport and raw diagnostic fields remain readable, but new
 combat events are `character_attack` and `character_contact`. Historical scripts
 that parse `mario_attack` must be migrated before their reports are relied on.
 The new `framework/qa` helpers are the supported basic regression path.
+
+
+### 2026-10-11 pit regression correction (prepared)
+
+The earlier statement that bottomless pits remained dangerous was not proven and
+is superseded: Firelink's death-camera collision was imported as solid terrain,
+preventing Mario from reaching the kill plane. The new host/cache fix distinguishes
+camera and lethal filters; protected landing damage remains unchanged. Offline
+geometry and actual guest fall checks are separate from live native death/respawn,
+which has not been exercised for this prepared revision. No game controls used.

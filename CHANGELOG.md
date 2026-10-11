@@ -2,11 +2,15 @@
 
 ## 0.9.0-dev.1 — unreleased
 
-Development checkpoint, not a public release. Older immutable checkpoints remain
-available; see [recovery](docs/CHECKPOINTS.md).
+Development build, not a public release. Git preserves earlier source versions;
+see [recovery](docs/RECOVERY.md).
 
 ### Release preparation
 
+- Use Git history for source recovery; retire the separate checkpoint command
+  and historical manifests from new source checkouts.
+- Keep automatic installation backups, including rollback support for older
+  backup locations. Existing local archives and tags are preserved.
 - Asset-free Windows CI for framework policies, hook contracts, SDK scaffolding,
   installer transactions and package validation; ROM tests remain local.
 - Checksum-verified compiler download and pinned dependency setup.

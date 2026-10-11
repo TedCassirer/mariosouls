@@ -35,11 +35,11 @@ Close the game first. This restores files replaced by the most recent installati
 if that installation replaced an older mod, the older mod is restored. It is not
 necessarily a return to vanilla. Unrelated files and saves are untouched.
 
-Restoration requires the matching private backup beneath `work/checkpoints/`.
+Restoration requires the matching private backup beneath `work/install-backups/` (or `work/checkpoints/` for older installs).
 Current and backup file hashes are verified. Modified files cause refusal: preserve
 those changes and review the backup before proceeding. There is no force-delete
 option. Pre-existing backups without hash inventories use their historical restore
-helpers; see [checkpoints](CHECKPOINTS.md). Keep backups when moving the checkout.
+helpers; see [recovery](RECOVERY.md). Keep backups when moving the checkout.
 
 ## Reporting a bug
 

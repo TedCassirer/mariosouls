@@ -1,4 +1,4 @@
-# Source checkpoint only. Local runtime archives and game-derived data stay private.
+# Source control only. Local runtime archives and game-derived data stay private.
 /*
 !/.gitignore
 !/.gitattributes
@@ -28,10 +28,7 @@
 !/tools/
 /tools/*
 !/tools/*.py
-!/checkpoints/
-/checkpoints/*
-!/checkpoints/*.json
-!/checkpoints/*.ini
+# Historical checkpoint manifests and archives remain local.
 !/patches/
 /patches/*
 !/patches/*.patch

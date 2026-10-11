@@ -68,7 +68,7 @@ def equipment_files(directory):
     directory=Path(directory).resolve();manifest_path=directory/'manifest.json'
     if not manifest_path.resolve().is_relative_to(directory):raise RuntimeError('Equipment manifest leaves its directory')
     manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
-    supported=json.loads((f.ROOT/'checkpoints/mariosouls-v0.7.json').read_text())['game_exe_sha256']
+    supported=json.loads((f.ROOT/'release/project.json').read_text())['supported_exe_sha256']
     if f.sha(f.GAME/'DARKSOULS.exe')!=supported:raise RuntimeError('Unsupported Dark Souls executable for equipment')
     if manifest.get('schema')!=1 or manifest.get('kind')!='ds1ptde-equipment-props' or manifest.get('game_exe_sha256')!=supported:raise RuntimeError('Invalid native equipment cache manifest')
     files,models,rows=manifest.get('files'),manifest.get('models'),manifest.get('equipment')
@@ -103,8 +103,8 @@ def install(character,asset,runtime,check_only=False,collision=None,equipment=No
     if any(receipt.get(k)!=v for k,v in expected.items()):raise RuntimeError('Build receipt does not match binaries')
     changed=[name for name,h in receipt['source_sha256'].items() if not (f.ROOT/name).is_file() or f.sha(f.ROOT/name)!=h]
     if changed:raise RuntimeError('Sources changed after build; rebuild and retest: '+', '.join(changed))
-    checkpoint=json.loads((f.ROOT/'checkpoints/mariosouls-v0.7.json').read_text())
-    if f.sha(f.GAME/'DARKSOULS.exe')!=checkpoint['game_exe_sha256']:raise RuntimeError('Unsupported Dark Souls executable')
+    project=json.loads((f.ROOT/'release/project.json').read_text())
+    if f.sha(f.GAME/'DARKSOULS.exe')!=project['supported_exe_sha256']:raise RuntimeError('Unsupported Dark Souls executable')
     cfg=configparser.ConfigParser();cfg.optionxform=str;cfg.read(f.GAME/'mariosouls.ini')
     proxy=f.GAME/'dinput8.dll'
     known=set()
@@ -147,7 +147,7 @@ def install(character,asset,runtime,check_only=False,collision=None,equipment=No
     if check_only:
         print('Install checks passed; exact tested build, runtime, assets and host identity match. No files changed.');return
     require_closed()
-    backup=f.ROOT/'work/checkpoints'/('before-framework-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'));backup.mkdir(parents=True)
+    backup=f.ROOT/'work/install-backups'/('before-framework-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'));backup.mkdir(parents=True)
     with tempfile.TemporaryDirectory(dir=backup,prefix='stage-') as tmp:
         temp=Path(tmp);sources={f.GAME/'dinput8.dll':f.BUILD/'dinput8.dll',destination/'character.dll':build/'character.dll',destination/'character.json':folder/'character.json'}
         sources.update(prepared_collision)

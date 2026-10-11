@@ -77,7 +77,7 @@ def main():
         correct = all((path / name).is_file() and sha(path / name) == value for name, value in expected.items())
         if not correct:
             if not args.setup or git(path, 'status', '--porcelain', '--untracked-files=normal'):
-                raise RuntimeError('Dependency changes differ from checkpoint; preserving files: ' + dep['path'])
+                raise RuntimeError('Dependency changes differ from the lock file; preserving files: ' + dep['path'])
             git(path, 'apply', '--check', str(ROOT / dep['patch']))
             git(path, 'apply', str(ROOT / dep['patch']))
             for source, target in dep.get('overlay', {}).items():
@@ -87,7 +87,7 @@ def main():
         tracked = set(git(path, 'diff', '--name-only', 'HEAD').splitlines())
         new = set(git(path, 'ls-files', '--others', '--exclude-standard').splitlines())
         if (tracked | new) - set(expected):
-            raise RuntimeError('Additional dependency edits need a new checkpoint: ' + dep['path'])
+            raise RuntimeError('Additional dependency edits need a lock file update: ' + dep['path'])
         print('Verified ' + dep['path'])
     compiler = ROOT / lock['compiler']['path']
     if not compiler.is_file() or sha(compiler) != lock['compiler']['sha256']:

@@ -95,6 +95,19 @@ class Removal(unittest.TestCase):
         self.prepare();before={str(p):p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
         removal.uninstall(True)
         self.assertEqual(before,{str(p):p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
+    def test_legacy_backup_directory(self):
+        before=self.prepare();path=self.game/'SoulsCharacterFramework/install.json'
+        manifest=json.loads(path.read_text());original=Path(manifest['backup'])
+        legacy=self.root/'work/checkpoints'/original.name;legacy.parent.mkdir(parents=True)
+        shutil.move(str(original),str(legacy));manifest['backup']=str(legacy)
+        path.write_text(json.dumps(manifest))
+        with patch.object(removal,'require_closed'):removal.uninstall()
+        self.assertEqual(before,{p.relative_to(self.game).as_posix():p.read_bytes() for p in self.game.rglob('*') if p.is_file()})
+    def test_backup_outside_allowed_directories(self):
+        self.prepare();path=self.game/'SoulsCharacterFramework/install.json'
+        manifest=json.loads(path.read_text());manifest['backup']=str(self.root/'unrelated')
+        path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(RuntimeError,'Backup leaves'):removal.uninstall(True)
     def test_user_modified_file(self):
         self.prepare();(self.game/'mariosouls.ini').write_text('user changes')
         with self.assertRaisesRegex(RuntimeError,'Installed file changed'):removal.uninstall(True)

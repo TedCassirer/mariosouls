@@ -3,7 +3,7 @@
 MarioSouls targets **Windows Dark Souls: Prepare to Die Edition**, x86. Dark Souls
 Remastered and other executables are unsupported. The accepted executable SHA-256
 is recorded in [project metadata](../release/project.json); the installer verifies
-it against the preserved checkpoint identity.
+it directly against that metadata.
 
 Support is for **offline play**. Multiplayer compatibility has not been verified.
 The mod does not provide a guarantee of online safety or a network sandbox.

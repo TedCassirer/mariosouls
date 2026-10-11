@@ -22,8 +22,9 @@ def owned_path(name):
 def uninstall(check_only=False):
     manifest=f.GAME/'SoulsCharacterFramework/install.json'
     installed=json.loads(manifest.read_text())
-    base=(f.ROOT/'work/checkpoints').resolve();backup=Path(installed['backup']).resolve()
-    if not backup.is_relative_to(base) or backup==base:raise RuntimeError('Backup leaves the checkpoint directory')
+    base=(f.ROOT/'work/install-backups').resolve();backup=Path(installed['backup']).resolve()
+    allowed=(base,(f.ROOT/'work/checkpoints').resolve())
+    if not any(backup.is_relative_to(folder) and backup!=folder for folder in allowed):raise RuntimeError('Backup leaves the installation backup directories')
     previous=json.loads((backup/'manifest.json').read_text())
     hashes=json.loads((backup/'hashes.json').read_text()) # Older archives require their historical restore helper.
     expected=dict(installed['files']);expected['SoulsCharacterFramework/install.json']=f.sha(manifest)
@@ -32,7 +33,7 @@ def uninstall(check_only=False):
         path=owned_path(name)
         if not path.is_file() or f.sha(path)!=digest:raise RuntimeError('Installed file changed; refusing to overwrite: '+name)
         original=backup/name
-        if not original.resolve().is_relative_to(backup):raise RuntimeError('Backup file leaves checkpoint')
+        if not original.resolve().is_relative_to(backup):raise RuntimeError('Backup file leaves its directory')
         if type(previous[name]) is not bool:raise RuntimeError('Invalid backup state')
         if previous[name] and (not original.is_file() or f.sha(original)!=hashes[name]):raise RuntimeError('Backup hash mismatch: '+name)
         if not previous[name] and hashes[name] is not None:raise RuntimeError('Invalid absent-file backup hash')

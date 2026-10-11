@@ -136,9 +136,6 @@ def main():
         return
     if git('status','--porcelain','--untracked-files=no'):raise RuntimeError('Commit tracked changes before packaging')
     if args.kind=='candidate':files.update(candidate_files())
-    # Minimal compatibility metadata, not the original machine's private archive inventory.
-    original=json.loads((ROOT/'checkpoints/mariosouls-v0.7.json').read_text())
-    files['checkpoints/mariosouls-v0.7.json']=(json.dumps({'game_exe_sha256':original['game_exe_sha256']},indent=2)+'\n').encode()
     project=json.loads((ROOT/'release/project.json').read_text())
     metadata={'schema':1,'kind':args.kind,'version':project['version'],'commit':git('rev-parse','HEAD'),'public_release':False,'release_blockers':blockers,'requires_user_assets':True}
     write_archive(args.output,files,metadata)

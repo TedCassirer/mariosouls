@@ -34,7 +34,7 @@ compatibility. See the [validation record](framework/docs/VALIDATION.md).
 | Report a problem or contribute | [Contributing](CONTRIBUTING.md) |
 | Understand tests and CI | [Testing](docs/TESTING.md) |
 | Prepare a future release | [Release process](docs/RELEASING.md) |
-| Recover an earlier version | [Checkpoints and local backups](docs/CHECKPOINTS.md) |
+| Recover an earlier version | [Git history and installation backups](docs/RECOVERY.md) |
 
 Mario requires a user-supplied US Super Mario 64 ROM. ROMs, saves, extracted assets,
 generated collision data and binaries are excluded from Git. A portable installer
@@ -44,10 +44,9 @@ that prepares the required data locally is planned.
 
 ```text
 framework/   Active game integration, character adapters, SDK and tests
-tools/       Build, validation, dependency and checkpoint commands
+tools/       Build, validation, dependency and installation commands
 docs/        Player, development and recovery guides
 patches/     Changes applied to pinned upstream dependencies
-checkpoints/ Historical manifests; runtime archives stay local
 work/        Preserved prototype, investigations and local build files
 outputs/     Historical local controls, installer and restore helpers
 ```

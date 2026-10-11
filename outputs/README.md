@@ -10,4 +10,4 @@ Some notes describe older behavior.
 
 Start with the [player guide](../docs/PLAYING.md) or
 [development setup](../docs/DEVELOPMENT.md). See
-[checkpoints and local backups](../docs/CHECKPOINTS.md) before using restore tools.
+[Git history and installation backups](../docs/RECOVERY.md) before using restore tools.

@@ -12,11 +12,12 @@ inline bool valid(const SC_ClassProfile* p){
 // One automatic decision per loaded actor. A manual toggle stays authoritative
 // for that actor; respawn/reload receives the native class default again.
 struct Selection {
- uintptr_t actor=0;
+ uintptr_t actor=0;bool selected=false;
  bool observe(uintptr_t current,bool matches){
-  if(!current){actor=0;return false;}
-  if(current==actor)return false;
-  actor=current;return matches;
+  if(current!=actor){actor=current;selected=false;}
+  if(!current||selected||!matches)return false;
+  selected=true;return true;
  }
+ void manual(uintptr_t current){actor=current;selected=true;}
 };
 }

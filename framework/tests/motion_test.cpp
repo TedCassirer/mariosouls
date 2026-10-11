@@ -14,11 +14,20 @@ int main(){
  Clock clock;clock.advance(10);assert(clock.take(true));assert(clock.take(true));assert(!clock.take(true));clock.clear();clock.advance(.1);assert(!clock.take(false));assert(clock.take(true));assert(!clock.take(true));
  InputLatch latch;SC_Input input{};input.attack=1;latch.sample(input,10);input.attack=0;input.moveY=1;latch.sample(input,20);auto out=latch.take(25);assert(out.attack&&out.moveY==1);assert(!latch.take(26).attack);input.jump=1;latch.sample(input,30);assert(!latch.take(200).jump);
  auto v=clip({100,300,0},{-1,0,0});assert(v.x==0&&v.y==300);v=clip({100,300,0},{0,-1,0});assert(v.y==0&&v.x==100);v=clip({100,-300,0},{0,1,0});assert(v.y==0&&v.x==100);
- SCSession::Session session;SCSession::Identity identity{1,2,3,1801};session.request(true);assert(!session.canRetry(identity,true,1000));assert(session.canRetry(identity,true,1500));session.activate(identity);assert(session.matches(identity)&&session.character());assert(session.handoff()&&session.action());assert(!session.handoff());assert(session.resume()&&session.character());session.release();assert(session.requested()&&!session.visible());assert(!session.canRetry(identity,false,2000));assert(!session.canRetry(identity,true,2500));assert(!session.canRetry({1,2,4,1801},true,3000));assert(!session.matches(identity));session.request(false);assert(!session.canRetry(identity,true,4000));
+ SCSession::Session session;SCSession::Identity identity{1,2,3,1801};session.request(true);assert(!session.canRetry(identity,true,1000));assert(session.canRetry(identity,true,1500));session.activate(identity);assert(session.matches(identity)&&session.character());assert(session.handoff()&&session.action());assert(!session.handoff());assert(session.resume()&&session.character());session.release();assert(session.requested()&&!session.visible());assert(!session.canRetry(identity,false,2000));assert(session.canRetry(identity,true,2500));assert(!session.canRetry({1,2,4,1801},true,3000));assert(!session.matches(identity));session.request(false);assert(!session.canRetry(identity,true,4000));
  assert(!session.die());session.activate(identity);assert(session.die()&&session.death()&&session.visible()&&!session.character()&&!session.action());
  assert(!session.resume()&&!session.handoff()&&!session.die()&&!session.canRetry(identity,true,5000));
  session.release();assert(session.requested()&&!session.death());assert(!session.canRetry(identity,true,6000));assert(session.canRetry(identity,true,6500));
  session.activate(identity);assert(session.handoff()&&session.die());assert(!session.matches({2,2,3,1801}));session.release();assert(!session.visible());
  SCSession::QuietGate gate;assert(!gate.update(true,0));assert(!gate.update(false,99));assert(!gate.update(true,100));assert(gate.update(true,200));
+ // Class activation must not require standing idle for 500 continuous ms.
+ SCSession::Session loading;loading.request(true);
+ assert(!loading.canRetry(identity,false,100));
+ assert(!loading.canRetry(identity,false,600)); // loading/menu still owns input
+ assert(loading.canRetry(identity,true,601)); // first safe frame after stable load
+ assert(!loading.canRetry({1,2,4,1801},true,602)); // physics replacement still settles
+ assert(!loading.canRetry({1,2,4,1801},false,1102));
+ assert(loading.canRetry({1,2,4,1801},true,1103));
+ loading.request(false);assert(!loading.canRetry(identity,true,1600));
  puts("PASS motion ownership: single-use requests, backpressure, stale/epoch rejection, finite bounds, clock-rate parity, input latch, velocity clipping, actor lifecycle and timed interaction return");
 }

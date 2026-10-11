@@ -190,3 +190,24 @@ offline regression suite and doctor passed. No new combat claims are made by
 this menu test. Final captures are outputs/Mario class.png and
 outputs/Mario appearance preview.png. The earlier Mario ClassQA save predates
 the requested inventory correction and intentionally keeps its acquired gear.
+
+## 2026-10-11 - Class activation loading gate
+
+User reported loading a Mario-class save as human. Read-only live observation
+confirmed saved class 7. The installed log contains the automatic class request,
+then a controller toggle cancelling that pending request while still human; a
+second toggle activates successfully. No load/floor failure was logged there.
+
+Fixed framework session stability: the 500 ms timer follows native actor,
+physics and map identity instead of requiring uninterrupted idle animation.
+Unsafe frames still prohibit ownership, but no longer reset identity stability.
+Class selection keeps observing until matching saved data arrives and preserves
+explicit manual decisions. A toggle while human enables the guest even with
+an automatic request pending. Existing manual-off behavior after activation
+is retained. No save, inventory, health or class-byte writes were added.
+
+Build, complete offline framework/real-adapter suite and doctor passed. Tests
+cover delayed class data, manual suppression, identity changes during loading,
+unsafe frames and first-safe-frame activation after settling. Installation and
+live reload validation await the requested control handoff; the running game
+is still the previous checkpoint. This entry is not a live verification claim.

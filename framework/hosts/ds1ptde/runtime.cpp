@@ -235,7 +235,13 @@ static void update(){
   launcherCancel();if(!deathBegin(acc))releaseControl(true);
  }
  if(characterSession.death()&&read<int>(player+0x2d4)>0){logf("Death presentation complete: native respawn");releaseControl(true);acc=0;}
- if((focus&&pressed(VK_F6))||padToggle){if(characterOwned()||characterSession.requested()){characterSession.request(false);releaseControl();}else{characterSession.request(true);if(!activate())characterSession.failed(inputTime);}}
+ if((focus&&pressed(VK_F6))||padToggle){
+  classSelection.manual(player);
+  // A pending load request is not a visible character. Pressing the toggle
+  // while still human should enable the guest, not cancel automatic activation.
+  if(characterOwned()){characterSession.request(false);releaseControl();}
+  else{characterSession.request(true);if(!activate())characterSession.failed(inputTime);}
+ }
  cameraTick();
  if(!equipmentActionOwned||characterSession.death())projectileRateRelease();
  if(characterSession.death()){deathTick(acc,pad.slot);return;}

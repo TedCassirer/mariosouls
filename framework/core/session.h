@@ -26,9 +26,12 @@ public:
  bool die(){if(!visible()||death())return false;mode=Owner::NativeDeath;settling=false;++epoch;return true;}
  void release(){mode=Owner::Native;identity={};settling=false;++epoch;}
  bool canRetry(Identity next,bool safe,uint32_t now){
-  if(!wanted||visible()||!next.valid()||!safe||(retryAt&&int32_t(now-retryAt)<0)){settling=false;return false;}
+  if(!wanted||visible()||!next.valid()||(retryAt&&int32_t(now-retryAt)<0)){settling=false;return false;}
   if(!settling||!(identity==next)){identity=next;stableAt=now;settling=true;return false;}
-  return uint32_t(now-stableAt)>=500;
+  // Settle the loaded identity, not its animation. Walking or a load/menu
+  // animation must not restart the timer on every frame. Ownership still waits
+  // for a safe native frame, even after the identity has settled.
+  return safe&&uint32_t(now-stableAt)>=500;
  }
  void failed(uint32_t now){settling=false;retryAt=now+2000;}
 };

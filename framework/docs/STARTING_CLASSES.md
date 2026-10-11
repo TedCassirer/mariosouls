@@ -33,6 +33,12 @@ Adapters continue to have no memory or inventory access.
   toggle remains available and is not overwritten every frame. This replacement
   also applies to existing Pyromancer-class saves when loaded; no inventory is
   retroactively granted to them. Other classes retain their normal defaults.
+  An actor appearing before its saved class data does not consume the decision.
+  An explicit manual toggle consumes it, including while class data is loading.
+  Activation settles the actor/physics/map identity for 500 ms, independently
+  of idle animations, focus and menus, then waits for a safe native frame.
+  Pressing the toggle while still human enables the guest even if an automatic
+  request was pending; it does not silently cancel that request.
 
 Set `[Framework] StartingClass=0` before launching to disable the class replacement
 while retaining the existing manual character toggle.

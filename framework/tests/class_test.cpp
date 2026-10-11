@@ -14,7 +14,9 @@ int main(){
  assert(!s.observe(0,true));assert(s.observe(100,true));
  assert(!s.observe(100,true)); // manual off must not be overwritten next frame
  assert(!s.observe(0,true));assert(s.observe(100,true)); // recycled pointer after load
- assert(!s.observe(200,false));assert(!s.observe(200,true));
+ assert(!s.observe(200,false));assert(s.observe(200,true)); // saved stats can arrive after the actor
+ assert(!s.observe(200,true));
+ assert(!s.observe(250,false));s.manual(250);assert(!s.observe(250,true));
  assert(s.observe(300,true));
  puts("PASS starting class: profile bounds, per-actor activation, manual override, native classes and recycled identity");
 }

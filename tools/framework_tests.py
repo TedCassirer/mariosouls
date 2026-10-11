@@ -17,6 +17,8 @@ def test(character,asset,runtime):
     f.BUILD.mkdir(parents=True,exist_ok=True)
     f.compile_cpp(f.FRAMEWORK/'tests/core_test.cpp',f.BUILD/'core-test.exe')
     f.run([f.BUILD/'core-test.exe'])
+    f.compile_cpp(f.FRAMEWORK/'tests/context_action_test.cpp',f.BUILD/'context-action-test.exe')
+    f.run([f.BUILD/'context-action-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/feedback_test.cpp',f.BUILD/'feedback-test.exe')
     f.run([f.BUILD/'feedback-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/motion_test.cpp',f.BUILD/'motion-test.exe')

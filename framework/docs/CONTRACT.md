@@ -132,6 +132,16 @@ free-running pose; otherwise phase is 0–1. Climb travelCm is cumulative signed
 vertical travel. Unsupported optional poses should fall back to a stable neutral
 pose, not fail the entire interaction. Talk currently falls back to neutral on Mario.
 
+Controller A is contextual: at an eligible native prompt it requests the native
+interaction; otherwise it supplies guest jump. `core/context_action.h` assigns
+each press once and consumes interaction presses until release, including across
+menu entry/exit. Focus, controller or actor changes require release before a new
+press. Native menus retain their normal A confirmation. Y/Q remain explicit
+interaction aliases; Space remains jump and X/E remains selected-item use.
+The DS1 host recognizes track-14 idle 120000 as well as 100000, so changing
+weapon stance does not silently disable interactions. No adapter-specific input
+switches or inventory/reward writes are involved.
+
 `SC_CAP_ITEM_PROP` tells the host the adapter draws its own held item during use;
 it suppresses the native human-hand prop/effect. Add character-specific fittings
 in the adapter, never in host code.

@@ -4,6 +4,7 @@ enum class ActionRoute { Free, Character, Locked, Ladder, Menu };
 static volatile LONG actionRoute=0,actionButton=0,actionUntil=0,actionPadSource=0;
 static bool actionInputReady=false;
 static volatile LONG equipmentGuardInput=0;
+static volatile LONG actionBlockHeldA=0;
 static unsigned actionGuardKeys[7]={},actionGuardKeyCount=0;
 static bool actionKeyboardGuardReady=false;
 static DWORD actionKeyboardPolls=0;
@@ -68,7 +69,7 @@ static void actionFilterPad(XINPUT_GAMEPAD& p){
   p.sThumbLX=0;if(route!=ActionRoute::Ladder)p.sThumbLY=0;
   p.bLeftTrigger=p.bRightTrigger=0;
   p.wButtons&=~(XINPUT_GAMEPAD_A|XINPUT_GAMEPAD_B|XINPUT_GAMEPAD_X|XINPUT_GAMEPAD_Y|XINPUT_GAMEPAD_LEFT_SHOULDER|XINPUT_GAMEPAD_RIGHT_SHOULDER);
- }else p.wButtons&=~XINPUT_GAMEPAD_Y;
+ }else {p.wButtons&=~XINPUT_GAMEPAD_Y;if(InterlockedCompareExchange(&actionBlockHeldA,0,0))p.wButtons&=~XINPUT_GAMEPAD_A;}
  if(route==ActionRoute::Character&&InterlockedCompareExchange(&equipmentGuardInput,0,0))p.wButtons|=XINPUT_GAMEPAD_LEFT_SHOULDER;
  int pulse=actionPulse(true);if(pulse==1)p.wButtons|=XINPUT_GAMEPAD_A;if(pulse==2)p.wButtons|=XINPUT_GAMEPAD_X;
 }

@@ -1,5 +1,10 @@
 # Souls Character Framework 0.5.0
 
+Interaction follow-up: controller A now interacts at eligible native prompts
+and jumps elsewhere. Y remains an interaction alias. A weapon-stance idle check
+that rejected animation 120000 has been fixed. The user confirmed A recovered
+Mario QA's 212 souls without jumping; see the validation record for scope.
+
 0.5.0 adds optional equipped combat through ABI 4. Mario can hold a native
 one-handed straight sword and a small or medium shield while retaining his own
 locomotion and fitted arm animations. Ground sword swings use the selected

@@ -41,6 +41,9 @@ that check.
    progression code; do not read or write Dark Souls memory from the adapter.
 4. Implement host-owned interaction poses and clean resume on the same instance.
    Test interrupted actions and rejected prompts as well as successful actions.
+   Report `SC_CAN_INTERACT` and `SC_GROUNDED` accurately. The shared controller-A
+   policy chooses native interaction at an eligible prompt or guest jump elsewhere;
+   adapters must not independently turn that interaction press into a jump.
 5. Run a full `build --character <id>`, then `test --character <id>` with required
    `--asset` and `--runtime` paths. The common suite checks lifecycle, bounds,
    floor, movement/jump, all poses, resume and damage/audio callbacks. Add engine-

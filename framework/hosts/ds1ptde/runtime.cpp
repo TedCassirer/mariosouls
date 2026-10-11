@@ -21,6 +21,7 @@
 #include "../../core/feedback.h"
 #include "../../core/motion.h"
 #include "../../core/session.h"
+#include "../../core/context_action.h"
 static void combatReset();
 static void equipmentReset();
 static void feedbackReset();
@@ -181,7 +182,7 @@ static HostInteraction::Observation nativeInteractionState(){
  HostInteraction::Observation o;uintptr_t movement=read<uint32_t>(player+0x28),tracks=read<uint32_t>(movement+0x18),menu=read<uint32_t>(0x13786d0);
  if(!player||!movement||!tracks||!menu)return o;
  int id=0;uint32_t token=0;if(!get(tracks+14*0x9c,id)||!get(tracks+14*0x9c+4,token))return o;
- o.valid=true;o.idle=id>=0&&id%100000==0&&token!=0xffffffff;
+ o.valid=true;o.idle=HostInteraction::idleAnimation(id,token);
  for(int i=0;i<29;i++){if(!get(tracks+i*0x9c,id)||!get(tracks+i*0x9c+4,token)){o.valid=false;return o;}if(token==0xffffffff||id<0)continue;int anim=id%100000;if(anim>=7000&&anim<7100){o.ladder=true;o.animation=anim;}else if(anim>=7000&&anim<9000){o.event=true;if(!o.ladder)o.animation=anim;}}
  // Same MenuMan fields inspected by native IsShowMenu (0xC2ABE0).
  // ItemGetMenuManImpl (C22780/C22910) owns +118 while its item queue popup is open.
@@ -231,7 +232,13 @@ static void update(){
  if(characterOwned()&&!nativeActionOwned()){
   auto native=nativeInteractionState();if(native.valid&&(native.menu||native.ladder||native.event))beginInteraction(pad.slot,false);
  }
- if(interactPressed){if(characterOwned()&&!nativeActionOwned())requestAction(1,padInteract);else if(nativeActionOwned()&&actionCurrentRoute()==ActionRoute::Menu)actionQueue(1,inputTime,padInteract);}
+ static SCContext::Button contextA;
+ auto context=contextA.update(controller.jump,focus&&pad.connected,player,pad.slot,
+  characterOwned()&&!nativeActionOwned()&&!nativeReaction,actionEligible(1));
+ InterlockedExchange(&actionBlockHeldA,context.blockNative);
+ controller.jump=context.jump;
+ if(context.interact)requestAction(1,true);
+ else if(interactPressed){if(characterOwned()&&!nativeActionOwned())requestAction(1,padInteract);else if(nativeActionOwned()&&actionCurrentRoute()==ActionRoute::Menu)actionQueue(1,inputTime,padInteract);}
  if(itemPressed&&characterOwned()&&!nativeActionOwned())requestAction(2,padItem);
  if(characterOwned()&&!nativeActionOwned()&&!actionPending()&&actionRequestKind){logf("Action request unanswered; Character retained");actionRequestKind=0;}
  static DWORD configTime=0;static int command=0;if(GetTickCount()-configTime>200){configTime=GetTickCount();int serial=GetPrivateProfileIntA("Test","Serial",0,ini);if(serial!=command){command=serial;if(!focus||!harnessIdentity()){logf("test command rejected: focus/identity guard");}else{int mode=GetPrivateProfileIntA("Test","Mode",0,ini);if(mode==3)graphFrames=2;if(mode==1&&!characterOwned()){if(nativeActionOwned())releaseControl();activate();}if(mode==2&&(characterOwned()||nativeActionOwned()))releaseControl();if(mode==4&&characterOwned())beginInteraction(pad.slot);testFrames=std::clamp<int>(GetPrivateProfileIntA("Test","Frames",0,ini),0,150);testButtons=GetPrivateProfileIntA("Test","Buttons",0,ini);testX=std::clamp<int>(GetPrivateProfileIntA("Test","X",0,ini),-1,1);testY=std::clamp<int>(GetPrivateProfileIntA("Test","Y",0,ini),-1,1);logf("test command=%d mode=%d frames=%d buttons=%d",serial,mode,testFrames,testButtons);}}}

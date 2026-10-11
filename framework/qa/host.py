@@ -83,7 +83,7 @@ class Host:
   attributes={key:self.i(stats+off) for key,off in [('hp_max',0x14),('hp_mod_max',0x10),('stamina_max',0x30),('stamina_mod_max',0x2c),('vitality',0x38),('attunement',0x40),('endurance',0x48),('strength',0x50),('dexterity',0x58),('intelligence',0x60),('faith',0x68),('humanity',0x7c),('resistance',0x80),('level',0x88),('souls',0x8c)]}
   equipment={key:self.i(stats+off) for key,off in [('stance',0x230),('left1',0x24c),('right1',0x250),('left2',0x254),('right2',0x258),('helmet',0x26c),('chest',0x270),('gloves',0x274),('legs',0x278),('ring1',0x280),('ring2',0x284),('item1',0x288),('item2',0x28c),('item3',0x290),('item4',0x294),('item5',0x298)]}
   held_index=self.i(stats+0x238);held_right=equipment['right1'] if held_index==0 else equipment['right2'] if held_index==1 else None
-  return dict(tick=k.GetTickCount()&0xffffffff,focus=self.focused(),map=mapid,player=a,target=target,target_id=target_id,nearby=nearby,menu=menus,interaction=any(7000<=v<9000 for v in tracks),native_idle=any(j==14 and i>=0 and i%100000==0 for j,i in a['tracks']),stats=attributes,equipment=equipment,held_right_index=held_index,held_right_id=held_right,protections=protections)
+  return dict(tick=k.GetTickCount()&0xffffffff,focus=self.focused(),map=mapid,player=a,target=target,target_id=target_id,nearby=nearby,menu=menus,interaction=any(7000<=v<9000 for v in tracks),native_idle=any(j==14 and i>=0 and i%100000 in (0,20000) for j,i in a['tracks']),action_prompt=bool(self.u(menu+0x58)),stats=attributes,equipment=equipment,held_right_index=held_index,held_right_id=held_right,protections=protections)
  def put(self,a,b):
   if not self.write_enabled:raise StateError('Read-only host')
   n=c.c_size_t()

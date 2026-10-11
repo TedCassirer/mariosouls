@@ -1,3 +1,32 @@
+# Contextual A and interaction stance fix (2026-10-11)
+
+Read-only observation of the reported failure found an active native prompt,
+track-14 animation 120000, and no modal/event ownership. The prior idle predicate
+accepted only IDs divisible by 100000, silently rejecting this weapon stance.
+The host now also recognizes the observed 20000-offset idle bank. Attack, event,
+invalid-token and adjacent animation IDs remain rejected in executable tests.
+
+Controller A is assigned once per press: eligible prompt -> native interaction;
+otherwise -> guest jump. Menu entry/exit, focus loss, controller changes and actor
+replacement cannot recycle a held press into a jump or a second interaction.
+Y/Q remain explicit aliases. Space and X/E are unchanged.
+
+Full supported build/test and doctor passed. Live checks used only Mario QA,
+level 6, with prior save backups. Native melee killed that character, reducing
+212 souls to 0. At the resulting actual "Recover lost power" prompt, the user
+pressed physical-controller A and confirmed recovery without jumping. Read-only
+observation verified 212 souls restored and HP 594; no reward/HP writes were used.
+Bonfire rest/Leave and subsequent keyboard jump also passed, including the
+100000 two-handed Hilt idle. Native stance 120000 is covered by the captured
+failure and regression test; the user's original character was not driven.
+Physical-controller held-A menu transitions are covered offline, not newly
+claimed as live tests. Fresh NPC dialogue, doors, ladders and Estus were not
+retested in this focused pass.
+
+Private evidence: `work/context-actions-qa/` (death trace, before/after recovery,
+bonfire snapshots and game log). The previous equipment checkpoint remains
+immutable. The existing native authoritative inventory/reward path is unchanged.
+
 # Framework 0.5.0: equipped combat (2026-10-11)
 
 Installed ABI 4 host, Mario adapter and runtime after the supported build/test

@@ -16,12 +16,15 @@ static void actionFlags(bool nativeMotion){
  // interaction evaluator needs its ordinary movement update to refresh prompts.
  put(player+0x3c4,(f2&~0x300u)|(savedFlags2&0x300u)|(allowAction?0:0x100u));
 }
-static void requestAction(int kind,bool fromPad=false){
- if(!characterOwned()||nativeActionOwned()||nativeReaction||character<0||!actionInputReady)return;
+static bool actionEligible(int kind){
+ if(!characterOwned()||nativeActionOwned()||nativeReaction||character<0||!actionInputReady||actionPending())return false;
  auto o=nativeInteractionState();
- if(!o.valid||!o.grounded||!(state.flags&SC_CAN_INTERACT)||!o.idle)return;
- if(kind==1&&!read<uint32_t>(read<uint32_t>(0x13786d0)+0x58)){logf("Action request rejected: no native prompt; Character retained");return;}
- if(actionPending())return;
+ if(!o.valid||!o.grounded||!(state.flags&SC_CAN_INTERACT)||!o.idle||o.menu||o.event||o.ladder)return false;
+ return kind!=1||read<uint32_t>(read<uint32_t>(0x13786d0)+0x58)!=0;
+}
+static void requestAction(int kind,bool fromPad=false){
+ if(!actionEligible(kind)){logf("Action request rejected: kind=%d not eligible",kind);return;}
+ characterInput.clear();
  actionRequested=GetTickCount();actionRequestKind=kind;actionFlags(false);actionQueue(kind,actionRequested,fromPad);
  logf("Action request kind=%d character=%d remains active",kind,character);
 }

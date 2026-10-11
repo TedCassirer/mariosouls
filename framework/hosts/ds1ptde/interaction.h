@@ -1,6 +1,11 @@
 #pragma once
 #include <stdint.h>
 namespace HostInteraction {
+// Track 14 uses weapon/stance animation banks. In particular the observed
+// two-handed 120000 idle must not be rejected as an active action.
+inline bool idleAnimation(int id,uint32_t token){
+    return token!=0xffffffffu&&id>=0&&(id%100000==0||id%100000==20000);
+}
 struct Observation {
     bool valid=false, menu=false, ladder=false, event=false, idle=false, grounded=false;
     int animation=-1;

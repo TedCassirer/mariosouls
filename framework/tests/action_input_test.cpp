@@ -40,6 +40,8 @@ int main(){
  actionQueue(2,GetTickCount(),false);p={};actionFilterPad(p);assert(p.wButtons==0);BYTE k[256]={};actionDeviceState(nullptr,256,k);assert(k[actionKeys[11]]==0x80);Sleep(170);memset(k,0,sizeof(k));actionDeviceState(nullptr,256,k);assert(k[actionKeys[11]]==0);
  actionRoute=LONG(ActionRoute::Ladder);p=original;actionFilterPad(p);assert(p.sThumbLX==0&&p.sThumbLY==15000);memset(k,0x80,sizeof(k));actionDeviceState(nullptr,256,k);assert(k[actionKeys[0]]==0x80&&k[actionKeys[1]]==0x80&&k[actionKeys[2]]==0&&k[actionKeys[4]]==0);
  actionRoute=LONG(ActionRoute::Menu);p=original;actionFilterPad(p);assert(p.sThumbLY==original.sThumbLY&&p.wButtons==(original.wButtons&~XINPUT_GAMEPAD_Y));
+ actionBlockHeldA=1;p=original;actionFilterPad(p);assert(!(p.wButtons&XINPUT_GAMEPAD_A));
+ actionBlockHeldA=0;p=original;actionFilterPad(p);assert(p.wButtons&XINPUT_GAMEPAD_A);
  actionRoute=LONG(ActionRoute::Locked);DIMOUSESTATE2 mouse={};mouse.rgbButtons[0]=mouse.rgbButtons[1]=0x80;mouse.lX=150;actionDeviceState(nullptr,sizeof(mouse),&mouse);assert(mouse.lX==150&&mouse.rgbButtons[0]==0&&mouse.rgbButtons[1]==0);
  puts("PASS: native movement suppression, camera, ladder/menu routes, source-specific action pulses, expiry/cancellation, mouse filtering");
  actionCancelPulse();actionRoute=LONG(ActionRoute::Character);equipmentGuardInput=1;

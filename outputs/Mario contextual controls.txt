@@ -1,0 +1,13 @@
+Mario controller update
+
+A: interact when a usable prompt is present; otherwise jump.
+Y: alternate interaction button.
+X: use the selected item (select Estus to heal).
+B/RB: attack. LB: shield. LT: crouch.
+
+Recover lost power: stand close to the green bloodstain and press A when prompted. This recovers lost souls and humanity; it does not refill health.
+
+Verified: physical A recovered Mario QA's 212 souls without jumping; native bonfire rest/Leave and jumping afterward. Held-input transitions also passed automated policy tests.
+
+Saved checkpoint: checkpoint-2026-10-11-contextual-a
+Old checkpoint archives and tags are unchanged.

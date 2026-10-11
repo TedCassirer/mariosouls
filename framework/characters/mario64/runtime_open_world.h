@@ -7,13 +7,16 @@
  * keeps gameplay far above this limit, and native kill surfaces remain lethal.
  */
 extern int scMarioOpenWorld;
+
 static struct SM64SurfaceCollisionData *sc_mario_open_floor(void) {
-    static struct SM64SurfaceCollisionData floor={
-        .type=0, .lowerY=-11000, .upperY=-11000,
-        .vertex1={-32767,-11000,-32767},
-        .vertex2={-32767,-11000,32767},
-        .vertex3={32767,-11000,32767},
-        .normal={0,1,0}, .originOffset=11000, .isValid=1
-    };
+    static struct SM64SurfaceCollisionData floor = {.type = 0,
+                                                    .lowerY = -11000,
+                                                    .upperY = -11000,
+                                                    .vertex1 = {-32767, -11000, -32767},
+                                                    .vertex2 = {-32767, -11000, 32767},
+                                                    .vertex3 = {32767, -11000, 32767},
+                                                    .normal = {0, 1, 0},
+                                                    .originOffset = 11000,
+                                                    .isValid = 1};
     return &floor;
 }

@@ -13,6 +13,10 @@ policies, input mapping, hook contracts, collision filters, equipment formats,
 SDK scaffolding, install/rollback transactions and package integrity. The build
 compiles the host, Mario adapter and runtime. It does not run gameplay.
 
+Developer-tool unit tests live in `tools/tests/` and share one runner. They use
+temporary fixtures rather than historical scripts or a prepared installation.
+CI also enforces the pinned Python and C/C++ formatting styles.
+
 `shared-test-report.json` is separate from the full test receipt and explicitly
 cannot authorize installation. Rendering is skipped on hosted CI; `--render`
 adds the D3D9 check on a local machine with a graphics device.

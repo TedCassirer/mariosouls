@@ -19,13 +19,20 @@ for personal paths before sharing them.
 ## Change the code
 
 Start with [development setup](docs/DEVELOPMENT.md) and [AGENTS.md](AGENTS.md).
-New gameplay changes belong in `framework/`; `work/` is historical material.
+New gameplay changes belong in `framework/`; `work/` is a private local workspace.
 Keep host integration, shared policy and character behavior in their respective
 directories. Update the SDK and adapter guide when the interface changes.
 
 Run checks appropriate to the change. For gameplay changes, use the supported
 build/test workflow and distinguish offline results from live-game results.
 Document unverified behavior and keep private test captures out of Git.
+
+Install `requirements-dev.txt` in your development environment. Run
+`python tools/framework.py format` before committing; CI checks the same styles
+with `format --check`. Use descriptive names and comments that explain ownership,
+native ABI constraints and non-obvious decisions. Avoid narrating simple code.
+Keep developer tests in `tools/tests/` and gameplay policy tests in
+`framework/tests/`; do not add one-off scripts or generated output to source.
 
 Do not add game assets, dependency checkouts, generated caches, binaries, secrets
 or personal saves. The `.gitignore` uses an allowlist; new source directories

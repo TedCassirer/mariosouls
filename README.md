@@ -48,12 +48,13 @@ framework/   Active game integration, character adapters, SDK and tests
 tools/       Build, validation, dependency and installation commands
 docs/        Player, development and recovery guides
 patches/     Changes applied to pinned upstream dependencies
-work/        Preserved prototype, investigations and local build files
-outputs/     Historical local controls, installer and restore helpers
+release/     Version metadata and release-readiness checklist
 ```
 
-New gameplay work belongs in `framework/`. The scripts in `work/` and `outputs/`
-include historical and machine-specific workflows; they are not a public installer.
+New gameplay work belongs in `framework/`. Local dependency checkouts, build
+products and historical investigations live under ignored `work/`; private
+deliverables live under ignored `outputs/`. Neither directory is part of the
+source distribution. Earlier prototypes remain available in Git history.
 
 ## Credits
 

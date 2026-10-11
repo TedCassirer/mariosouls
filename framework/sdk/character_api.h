@@ -27,18 +27,22 @@ extern "C" {
  * A host may support only selected projectile kinds; missing export is native. */
 #define SC_PROJECTILE_PROFILE_VERSION 1u
 #define SC_PROJECTILE_FIREBALL 1u
+
 typedef struct SC_ProjectileProfile {
     uint32_t size, version, kind;
     float castSpeed, speed, gravity, bounceSpeed, lifetime, spawnHeight;
 } SC_ProjectileProfile;
-typedef const SC_ProjectileProfile* (*SC_GetProjectileProfile)(uint32_t version,uint32_t size);
+
+typedef const SC_ProjectileProfile *(*SC_GetProjectileProfile)(uint32_t version, uint32_t size);
 /* Optional native impact tuning; zero distance opts an attack out. */
 #define SC_IMPACT_PROFILE_VERSION 1u
+
 typedef struct SC_ImpactProfile {
     uint32_t size, version, attackCount, cooldownMs;
     float resistantPoise, knockbackCm[SC_MAX_ATTACKS];
 } SC_ImpactProfile;
-typedef const SC_ImpactProfile* (*SC_GetImpactProfile)(uint32_t version,uint32_t size);
+
+typedef const SC_ImpactProfile *(*SC_GetImpactProfile)(uint32_t version, uint32_t size);
 #define SC_GROUNDED 1u
 #define SC_CAN_INTERACT 2u
 #define SC_AUTO_ATTACK_ELIGIBLE 4u
@@ -54,12 +58,22 @@ typedef struct SC_Input {
     float camLookX, camLookZ, moveX, moveY;
     uint8_t jump, attack, crouch, guard;
 } SC_Input;
-typedef struct SC_Surface { int32_t vertices[3][3]; uint32_t material; } SC_Surface;
+
+typedef struct SC_Surface {
+    int32_t vertices[3][3];
+    uint32_t material;
+} SC_Surface;
+
 typedef struct SC_Mesh {
     float *position, *normal, *color, *uv;
     uint32_t capacityTriangles, numTrianglesUsed;
 } SC_Mesh;
-typedef struct SC_Texture { uint8_t *rgba; uint32_t capacityBytes; } SC_Texture;
+
+typedef struct SC_Texture {
+    uint8_t *rgba;
+    uint32_t capacityBytes;
+} SC_Texture;
+
 typedef struct SC_State {
     float position[3], velocity[3], faceAngle, forwardSpeed, floorHeight;
     uint32_t flags;
@@ -69,6 +83,7 @@ typedef struct SC_State {
     uint32_t rawAction, rawFlags, rawActionArg, rawActionTimer;
     int32_t rawAnimation, rawAnimationFrame;
 } SC_State;
+
 typedef struct SC_Attack {
     char name[32];
     float multiplier, poise;
@@ -87,6 +102,7 @@ typedef struct SC_Body {
     float fallDamageScale, fallDamageMaxHPFraction;
     uint32_t nonlethalFalls;
 } SC_Body;
+
 typedef struct SC_Descriptor {
     uint32_t size, abiVersion;
     char id[48], displayName[64];
@@ -97,26 +113,41 @@ typedef struct SC_Descriptor {
     SC_Attack attacks[SC_MAX_ATTACKS];
     SC_Body body;
 } SC_Descriptor;
+
 typedef void (*SC_Log)(const char *message);
+
 typedef struct SC_Init {
     uint32_t size;
     const char *assetPath, *runtimePath;
     SC_Log log;
 } SC_Init;
-enum SC_PoseKind { SC_POSE_NEUTRAL, SC_POSE_CLIMB, SC_POSE_DRINK, SC_POSE_REST,
-    SC_POSE_DOOR, SC_POSE_WALK, SC_POSE_DOWNED, SC_POSE_TALK, SC_POSE_STAGGER,
-    SC_POSE_DEATH, SC_POSE_NATIVE_COMBAT };
+
+enum SC_PoseKind {
+    SC_POSE_NEUTRAL,
+    SC_POSE_CLIMB,
+    SC_POSE_DRINK,
+    SC_POSE_REST,
+    SC_POSE_DOOR,
+    SC_POSE_WALK,
+    SC_POSE_DOWNED,
+    SC_POSE_TALK,
+    SC_POSE_STAGGER,
+    SC_POSE_DEATH,
+    SC_POSE_NATIVE_COMBAT
+};
+
 typedef struct SC_Pose {
     uint32_t kind;
     float position[3], yaw, phase, travelCm;
 } SC_Pose;
+
 enum SC_Command { SC_COMMAND_IDLE, SC_COMMAND_FALL };
 
 /* Resolved host position and collision planes, local cm; never a simulation tick.
  * Update momentum only into the supplied unit normals; preserve tangential motion,
  * the current action and animation phase. Shift the existing mesh coherently. */
 typedef struct SC_MotionResolution {
-    uint32_t size,generation,sequence;
+    uint32_t size, generation, sequence;
     float position[3];
     uint32_t normalCount;
     float normals[4][3];
@@ -125,18 +156,36 @@ typedef struct SC_MotionResolution {
 /* Host-owned equipment action, presentation only; never advance simulation.
  * Kind values carry no native inventory pointers or addresses. The host retains
  * native equipment rules, stamina, damage and guard state. */
-enum SC_EquipmentKind { SC_EQUIPMENT_NONE, SC_EQUIPMENT_SWORD, SC_EQUIPMENT_SHIELD,
-    SC_EQUIPMENT_DAGGER, SC_EQUIPMENT_CURVED_SWORD, SC_EQUIPMENT_GREATSWORD,
-    SC_EQUIPMENT_AXE, SC_EQUIPMENT_HAMMER, SC_EQUIPMENT_PYROMANCY };
+enum SC_EquipmentKind {
+    SC_EQUIPMENT_NONE,
+    SC_EQUIPMENT_SWORD,
+    SC_EQUIPMENT_SHIELD,
+    SC_EQUIPMENT_DAGGER,
+    SC_EQUIPMENT_CURVED_SWORD,
+    SC_EQUIPMENT_GREATSWORD,
+    SC_EQUIPMENT_AXE,
+    SC_EQUIPMENT_HAMMER,
+    SC_EQUIPMENT_PYROMANCY
+};
+
 /* Special values require SC_CAP_NATIVE_COMBAT. Native combat posing preserves
  * the equipment layer; the adapter never performs damage or locomotion. */
-enum SC_EquipmentAction { SC_EQUIPMENT_READY, SC_EQUIPMENT_LIGHT_1, SC_EQUIPMENT_LIGHT_2,
-    SC_EQUIPMENT_BACKSTAB, SC_EQUIPMENT_RIPOSTE, SC_EQUIPMENT_PARRY,
-    SC_EQUIPMENT_CAST_RIGHT, SC_EQUIPMENT_CAST_LEFT };
+enum SC_EquipmentAction {
+    SC_EQUIPMENT_READY,
+    SC_EQUIPMENT_LIGHT_1,
+    SC_EQUIPMENT_LIGHT_2,
+    SC_EQUIPMENT_BACKSTAB,
+    SC_EQUIPMENT_RIPOSTE,
+    SC_EQUIPMENT_PARRY,
+    SC_EQUIPMENT_CAST_RIGHT,
+    SC_EQUIPMENT_CAST_LEFT
+};
+
 typedef struct SC_EquipmentPose {
     uint32_t size, rightKind, leftKind, swing;
     float swingPhase, guard;
 } SC_EquipmentPose;
+
 /* Column-major rigid transforms: orthonormal basis, local-centimetre translation.
  * +Z is sword blade direction / shield front, +Y is up. They describe the SAME
  * mesh frame returned by step/pose/resolveMotion. valid bits: 1 right, 2 left. */
@@ -150,32 +199,39 @@ typedef struct SC_CharacterAPI {
     const SC_Descriptor *(*describe)(void);
     uint32_t (*initialize)(const SC_Init *, SC_Texture *);
     void (*shutdown)(void);
-    int32_t (*create)(float x,float y,float z,float yaw);
+    int32_t (*create)(float x, float y, float z, float yaw);
     void (*destroy)(int32_t);
-    uint32_t (*step)(int32_t,const SC_Input *,SC_State *,SC_Mesh *);
-    uint32_t (*pose)(int32_t,const SC_Pose *,SC_State *,SC_Mesh *);
-    void (*resume)(int32_t,float,float,float,float);
-    void (*setPosition)(int32_t,float,float,float);
-    void (*command)(int32_t,uint32_t);
-    void (*nativeDamage)(int32_t,uint32_t severity);
-    void (*surfaces)(const SC_Surface *,uint32_t count,uint32_t dynamicContacts);
-    float (*floorHeight)(float,float,float);
-    uint32_t (*probeContact)(int32_t,float,float,float);
-    void (*commitContact)(int32_t,float,float,float,float radiusCm);
+    uint32_t (*step)(int32_t, const SC_Input *, SC_State *, SC_Mesh *);
+    uint32_t (*pose)(int32_t, const SC_Pose *, SC_State *, SC_Mesh *);
+    void (*resume)(int32_t, float, float, float, float);
+    void (*setPosition)(int32_t, float, float, float);
+    void (*command)(int32_t, uint32_t);
+    void (*nativeDamage)(int32_t, uint32_t severity);
+    void (*surfaces)(const SC_Surface *, uint32_t count, uint32_t dynamicContacts);
+    float (*floorHeight)(float, float, float);
+    uint32_t (*probeContact)(int32_t, float, float, float);
+    void (*commitContact)(int32_t, float, float, float, float radiusCm);
     /* Return stereo sample FRAMES, never bytes. capacityFrames is a hard bound. */
-    uint32_t (*audio)(uint32_t queuedFrames,uint32_t desiredFrames,int16_t *stereo,uint32_t capacityFrames);
-    uint32_t (*resolveMotion)(int32_t,const SC_MotionResolution *,SC_State *,SC_Mesh *);
-    uint32_t (*equipment)(int32_t,const SC_EquipmentPose *);
-    uint32_t (*attachments)(int32_t,SC_Attachments *);
+    uint32_t (*audio)(uint32_t queuedFrames, uint32_t desiredFrames, int16_t *stereo,
+                      uint32_t capacityFrames);
+    uint32_t (*resolveMotion)(int32_t, const SC_MotionResolution *, SC_State *, SC_Mesh *);
+    uint32_t (*equipment)(int32_t, const SC_EquipmentPose *);
+    uint32_t (*attachments)(int32_t, SC_Attachments *);
 } SC_CharacterAPI;
-typedef const SC_CharacterAPI *(*SC_GetAPI)(uint32_t hostAbi,uint32_t hostApiSize);
+
+typedef const SC_CharacterAPI *(*SC_GetAPI)(uint32_t hostAbi, uint32_t hostApiSize);
 
 /* Optional independent export: SoulsCharacterGetCameraProfile(version, size).
  * Does not change ABI4 layouts. Missing export keeps the host camera unchanged.
  * The host owns camera collision, targets, timing and restoration. */
 #define SC_CAMERA_PROFILE_VERSION 1u
-typedef struct SC_CameraProfile { uint32_t size,version; float distanceScale; } SC_CameraProfile;
-typedef const SC_CameraProfile *(*SC_GetCameraProfile)(uint32_t version,uint32_t size);
+
+typedef struct SC_CameraProfile {
+    uint32_t size, version;
+    float distanceScale;
+} SC_CameraProfile;
+
+typedef const SC_CameraProfile *(*SC_GetCameraProfile)(uint32_t version, uint32_t size);
 
 #ifdef __cplusplus
 }

@@ -24,6 +24,9 @@ $env:MARIOSOULS_GAME_DIR = "D:\SteamLibrary\steamapps\common\Dark Souls Prepare 
 Live QA helpers still have their own paths. Review those separately. A standalone
 player installer remains planned work. For the shared tests, install the small
 Python dependency set with `python -m pip install -r requirements-ci.txt`.
+Contributors should install `requirements-dev.txt` instead; it also pins Ruff
+and clang-format. `python tools/framework.py format` formats active source;
+`python tools/framework.py format --check` runs the same check as CI.
 
 ## Dependencies and build
 

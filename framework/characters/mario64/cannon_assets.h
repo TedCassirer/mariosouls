@@ -3,6 +3,14 @@
 // or textures are compiled into the adapter. Display-list addresses are format
 // metadata checked against n64decomp/sm64's pinned actor declarations.
 #include <stdexcept>
+#include <vector>
+#include <cstdint>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <utility>
+#include "../../sdk/character_api.h"
+#include "../../sdk/launcher_api.h"
 
 namespace MarioCannonAssets {
 struct V {
@@ -209,7 +217,7 @@ struct Reader {
     }
 };
 
-static bool initialize(const std::vector<uint8_t> &rom) {
+static bool initialize(const std::vector<uint8_t> &rom, SC_Log report) {
     try {
         decode(rom);
         const uint32_t addresses[] = {0x080057f8, 0x08006660, 0x08022d78, 0x080048e0, 0x08023270,

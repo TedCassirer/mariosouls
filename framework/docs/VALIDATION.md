@@ -15,7 +15,7 @@ not install the refactor or drive the game.
 | Shared policies | Lifecycle, motion, input, combat, body, contact and feedback tests | Synthetic state; no running game |
 | Native contracts | Hook thunks, target identity, blocking and guard-break fixtures | Fake callees and packets do not prove native combat in every encounter |
 | Rendering | Local D3D9 composition, depth and UI ordering tests | Hosted CI skips rendering; not a display/driver compatibility matrix |
-| Mario runtime | Real adapter mesh, jump, traction, missing-floor, death, equipment and lifecycle tests | Synthetic surfaces and pose fixtures do not replace level traversal |
+| Mario runtime | Real adapter mesh, jump, traction, missing-floor, death, equipment, failure recovery and repeated shutdown tests | Synthetic surfaces and pose fixtures do not replace level traversal |
 | Developer tools | Install/rollback, packaging, manifest validation, diagnostics, logs and JUnit tests | Temporary fixtures; no clean second-PC installation |
 | Live QA commands | All scenarios can be imported and display help without native tooling | Does not run the scenarios or prove their live results |
 

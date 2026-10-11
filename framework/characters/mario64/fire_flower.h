@@ -76,7 +76,7 @@ static void fireFlower(SC_Mesh &mesh, const float *m) {
 }
 
 static void firePresentation(SC_Mesh &mesh, bool props) {
-    if (!fireAppearance)
+    if (!mario.fireAppearance)
         return;
     // ROM material colors distinguish cloth from skin, gloves and shoes. Apply to
     // fresh mesh output only, so repeated correction/posing never accumulates tint.
@@ -93,9 +93,10 @@ static void firePresentation(SC_Mesh &mesh, bool props) {
         }
     }
     if (props) {
-        if (equipmentPose.rightKind == SC_EQUIPMENT_PYROMANCY && (equipmentHands.valid & 1))
-            fireFlower(mesh, equipmentHands.right);
-        if (equipmentPose.leftKind == SC_EQUIPMENT_PYROMANCY && (equipmentHands.valid & 2))
-            fireFlower(mesh, equipmentHands.left);
+        if (mario.equipmentPose.rightKind == SC_EQUIPMENT_PYROMANCY &&
+            (mario.attachments.valid & 1))
+            fireFlower(mesh, mario.attachments.right);
+        if (mario.equipmentPose.leftKind == SC_EQUIPMENT_PYROMANCY && (mario.attachments.valid & 2))
+            fireFlower(mesh, mario.attachments.left);
     }
 }

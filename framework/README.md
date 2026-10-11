@@ -46,6 +46,7 @@ checks, and installation requires the exact tested build.
 | --- | --- |
 | Adapter interface and ownership | [SDK contract](docs/CONTRACT.md) |
 | Creating a character | [Adapter guide](docs/ADDING_A_CHARACTER.md) |
+| Mario adapter internals | [Mario implementation](characters/mario64/README.md) |
 | Mario weapons and animation fitting | [Equipment](characters/mario64/EQUIPMENT.md) |
 | Wind Waker Link's scope and setup | [Link adapter](characters/link_ww/README.md) |
 | Starting classes and previews | [Class integration](docs/STARTING_CLASSES.md) |

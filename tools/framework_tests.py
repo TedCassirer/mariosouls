@@ -148,12 +148,19 @@ def test(character, asset, runtime, shared_only=False, render=False):
                 asset or "",
             ]
         )
-    character_equipment_test = folder / "equipment_test.cpp"
     character_checks = []
-    slope_test = folder / "slope_test.cpp"
-    if slope_test.is_file():
-        executable = f.BUILD / (character + "-slope-test.exe")
-        f.compile_cpp(slope_test, executable)
+    fixtures = [
+        ("slope", "slope traction, run/release, steep terrain and ice"),
+        ("death", "death pose, terminal hold, one-shot sound and new-life reset"),
+        ("equipment", "equipment movement/action parity, rendered poses, sockets and lifecycle"),
+        ("lifecycle", "runtime failure recovery, single-instance ownership and repeated shutdown"),
+    ]
+    for name, description in fixtures:
+        source = folder / (name + "_test.cpp")
+        if not source.is_file():
+            continue
+        executable = f.BUILD / (character + "-" + name + "-test.exe")
+        f.compile_cpp(source, executable)
         f.run(
             [
                 executable,
@@ -162,36 +169,7 @@ def test(character, asset, runtime, shared_only=False, render=False):
                 runtime or "",
             ]
         )
-        character_checks.append(character + " slope traction, run/release, steep terrain and ice")
-    death_test = folder / "death_test.cpp"
-    if death_test.is_file():
-        executable = f.BUILD / (character + "-death-test.exe")
-        f.compile_cpp(death_test, executable)
-        f.run(
-            [
-                executable,
-                f.BUILD / "characters" / character / "character.dll",
-                asset or "",
-                runtime or "",
-            ]
-        )
-        character_checks.append(
-            character + " death pose, terminal hold, one-shot sound and new-life reset"
-        )
-    if character_equipment_test.is_file():
-        equipment_test = f.BUILD / (character + "-equipment-test.exe")
-        f.compile_cpp(character_equipment_test, equipment_test)
-        f.run(
-            [
-                equipment_test,
-                f.BUILD / "characters" / character / "character.dll",
-                asset or "",
-                runtime or "",
-            ]
-        )
-        character_checks.append(
-            character + " equipment movement/action parity, rendered poses, sockets and lifecycle"
-        )
+        character_checks.append(character + " " + description)
     (f.BUILD / "test-report.json").write_text(
         json.dumps(
             {

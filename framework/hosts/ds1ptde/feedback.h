@@ -111,8 +111,7 @@ static void feedbackConfirmed(const SCFeedback::Receipt &r, int after, DWORD now
         if (feedbackSoundEnabled)
             feedbackSound(e, r.serial);
         if (feedbackRumbleEnabled)
-            feedbackRumble(int(InterlockedCompareExchange(&controllerOwnedSlot, -1, -1)), e,
-                           feedbackRumbleScale);
+            feedbackRumble(HostController::owner(), e, feedbackRumbleScale);
     }
     if (feedbackFlashEnabled) {
         if (feedbackFlashes.size() >= 8)

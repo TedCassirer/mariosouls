@@ -74,7 +74,13 @@ def _shared_tests(render=False):
         f.FRAMEWORK / "tests/debug_geometry_test.cpp", f.BUILD / "debug-geometry-test.exe"
     )
     f.run([f.BUILD / "debug-geometry-test.exe"])
-    for name in ["controller", "action_input", "native_block", "native_targets"]:
+    for name in [
+        "controller",
+        "controller_hooks",
+        "action_input",
+        "native_block",
+        "native_targets",
+    ]:
         f.compile_cpp(
             f.FRAMEWORK / f"tests/{name}_test.cpp",
             f.BUILD / f"{name}-test.exe",

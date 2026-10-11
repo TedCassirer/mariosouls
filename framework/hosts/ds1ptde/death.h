@@ -51,7 +51,7 @@ static void deathTick(double &acc, int slot) {
     deathPrevious = host;
     actionCancelPulse();
     InterlockedExchange(&equipmentGuardInput, 0);
-    InterlockedExchange(&controllerOwnedSlot, slot);
+    HostController::setOwner(slot);
     InterlockedExchange(&actionRoute, LONG(ActionRoute::Locked));
     if (hideNative)
         put(player + 0x258, 0.f);

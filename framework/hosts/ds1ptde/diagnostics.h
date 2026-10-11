@@ -94,7 +94,7 @@ static void diagnosticsTick() {
     f.presented = characterPresented();
     f.rig = character >= 0 && guest && profile;
     f.focus = focus;
-    f.controller = pollController(now).connected;
+    f.controller = HostController::poll(now).connected;
     if (f.actor) {
         auto value = [&](unsigned offset) {
             int result = -1;

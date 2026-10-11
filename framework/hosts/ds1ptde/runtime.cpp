@@ -175,85 +175,9 @@ static bool nativeActionOwned() {
 
 static Vec interactionPrevious;
 static int interactionMap = -1;
-static SCController::Reader controllerReader;
 #include "action_input.h"
-static volatile LONG controllerOwnedSlot = -1, controllerNativePolls = 0;
 #include "feedback_rumble.h"
-static thread_local bool controllerReadRaw = false;
-
-static SCController::Sample pollController(DWORD now) {
-    controllerReadRaw = true;
-    auto result = controllerReader.poll(now);
-    controllerReadRaw = false;
-    return result;
-}
-
-using ControllerGetState = DWORD(WINAPI *)(DWORD, XINPUT_STATE *);
-static ControllerGetState originalControllerState = nullptr, originalControllerStateEx = nullptr;
-static SRWLOCK controllerPacketLock = SRWLOCK_INIT;
-static XINPUT_STATE controllerPackets[XUSER_MAX_COUNT] = {};
-static bool controllerPacketSeen[XUSER_MAX_COUNT] = {};
-
-static DWORD controllerResult(DWORD result, DWORD slot, XINPUT_STATE *output) {
-    if (!controllerReadRaw && result == ERROR_SUCCESS && output) {
-        if (LONG(slot) == InterlockedCompareExchange(&controllerOwnedSlot, -1, -1)) {
-            actionFilterPad(output->Gamepad);
-            InterlockedIncrement(&controllerNativePolls);
-        }
-        // Filtering and the synthetic interact press must change the packet number
-        // even when the physical controller has not moved between native polls.
-        if (slot < XUSER_MAX_COUNT) {
-            AcquireSRWLockExclusive(&controllerPacketLock);
-            auto &previous = controllerPackets[slot];
-            if (!controllerPacketSeen[slot]) {
-                previous = *output;
-                controllerPacketSeen[slot] = true;
-            } else if (memcmp(&previous.Gamepad, &output->Gamepad, sizeof(XINPUT_GAMEPAD)) != 0) {
-                previous.Gamepad = output->Gamepad;
-                ++previous.dwPacketNumber;
-            }
-            output->dwPacketNumber = previous.dwPacketNumber;
-            ReleaseSRWLockExclusive(&controllerPacketLock);
-        }
-    }
-    return result;
-}
-
-static DWORD WINAPI controllerState(DWORD slot, XINPUT_STATE *output) {
-    return controllerResult(originalControllerState(slot, output), slot, output);
-}
-
-static DWORD WINAPI controllerStateEx(DWORD slot, XINPUT_STATE *output) {
-    return controllerResult(originalControllerStateEx(slot, output), slot, output);
-}
-
-static void installControllerHooks() {
-    controllerReader.poll(GetTickCount());
-    void *target = controllerReader.function();
-    if (!target) {
-        logf("XInput unavailable; keyboard remains enabled");
-        return;
-    }
-    HMODULE module = nullptr;
-    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                       (LPCSTR)target, &module);
-    auto status = MH_CreateHook(target, (void *)controllerState, (void **)&originalControllerState);
-    if (status == MH_OK) {
-        controllerReader.setFunction((void *)originalControllerState);
-        status = MH_EnableHook(target);
-    }
-    logf("controller input hook status=%d", status);
-    void *extra = module ? (void *)GetProcAddress(module, (LPCSTR)100) : nullptr;
-    if (extra && extra != target) {
-        status =
-            MH_CreateHook(extra, (void *)controllerStateEx, (void **)&originalControllerStateEx);
-        if (status == MH_OK)
-            status = MH_EnableHook(extra);
-        logf("controller extended input hook status=%d", status);
-    }
-    feedbackInstallRumble(module);
-}
+#include "controller_hooks.h"
 
 static int character = -1;
 static Vec origin;
@@ -455,7 +379,7 @@ static void releaseControl(bool preserveRequest = true) {
         guest->surfaces(nullptr, 0, 1);
     actionCancelPulse();
     InterlockedExchange(&actionRoute, LONG(ActionRoute::Free));
-    InterlockedExchange(&controllerOwnedSlot, -1);
+    HostController::setOwner(-1);
     if (characterOwned() && lastPlayer && chain(playerSlot, {0, 4, 0}) == lastPlayer &&
         read<uint32_t>(lastPlayer + 0x28) == lastMap) {
         uint32_t f1 = read<uint32_t>(lastPlayer + 0x1fc), f2 = read<uint32_t>(lastPlayer + 0x3c4);
@@ -671,7 +595,7 @@ static GameplayFrame pollGameplayFrame() {
         feedbackReset();
     static SCController::Toggle controllerToggle;
     DWORD inputTime = GetTickCount();
-    auto pad = pollController(inputTime);
+    auto pad = HostController::poll(inputTime);
     auto controller = pad.connected && focus ? SCController::map(pad.pad) : SCController::Input{};
     static int lastController = -2;
     if (pad.slot != lastController) {
@@ -866,13 +790,12 @@ static void refreshGameplaySettings(const GameplayFrame &frame) {
 // Native actions and reactions own their frames. Reconcile the native motion
 // acknowledgement before evaluating damage or beginning another guest tick.
 static bool prepareCharacterSimulation(const GameplayFrame &frame, double &acc) {
-    InterlockedExchange(&controllerOwnedSlot,
-                        (characterOwned() || nativeActionOwned()) ? frame.pad.slot : -1);
+    HostController::setOwner((characterOwned() || nativeActionOwned()) ? frame.pad.slot : -1);
     if (!nativeActionOwned())
         InterlockedExchange(&actionRoute,
                             LONG(characterOwned() ? ActionRoute::Character : ActionRoute::Free));
     static bool filteredLogged = false;
-    if (!filteredLogged && InterlockedCompareExchange(&controllerNativePolls, 0, 0) > 0) {
+    if (!filteredLogged && HostController::nativePollCount() > 0) {
         logf("controller native input filtering confirmed; right stick preserved");
         filteredLogged = true;
     }
@@ -1478,7 +1401,7 @@ static DWORD WINAPI start(void *) {
             characterInstallDamage();
         worldInstall();
         projectileInstall();
-        installControllerHooks();
+        HostController::install(actionFilterPad, logf, feedbackInstallRumble);
         installActionInput();
         installActionEffects();
         installStartupHooks(table);

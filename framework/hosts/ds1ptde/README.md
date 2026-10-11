@@ -46,6 +46,14 @@ Useful starting points:
 | Diagnostics and live QA | `diagnostics.h`, `report_files.h`, `debug_view.h`, `harness.h` |
 | Character creation | `starting_class.h`, `class_preview.h` |
 
+`controller_hooks.h` owns native XInput interception, packet history and the
+interlocked controller-ownership counters. Gameplay reads raw samples through
+`HostController::poll()` and changes the native route through `setOwner()`.
+The host supplies action filtering, logging and rumble installation callbacks;
+the hook layer does not depend on gameplay globals. Both XInput entry points
+share synthetic packet numbering so contextual input changes reach the game
+even when the physical controller has not moved.
+
 Native HP, stamina, inventory, quest state and rewards remain authoritative.
 Actor pointers and cached geometry must be invalidated when their owning game
 state changes. See the [SDK contract](../../docs/CONTRACT.md) and

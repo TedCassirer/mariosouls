@@ -194,7 +194,7 @@ static bool combatEnvironment(double &acc) {
             logf("Character fall%s", fields);
             if (after == 0) {
                 if (harness.armed)
-                    harnessObserve(true, pollController(GetTickCount()).connected);
+                    harnessObserve(true, HostController::poll(GetTickCount()).connected);
                 if (!deathBegin(acc))
                     releaseControl(true);
                 return false;

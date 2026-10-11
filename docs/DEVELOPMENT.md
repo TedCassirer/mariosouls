@@ -38,11 +38,12 @@ python tools/framework.py doctor
 python tools/framework.py build --with-runtime
 ```
 
-Dependency setup clones pinned upstream repositories and applies our patches. It
-downloads and verifies the compiler only when requested; never downloads game assets and stops if existing dependency
-edits differ. Runtime preparation operates on a staged copy of the dependency. It fetches two
-geometry source files from the revision pinned by libsm64, verifies their hashes,
-and generates the required local sources; it never downloads a ROM.
+Dependency setup clones pinned upstream repositories and applies our patches.
+It downloads and verifies the compiler only when requested, never downloads game
+assets and stops if existing dependency edits differ. Runtime preparation uses a
+staged copy of the dependency. It fetches two geometry source files from the
+revision pinned by libsm64, verifies their hashes and generates the required
+local sources; it never downloads a ROM.
 
 Build output is in `work/framework-build/`. Later builds without `--with-runtime`
 rebuild the host and adapter, reusing the existing runtime.
@@ -51,7 +52,6 @@ rebuild the host and adapter, reusing the existing runtime.
 
 ROM-free checks: `python tools/framework.py test --shared-only`. See
 [testing and CI](TESTING.md) for the distinction between shared, full and live tests.
-
 
 ```powershell
 python tools/framework.py test --asset "C:\path\Super Mario 64 (USA).z64" --runtime "work/framework-build/characters/mario64/sm64.dll"

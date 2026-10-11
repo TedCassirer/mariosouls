@@ -12,7 +12,8 @@ Open a [GitHub issue](https://github.com/TedCassirer/mariosouls/issues) with:
 - The area, steps to reproduce, expected result and actual result.
 - Relevant log excerpts or a short screenshot/video if useful.
 
-Use the [debug overlay](framework/docs/DEBUG_VIEW.md) for collision problems.
+Press **F11** while playing to [review a pre-filled report](docs/BUG_REPORTING.md),
+or use the [debug overlay](framework/docs/DEBUG_VIEW.md) for collision problems.
 Do not upload ROMs, saves, extracted game files or full memory dumps. Review logs
 for personal paths before sharing them.
 

@@ -160,7 +160,6 @@ int main(int argc, char **argv) {
     assert(!a->resolveMotion(id, &resolution, &state, &m));
     a->resume(id, 0, 0, 0, 0);
     input.jump = 0;
-    input.jump = 0;
     input.moveY = 1;
     for (int i = 0; i < 45; i++)
         step();

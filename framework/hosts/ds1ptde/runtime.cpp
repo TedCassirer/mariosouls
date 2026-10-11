@@ -1310,7 +1310,7 @@ static DWORD WINAPI start(void *) {
     char file[MAX_PATH];
     snprintf(file, sizeof(file), "%s\\mariosouls.log", root);
     logfile = fopen(file, "w");
-    logf("Souls Character Framework 0.9.0 host ds1ptde starting");
+    logf("Souls Character Framework %s host ds1ptde starting", SC_BUILD_VERSION);
     if (read<uint32_t>(0x400080) != 0xfc293654) {
         logf("Unsupported executable; inactive");
         return 0;

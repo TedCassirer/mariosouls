@@ -1,0 +1,302 @@
+{
+  "name": "MarioSouls 0.7 contextual interactions checkpoint",
+  "tag": "checkpoint-2026-10-11-mariosouls-v0.7",
+  "created": "2026-10-11T05:27:33.609553+02:00",
+  "game_directory": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Dark Souls Prepare to Die Edition\\DATA",
+  "game_exe_sha256": "67bcab513c8f0ed6164279d85f302e06b1d8a53abff5df7f3d10e1d4dfd81459",
+  "archive": "work/checkpoints/mariosouls-v0.7-runtime.zip",
+  "files": {
+    "dinput8.dll": {
+      "bytes": 512512,
+      "sha256": "881ed7fc251a79090f2c4a31901d2a2a44b2676a25518ba60c7d2de740a212bf"
+    },
+    "MarioSouls/backup/frpg_title.wmv": {
+      "bytes": 3886821,
+      "sha256": "35518b46f96d8acb320012fbb4d011193bc5e702e3f8c706eba32d49f7b13c1a"
+    },
+    "MarioSouls/collision/asylum-arena-floor.bin": {
+      "bytes": 4976,
+      "sha256": "9707fe23e077f6c31a7781e28aff395e8e201b98efd1e2b3a923ff3d8d6f2741"
+    },
+    "MarioSouls/collision/m10_00_00_00.bin": {
+      "bytes": 2490920,
+      "sha256": "81fcec1d6e203fae6db8759dc3e9fcfe36bd82444d7fd472bcc7916db5c44744"
+    },
+    "MarioSouls/collision/m10_01_00_00.bin": {
+      "bytes": 5494004,
+      "sha256": "281f7b820c1ba941ad227123410478ed3290b5c126ebcae60ca36f71c151b8d5"
+    },
+    "MarioSouls/collision/m10_02_00_00.bin": {
+      "bytes": 1863656,
+      "sha256": "931a5d453e640db0c74179864526289875c4f8ca7c9023ef737b542ae982eab6"
+    },
+    "MarioSouls/collision/m11_00_00_00.bin": {
+      "bytes": 3577328,
+      "sha256": "953744b6a79becf83f35bcc341b5e439ed4c37445fc6a690b320d6a409446614"
+    },
+    "MarioSouls/collision/m12_01_00_00.bin": {
+      "bytes": 10145672,
+      "sha256": "5564eedda590d489b5bd3b288dd1946a28b18627a0f0cc7b309771eb89acf483"
+    },
+    "MarioSouls/collision/m13_00_00_00.bin": {
+      "bytes": 2575232,
+      "sha256": "4e05e4d7b7c4fc8f2405fb2873a261461178105d7c6185f0b3aa9af4d561edf1"
+    },
+    "MarioSouls/collision/m13_01_00_00.bin": {
+      "bytes": 3354884,
+      "sha256": "a3049d9bc04ab932b5449d13b414c3abbf81fe53c3a298f398f8b1fe00ae75e8"
+    },
+    "MarioSouls/collision/m14_00_00_00.bin": {
+      "bytes": 4133096,
+      "sha256": "5aac651f2a474ff1d3c38cea55bb6d3d8890a6c0b711521fadd6b33949b2d21c"
+    },
+    "MarioSouls/collision/m14_01_00_00.bin": {
+      "bytes": 6738164,
+      "sha256": "12309c5f120a08b83a4423203e3e321ac8c732cfad274cee6184f02eaa99b98a"
+    },
+    "MarioSouls/collision/m15_00_00_00.bin": {
+      "bytes": 2681180,
+      "sha256": "2881b3a88c0a02081bb452dfac73c5185dd1ccf17781ed1787283a044994091d"
+    },
+    "MarioSouls/collision/m15_01_00_00.bin": {
+      "bytes": 7179272,
+      "sha256": "51df56336d9a45379d276c6c26b30f8bfd77d8c9fbb6272fe8b087649e66543c"
+    },
+    "MarioSouls/collision/m16_00_00_00.bin": {
+      "bytes": 3022136,
+      "sha256": "2db13dc7ca0a93eb784ac9d608e12a92414118c0c74dc5c26d553ae4d062f023"
+    },
+    "MarioSouls/collision/m17_00_00_00.bin": {
+      "bytes": 7206704,
+      "sha256": "588c2ce3830cc1fd2f4e3435aa77b3775a6553a43a05b6c3fd347791220265c4"
+    },
+    "MarioSouls/collision/m18_00_00_00.bin": {
+      "bytes": 1248344,
+      "sha256": "3d6b3418bf702f1a20e458fbe63133f806901482b3c59a4aeb41690e4049edd3"
+    },
+    "MarioSouls/collision/m18_01_00_00.bin": {
+      "bytes": 2366432,
+      "sha256": "3fd899c7aafbe7fe6e6e862dbbac6e7a0b721864b6726d58a168d24d48546bc6"
+    },
+    "MarioSouls/harness.ini": {
+      "bytes": 37,
+      "sha256": "1349399332808896b6078f111b07a429a7579b854953f0b95751799c3eb70aad"
+    },
+    "MarioSouls/install.json": {
+      "bytes": 7866,
+      "sha256": "9d9941d98516aa31b6e23b31306f1477a0ff8b102f4b6d08927bd43588136682"
+    },
+    "MarioSouls/sm64.dll": {
+      "bytes": 812032,
+      "sha256": "888e68f5878710ff39631df9d4331559894acc27550470292c70193cb5041d75"
+    },
+    "MarioSouls/source/action_input_test.cpp": {
+      "bytes": 2418,
+      "sha256": "e3dc03ca229b965e779587bc3f89294f06ee155303f387747a279c8c9b2e80a2"
+    },
+    "MarioSouls/source/build_plugin.py": {
+      "bytes": 879,
+      "sha256": "660a7662da91ff7471336d0a80b3768b0da52332a71841708e4cce9cad40bf65"
+    },
+    "MarioSouls/source/build_sm64.py": {
+      "bytes": 1238,
+      "sha256": "1f770da767fe7f8faa4fc6c9a9815fc6fa822431b731fd7e410b1f9015964d2e"
+    },
+    "MarioSouls/source/controller_input.h": {
+      "bytes": 3763,
+      "sha256": "d113933ebddc4cd98301c148dec83e792029b9914de4b7bd37c0fc3dc3fadf07"
+    },
+    "MarioSouls/source/controller_test.cpp": {
+      "bytes": 2899,
+      "sha256": "66e6160a7cf2f35d240fbff039bef7a36e0c5a6724ed30077e7cbe8a5ddc8d6a"
+    },
+    "MarioSouls/source/ds_archive.py": {
+      "bytes": 1268,
+      "sha256": "95bb048e692a86206afd012b3134c6e314b5d8e00e6741a0640acf8276137225"
+    },
+    "MarioSouls/source/export_collision.py": {
+      "bytes": 2039,
+      "sha256": "2f72fba9fdf6467e59944ad5b39ac655f85a3f54b95217acb061ab05d0ee20fb"
+    },
+    "MarioSouls/source/fake_interaction.h": {
+      "bytes": 655,
+      "sha256": "5628f54068d219078f6ff989ddfe3c8109773017b51c4a37efefaf0bf74bd8b0"
+    },
+    "MarioSouls/source/harness_policy.h": {
+      "bytes": 860,
+      "sha256": "74d6a02a4173c4dd7a580e88b17dffae328f1ea056d96b030ace67558e984c06"
+    },
+    "MarioSouls/source/harness_runtime.h": {
+      "bytes": 11776,
+      "sha256": "9892987a09e220df349c6252ef5826576600a8924b2ec540d86cdfb9bc142b57"
+    },
+    "MarioSouls/source/host_pose.h": {
+      "bytes": 5796,
+      "sha256": "a9f357d57f1bff257d4dd7ef70acb8e238162e2d5ff5bc667dee0655a898a273"
+    },
+    "MarioSouls/source/install_runtime.py": {
+      "bytes": 2250,
+      "sha256": "b931fd36cd1dd872f6b275495f2b6c039ed0341f2ca3f1c98bcfafde91635c6d"
+    },
+    "MarioSouls/source/interaction_state.h": {
+      "bytes": 953,
+      "sha256": "25d0c9961c21d57e760f0ce25ce27724410ea97dc7d647ab7ad6edea45561c9c"
+    },
+    "MarioSouls/source/interaction_test.cpp": {
+      "bytes": 1373,
+      "sha256": "1b25f710def33869d220224181417f3f5ff331adabf84de4f61f9cd51e75c358"
+    },
+    "MarioSouls/source/libsm64-LICENSE.txt": {
+      "bytes": 7169,
+      "sha256": "f4e7f373b9b996950337e8d41a4a2939c2d90b7725e9baf3d5084a22717ad328"
+    },
+    "MarioSouls/source/libsm64-pose/libsm64.c": {
+      "bytes": 26248,
+      "sha256": "58f447a0e8182d766af2504303e8f75f575599aa573452bab17386e22c0f6c41"
+    },
+    "MarioSouls/source/libsm64-pose/libsm64.h": {
+      "bytes": 8019,
+      "sha256": "cf0c371f82e9ceb6ce8f7ff71baf4084d35c55f8ee387d98d425d1f10e670e7e"
+    },
+    "MarioSouls/source/libsm64.c": {
+      "bytes": 29161,
+      "sha256": "2bf67236ca760a95f0c3c753e56f0ea162e6f0ebd66ad52260e60ed6ab8fbcf4"
+    },
+    "MarioSouls/source/libsm64.h": {
+      "bytes": 8630,
+      "sha256": "187e24045d92fbdd4cde107a9e485b1b594be9557dfd58c1dff4efde98162414"
+    },
+    "MarioSouls/source/load_surfaces.c": {
+      "bytes": 11151,
+      "sha256": "08e5dbbe4c74ceed842884448c41420d19b54ffff29bf5932a0d95c67e4b4876"
+    },
+    "MarioSouls/source/load_surfaces.h": {
+      "bytes": 913,
+      "sha256": "85fa751d35f1f506f73e0faebf6457936f865a975cfda8358fb8b32ccabc12bb"
+    },
+    "MarioSouls/source/mario_action_effects.h": {
+      "bytes": 1293,
+      "sha256": "7ed7d53c8a2fb724c7a68810b45c4297efdb2e65b7e54dd04993ce73c193dd12"
+    },
+    "MarioSouls/source/mario_action_input.h": {
+      "bytes": 3670,
+      "sha256": "e1dfa881522dbfa7b831eafe1be50478497a6567c7e59cdfd92ee02f64e9e163"
+    },
+    "MarioSouls/source/mario_action_runtime.h": {
+      "bytes": 5437,
+      "sha256": "56838de45c0e1d080b300921588e5cbb3ff07fb0b5ac0c716ecf2fa0215450b6"
+    },
+    "MarioSouls/source/mario_arena_floor.h": {
+      "bytes": 1396,
+      "sha256": "52b257550efa64fcfa4bedfd84906d49c384d5b0b21d0b3ac55e142f15df959c"
+    },
+    "MarioSouls/source/mario_combat_policy.h": {
+      "bytes": 3556,
+      "sha256": "aa7ce32ad267f2d520f4e2a996a353f62d656f34dfddc6126203e0680736f86e"
+    },
+    "MarioSouls/source/mario_combat_runtime.h": {
+      "bytes": 10862,
+      "sha256": "e20495241beac7ae893b2d19accdca592d3d68d0d627b8145a7d179deb41cd25"
+    },
+    "MarioSouls/source/mario_flask.h": {
+      "bytes": 1444,
+      "sha256": "f934fc4aa8b4c12b891eef39b39273f744dafa70be6b7c338d4b938990e2f2fa"
+    },
+    "MarioSouls/source/mario_native_combat.h": {
+      "bytes": 5509,
+      "sha256": "951de7b2d8c618db51cb5664f0433cdd231788acc040689093ccac670c403660"
+    },
+    "MarioSouls/source/mario_object_combat.h": {
+      "bytes": 2824,
+      "sha256": "b72db5a7d663acefc85880ccb8bdc4033f3796491212eb42f139b0c4e3cd8509"
+    },
+    "MarioSouls/source/mario_param_templates.h": {
+      "bytes": 989,
+      "sha256": "823f0adec4798be6316930ca95fde05a54357149e2de5294a7b29cabb4c7d347"
+    },
+    "MarioSouls/source/mario_ui_order.h": {
+      "bytes": 4643,
+      "sha256": "e5009da4a1868c04e15b9ec9c2526f500492571ed6fb80a9cdefafeb2523875f"
+    },
+    "MarioSouls/source/mario_ui_render.h": {
+      "bytes": 4143,
+      "sha256": "2db209151730df27ec32bd50db21531e0e029f4e770a17eea76e56517b44fcff"
+    },
+    "MarioSouls/source/mario_world_bridge.h": {
+      "bytes": 7133,
+      "sha256": "0e27ad8307718615dd1637c4c5e819ba0615ce2bb34689dd84cf03f80dc99c11"
+    },
+    "MarioSouls/source/mariosouls.cpp": {
+      "bytes": 39863,
+      "sha256": "5c0296f0a528ac6d3701021ebc856b08471ff768c2ea4db14a9afd1a99803fa8"
+    },
+    "MarioSouls/source/mariosouls.def": {
+      "bytes": 67,
+      "sha256": "acfddbeec7e9343c7c0fad53b7361712c0cbf402d0b9d285d469cf7f0386f010"
+    },
+    "MarioSouls/source/MinHook-LICENSE.txt": {
+      "bytes": 4446,
+      "sha256": "4f21f857550d7be854da6ea5f2da4e6775ca4e3fbb535e4f3d961c47d0bf3335"
+    },
+    "MarioSouls/source/rendering_graph_node.c": {
+      "bytes": 47014,
+      "sha256": "fc5047fbca99bf3c9220cf802f5e0ae1b04057399d2f776e38deb94d0cae9e48"
+    },
+    "MarioSouls/source/sm64_smoke.c": {
+      "bytes": 5852,
+      "sha256": "89f26323c822f13fac40f176d9653005152a45db4ab034d87b96d17144998221"
+    },
+    "MarioSouls/source/startup.h": {
+      "bytes": 1598,
+      "sha256": "b9fa475d5d623517e03ebb5daace8e00014d875c670631171d333d913a62571c"
+    },
+    "MarioSouls/source/startup_hash.h": {
+      "bytes": 3126,
+      "sha256": "9ff3d09ec776570af2ca849317b1c2b64f042a3843ade2f58bc004e6ea552acc"
+    },
+    "MarioSouls/tools/autosave-notice_small.png": {
+      "bytes": 452883,
+      "sha256": "b6a6cc12b33c72bbb3f9a233d7a9c8f4face33c57d7709b364ec0a5013f745c1"
+    },
+    "MarioSouls/tools/continue_small.png": {
+      "bytes": 155533,
+      "sha256": "2bb013c8ba3d6f13d779aeb5db40154288816ceabc67d14500d939f1d4eae198"
+    },
+    "MarioSouls/tools/fast-load-observe_small.png": {
+      "bytes": 814075,
+      "sha256": "6c2148ea9c74fb4c93fdb6d9c89e3dff64c9783a787e20ea965e14bb2ae18502"
+    },
+    "MarioSouls/tools/fast_test_load.py": {
+      "bytes": 3182,
+      "sha256": "1b64ffa4d57134439952d6f7a495d6b92ff7df7de46f73d3407a4315d9e605fc"
+    },
+    "MarioSouls/tools/load-slot_small.png": {
+      "bytes": 781952,
+      "sha256": "50edeeeb0d3fe33e0a5252afe7a5423a3a3da28ab4d07df808be480e1551f14f"
+    },
+    "MarioSouls/tools/quit-warning_small.png": {
+      "bytes": 214051,
+      "sha256": "827a072ad2d63459acfd4fa8482607c46f60fc4c1cff2b3ef2852c760609cc2e"
+    },
+    "MarioSouls/tools/slot-test_small.png": {
+      "bytes": 777205,
+      "sha256": "15c4db3a3ec0202fed0d0b781f997002e8fdd915157cebe52c5a33ba05952c47"
+    },
+    "MarioSouls/tools/title-long_small.png": {
+      "bytes": 166653,
+      "sha256": "6af4fc5804611769e09d7f84ed493c4e09fe244ae20d74d33ccbbff752800f6c"
+    },
+    "mariosouls.ini": {
+      "bytes": 781,
+      "sha256": "ed5454389d13a222f9995d5a19d0b95520ed24690eb9bc4119c76fdf2b3f0465"
+    },
+    "movWW/frpg_title.wmv": {
+      "bytes": 3886821,
+      "sha256": "35518b46f96d8acb320012fbb4d011193bc5e702e3f8c706eba32d49f7b13c1a"
+    }
+  },
+  "save_files_included": false,
+  "rom_included": false,
+  "notes": "Private local runtime cache. Keep it with the repository; it is deliberately excluded from Git.",
+  "archive_sha256": "caa278b2e05b563a7cd9b5a8e5c1d995efcd3d3e53a3a43650f41295fb0bcb52"
+}

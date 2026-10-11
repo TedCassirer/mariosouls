@@ -1,0 +1,317 @@
+diff --git a/src/decomp/game/rendering_graph_node.c b/src/decomp/game/rendering_graph_node.c
+index 97bfed4d55d9b54562469663c5b48c7a41fd6675..5a6506d511b5f75db8c8a1fbe5693ff76d52212f 100644
+--- a/src/decomp/game/rendering_graph_node.c
++++ b/src/decomp/game/rendering_graph_node.c
+@@ -1,4 +1,5 @@
+ #define NO_SEGMENTED_MEMORY
++#include <string.h>
+ 
+ #include "../include/PR/gbi.h"
+ #include "../include/PR/ultratypes.h"
+@@ -570,6 +571,8 @@ static void geo_process_background(struct GraphNodeBackground *node) {
+  * Render an animated part. The current animation state is not part of the node
+  * but set in global variables. If an animated part is skipped, everything afterwards desyncs.
+  */
++float sm64_host_right_hand[4][4];
++static u16 *hostAnimAttributes;
+ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
+     Mat4 matrix;
+     Vec3s rotation;
+@@ -619,6 +622,7 @@ static void geo_process_animated_part(struct GraphNodeAnimatedPart *node) {
+     mtxf_rotate_xyz_and_translate(matrix, translation, rotation);
+     mtxf_mul(gMatStack[gMatStackIndex + 1], matrix, gMatStack[gMatStackIndex]);
+     gMatStackIndex++;
++    if(hostAnimAttributes && gCurrAnimAttribute-hostAnimAttributes==78)memcpy(sm64_host_right_hand,gMatStack[gMatStackIndex],sizeof(sm64_host_right_hand));
+     mtxf_to_mtx(matrixPtr, gMatStack[gMatStackIndex]);
+     gMatStackFixed[gMatStackIndex] = matrixPtr;
+     if (node->displayList != NULL) {
+@@ -654,6 +658,7 @@ void geo_set_animation_globals(struct AnimInfo *node, s32 hasAnimation) {
+     gCurrAnimFrame = node->animFrame;
+     gCurAnimEnabled = (anim->flags & ANIM_FLAG_5) == 0;
+     gCurrAnimAttribute = segmented_to_virtual((void *) anim->index);
++    hostAnimAttributes=gCurrAnimAttribute;
+     gCurAnimData = segmented_to_virtual((void *) anim->values);
+ 
+     if (anim->animYTransDivisor == 0) {
+@@ -1165,4 +1170,4 @@ void geo_process_root_hack_single_node(struct GraphNode *node)
+     gMarioObject->header.gfx.throwMatrix = NULL;
+ 
+     alloc_only_pool_free(gDisplayListHeap);
+-}
+\ No newline at end of file
++}
+diff --git a/src/fake_interaction.h b/src/fake_interaction.h
+index a6277eee6ba3559d5182a22588f90866ff5ca042..2d07f6115c709f84aeee6673a581925528db47d0 100644
+--- a/src/fake_interaction.h
++++ b/src/fake_interaction.h
+@@ -1,8 +1,9 @@
+ #pragma once
+ #include "decomp/include/types.h"
++u32 fake_determine_interaction(struct MarioState *m,float x,float y,float z);
+ 
+ u32 fake_determine_knockback_action(struct MarioState *m, s32 damage,float xSrc,float ySrc,float zSrc);
+ s16 fake_mario_obj_angle_to_object(struct MarioState *m, float xSrc,float zSrc);
+ uint32_t fake_damage_knock_back(struct MarioState *m, uint32_t damage,uint32_t interactionSubtype,float xSrc,float ySrc,float zSrc);
+ u32 fake_interact_hit_from_below(struct MarioState *m, float x, float y, float z, float hitboxHeight);
+-u32 fake_interact_bounce_top(struct MarioState *m, float x, float y, float z, float hitboxHeight);
+\ No newline at end of file
++u32 fake_interact_bounce_top(struct MarioState *m, float x, float y, float z, float hitboxHeight);
+diff --git a/src/libsm64.c b/src/libsm64.c
+index b7db0b159414920105a05462e8dad3ebe70b2319..970b68047c2cc6ff4c8ce1f6cdcb82296704d3cb 100644
+--- a/src/libsm64.c
++++ b/src/libsm64.c
+@@ -47,6 +47,9 @@ static bool s_init_one_mario = false;
+ struct MarioInstance
+ {
+     struct GlobalState *globalState;
++    bool hostHealth;
++    bool poseValid;int poseKey,blendTicks;
++    s16 lastPose[63],blendFrom[63];u16 poseIndices[126];
+ };
+ struct ObjPool s_mario_instance_pool = { 0, 0 };
+ 
+@@ -173,6 +176,8 @@ SM64_LIB_FN int32_t sm64_mario_create( float x, float y, float z )
+ {
+     int32_t marioIndex = obj_pool_alloc_index( &s_mario_instance_pool, sizeof( struct MarioInstance ));
+     struct MarioInstance *newInstance = s_mario_instance_pool.objects[marioIndex];
++    memset(newInstance,0,sizeof(*newInstance));
++    newInstance->hostHealth=false;
+ 
+     newInstance->globalState = global_state_create();
+     global_state_bind( newInstance->globalState );
+@@ -218,6 +223,10 @@ SM64_LIB_FN int32_t sm64_mario_create( float x, float y, float z )
+     return marioIndex;
+ }
+ 
++extern void mario_reset_bodystate(struct MarioState *m);
++extern void mario_update_hitbox_and_cap_model(struct MarioState *m);
++#include "host_pose.h"
++
+ SM64_LIB_FN void sm64_mario_tick( int32_t marioId, const struct SM64MarioInputs *inputs, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers )
+ {
+     if( marioId >= s_mario_instance_pool.size || s_mario_instance_pool.objects[marioId] == NULL )
+@@ -242,13 +251,18 @@ SM64_LIB_FN void sm64_mario_tick( int32_t marioId, const struct SM64MarioInputs
+     gController.stickY = 64.0f * inputs->stickY;
+     gController.stickMag = sqrtf( gController.stickX*gController.stickX + gController.stickY*gController.stickY );
+ 
++    uint32_t actionBeforeTick = gMarioState->action;
+     apply_mario_platform_displacement();
+     bhv_mario_update();
++    if (((struct MarioInstance *)s_mario_instance_pool.objects[marioId])->hostHealth) {
++        // The host alone owns damage/death. SM64 provides reactions and movement.
++        gMarioState->health=0x880;gMarioState->hurtCounter=0;gMarioState->healCounter=0;
++        gMarioState->invincTimer=0;
++        gMarioState->marioObj->header.gfx.node.flags &= ~GRAPH_RENDER_INVISIBLE;
++    }
+     update_mario_platform(); // TODO platform grabbed here and used next tick could be a use-after-free
+ 
+-    gfx_adapter_bind_output_buffers( outBuffers );
+-
+-    geo_process_root_hack_single_node( s_mario_graph_node );
++    host_render((struct MarioInstance*)s_mario_instance_pool.objects[marioId],outBuffers,0,NULL);
+ 
+     gAreaUpdateCounter++;
+ 
+@@ -266,6 +280,61 @@ SM64_LIB_FN void sm64_mario_tick( int32_t marioId, const struct SM64MarioInputs
+     outState->flags = gMarioState->flags;
+     outState->particleFlags = gMarioState->particleFlags;
+     outState->invincTimer = gMarioState->invincTimer;
++    outState->actionArg = gMarioState->actionArg;
++    outState->actionTimer = gMarioState->actionTimer;
++    outState->floorHeight = gMarioState->floorHeight;
++    outState->interruptedAction = gMarioState->action != actionBeforeTick && gMarioState->prevAction != actionBeforeTick ? gMarioState->prevAction : 0;
++}
++
++// Host-confirmed damage must not be suppressed by SM64's independent i-frames.
++SM64_LIB_FN void sm64_mario_host_health(int32_t marioId,int32_t damage) {
++    if(marioId<0||marioId>=s_mario_instance_pool.size||!s_mario_instance_pool.objects[marioId])return;
++    struct MarioInstance *instance=s_mario_instance_pool.objects[marioId];
++    global_state_bind(instance->globalState);instance->hostHealth=true;
++    struct MarioState *m=gMarioState;
++    m->health=0x880;m->hurtCounter=0;m->healCounter=0;m->invincTimer=0;
++    if(damage>0){
++        g_state->msInvulnerable=FALSE;
++        fake_damage_knock_back(m,damage,0,m->pos[0]+sins(m->faceAngle[1])*100,m->pos[1],m->pos[2]+coss(m->faceAngle[1])*100);
++        m->health=0x880;m->hurtCounter=0;m->invincTimer=0;
++    }
++}
++
++SM64_LIB_FN uint32_t sm64_mario_probe_attack(int32_t marioId,float x,float y,float z) {
++    if(marioId<0||marioId>=s_mario_instance_pool.size||!s_mario_instance_pool.objects[marioId])return 0;
++    global_state_bind(((struct MarioInstance*)s_mario_instance_pool.objects[marioId])->globalState);
++    return fake_determine_interaction(gMarioState,x,y,z);
++}
++
++// Local extension for interactions owned by the host game. In particular, do not
++// execute pole/door actions: those expect SM64 objects that do not exist here.
++extern void mario_reset_bodystate(struct MarioState *m);
++extern void mario_update_hitbox_and_cap_model(struct MarioState *m);
++SM64_LIB_FN void sm64_mario_pose_tick(int32_t marioId, float x, float y, float z, float facing, int32_t animation, int32_t frame, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers)
++{
++    if(marioId<0 || marioId>=s_mario_instance_pool.size || !s_mario_instance_pool.objects[marioId] || animation<0 || animation>0xD0)return;
++    global_state_bind(((struct MarioInstance*)s_mario_instance_pool.objects[marioId])->globalState);
++    struct MarioState *m=gMarioState;
++    m->action=ACT_IDLE;m->forwardVel=0;m->particleFlags=0;
++    vec3f_set(m->vel,0,0,0);vec3f_set(m->pos,x,y,z);
++    vec3s_set(m->faceAngle,0,(s16)(facing*32768.f/3.14159265359f),0);
++    vec3f_copy(m->marioObj->header.gfx.pos,m->pos);
++    vec3s_copy(m->marioObj->header.gfx.angle,m->faceAngle);
++    vec3f_set(m->marioObj->header.gfx.scale,1,1,1);
++    m->marioObj->header.gfx.throwMatrix=NULL;
++    mario_reset_bodystate(m);mario_update_hitbox_and_cap_model(m);
++    m->marioBodyState->action=ACT_IDLE;m->marioBodyState->punchState=0;
++    vec3s_set(m->marioBodyState->headAngle,0,0,0);vec3s_set(m->marioBodyState->torsoAngle,0,0,0);
++    set_mario_animation(m,animation);
++    if(frame>=0)m->marioObj->header.gfx.animInfo.animFrame=(s16)frame;
++    gfx_adapter_bind_output_buffers(outBuffers);
++    geo_process_root_hack_single_node(s_mario_graph_node);
++    gAreaUpdateCounter++;
++    memset(outState,0,sizeof(*outState));vec3f_copy(outState->position,m->pos);
++    outState->faceAngle=facing;outState->action=m->action;outState->health=m->health;
++    outState->animID=m->marioObj->header.gfx.animInfo.animID;
++    outState->animFrame=m->marioObj->header.gfx.animInfo.animFrame;
++    outState->flags=m->flags;
+ }
+ 
+ SM64_LIB_FN void sm64_mario_delete( int32_t marioId )
+@@ -615,7 +684,14 @@ SM64_LIB_FN bool sm64_mario_attack(int32_t marioId, float x, float y, float z, f
+     struct GlobalState *globalState = ((struct MarioInstance *)s_mario_instance_pool.objects[ marioId ])->globalState;
+     global_state_bind( globalState );
+ 
+-    return fake_interact_bounce_top(gMarioState, x, y, z, hitboxHeight);
++    float forward=gMarioState->forwardVel;
++    uint32_t contact=fake_determine_interaction(gMarioState,x,y,z);
++    bool hit=fake_interact_bounce_top(gMarioState, x, y, z, hitboxHeight);
++    // Native enemy attacks already resolve their own impacts. SM64's -48-speed
++    // wall recoil would separate every successful combo from its target.
++    // Preserve locomotion for host punches/kicks; keep the authentic stomp bounce.
++    if(((struct MarioInstance*)s_mario_instance_pool.objects[marioId])->hostHealth && (contact&0x0e))mario_set_forward_vel(gMarioState,forward);
++    return hit;
+ }
+ 
+ SM64_LIB_FN uint32_t sm64_surface_object_create( const struct SM64SurfaceObject *surfaceObject )
+@@ -624,6 +700,11 @@ SM64_LIB_FN uint32_t sm64_surface_object_create( const struct SM64SurfaceObject
+     return id;
+ }
+ 
++SM64_LIB_FN void sm64_host_contacts_load(const struct SM64Surface *surfaces,uint32_t count)
++{
++    surfaces_load_host_contacts(surfaces,count);
++}
++
+ SM64_LIB_FN void sm64_surface_object_move( uint32_t objectId, const struct SM64ObjectTransform *transform )
+ {
+     surface_object_update_transform( objectId, transform );
+diff --git a/src/libsm64.h b/src/libsm64.h
+index 1f6c5e4b1789cd7f7290f9d562834f502d940101..a4e7e75ce50cc293ba4c12fcc7be2d3f8f4cf017 100644
+--- a/src/libsm64.h
++++ b/src/libsm64.h
+@@ -66,6 +66,10 @@ struct SM64MarioState
+     uint32_t flags;
+     uint32_t particleFlags;
+     int16_t invincTimer;
++    uint32_t actionArg;
++    uint16_t actionTimer;
++    float floorHeight;
++    uint32_t interruptedAction;
+ };
+ 
+ struct SM64MarioGeometryBuffers
+@@ -157,6 +161,11 @@ extern SM64_LIB_FN void sm64_static_surfaces_load( const struct SM64Surface *sur
+ 
+ extern SM64_LIB_FN int32_t sm64_mario_create( float x, float y, float z );
+ extern SM64_LIB_FN void sm64_mario_tick( int32_t marioId, const struct SM64MarioInputs *inputs, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers );
++// Local host-driven interaction pose: render animation without running SM64 physics.
++extern SM64_LIB_FN void sm64_mario_pose_tick(int32_t marioId, float x, float y, float z, float facing, int32_t animation, int32_t frame, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers);
++extern SM64_LIB_FN void sm64_mario_host_pose_tick(int32_t marioId, float x, float y, float z, float facing, int32_t animation, float phase, int32_t style, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers);
++extern SM64_LIB_FN void sm64_mario_host_resume(int32_t marioId,float x,float y,float z,float facing);
++extern SM64_LIB_FN void sm64_mario_hand_matrix(float *out16);
+ extern SM64_LIB_FN void sm64_mario_delete( int32_t marioId );
+ 
+ extern SM64_LIB_FN void sm64_set_mario_action(int32_t marioId, uint32_t action);
+@@ -181,6 +190,7 @@ extern SM64_LIB_FN void sm64_mario_extend_cap(int32_t marioId, uint16_t capTime)
+ extern SM64_LIB_FN bool sm64_mario_attack(int32_t marioId, float x, float y, float z, float hitboxHeight);
+ 
+ extern SM64_LIB_FN uint32_t sm64_surface_object_create( const struct SM64SurfaceObject *surfaceObject );
++extern SM64_LIB_FN void sm64_host_contacts_load(const struct SM64Surface *surfaces,uint32_t count);
+ extern SM64_LIB_FN void sm64_surface_object_move( uint32_t objectId, const struct SM64ObjectTransform *transform );
+ extern SM64_LIB_FN void sm64_surface_object_delete( uint32_t objectId );
+ 
+diff --git a/src/load_surfaces.c b/src/load_surfaces.c
+index afe66a709e8f136ca494751fb68bbcd823560202..035acc612bc5239708acbd7a01fa3bcb74d475e5 100644
+--- a/src/load_surfaces.c
++++ b/src/load_surfaces.c
+@@ -24,6 +24,10 @@ static struct SM64SurfaceCollisionData *s_static_surface_list = NULL;
+ 
+ static uint32_t s_surface_object_count = 0;
+ static struct LoadedSurfaceObject *s_surface_object_list = NULL;
++// A bounded host contact overlay with stable addresses. Refreshing contacts
++// never frees a surface referenced by Mario's previous floor/wall state.
++static struct SM64SurfaceCollisionData s_host_surfaces[48];
++static uint32_t s_host_surface_count=0;
+ 
+ #define CONVERT_ANGLE( x ) ((s16)( -(x) / 180.0f * 32768.0f ))
+ 
+@@ -210,13 +214,14 @@ static void engine_surface_from_lib_surface( struct SM64SurfaceCollisionData *su
+ 
+ uint32_t loaded_surface_iter_group_count( void )
+ {
+-    return 1 + s_surface_object_count;
++    return 2 + s_surface_object_count;
+ }
+ 
+ uint32_t loaded_surface_iter_group_size( uint32_t groupIndex )
+ {
+     if( groupIndex == 0 )
+         return s_static_surface_count;
++    if( groupIndex == s_surface_object_count + 1 ) return s_host_surface_count;
+ 
+     return s_surface_object_list[ groupIndex - 1 ].surfaceCount;
+ }
+@@ -225,6 +230,7 @@ struct SM64SurfaceCollisionData *loaded_surface_iter_get_at_index( uint32_t grou
+ {
+     if( groupIndex == 0 )
+         return &s_static_surface_list[ surfaceIndex ];
++    if( groupIndex == s_surface_object_count + 1 ) return &s_host_surfaces[surfaceIndex];
+ 
+     return &s_surface_object_list[ groupIndex - 1 ].engineSurfaces[ surfaceIndex ];
+ }
+@@ -241,6 +247,14 @@ void surfaces_load_static( const struct SM64Surface *surfaceArray, uint32_t numS
+         engine_surface_from_lib_surface( &s_static_surface_list[i], &surfaceArray[i], NULL );
+ }
+ 
++void surfaces_load_host_contacts(const struct SM64Surface *surfaces,uint32_t count)
++{
++    if(count>48)count=48;
++    memset(s_host_surfaces,0,sizeof(s_host_surfaces));
++    for(uint32_t i=0;i<count;i++)engine_surface_from_lib_surface(&s_host_surfaces[i],&surfaces[i],NULL);
++    s_host_surface_count=count;
++}
++
+ uint32_t surfaces_load_object( const struct SM64SurfaceObject *surfaceObject )
+ {
+     bool pickedOldIndex = false;
+@@ -324,6 +338,7 @@ struct SM64SurfaceObjectTransform *surfaces_object_get_transform_ptr( uint32_t o
+ 
+ void surfaces_unload_all( void )
+ {
++    surfaces_load_host_contacts(NULL,0);
+     free( s_static_surface_list );
+     s_static_surface_count = 0;
+     s_static_surface_list = NULL;
+diff --git a/src/load_surfaces.h b/src/load_surfaces.h
+index 3e997431122936e8bf2ce0de209729f02351ed0d..3c8bed97d2d267a4f8e3f0378cc0716b4918b80f 100644
+--- a/src/load_surfaces.h
++++ b/src/load_surfaces.h
+@@ -8,8 +8,9 @@ extern uint32_t loaded_surface_iter_group_size( uint32_t groupIndex );
+ extern struct SM64SurfaceCollisionData *loaded_surface_iter_get_at_index( uint32_t groupIndex, uint32_t surfaceIndex );
+ 
+ extern void surfaces_load_static( const struct SM64Surface *surfaceArray, uint32_t numSurfaces );
++extern void surfaces_load_host_contacts(const struct SM64Surface *surfaces,uint32_t count);
+ extern uint32_t surfaces_load_object( const struct SM64SurfaceObject *surfaceObject );
+ extern void surface_object_update_transform( uint32_t objId, const struct SM64ObjectTransform *newTransform );
+ extern struct SM64SurfaceObjectTransform *surfaces_object_get_transform_ptr( uint32_t objId );
+ extern void surfaces_unload_object( uint32_t objId );
+-extern void surfaces_unload_all( void );
+\ No newline at end of file
++extern void surfaces_unload_all( void );

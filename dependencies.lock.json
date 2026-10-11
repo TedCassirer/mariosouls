@@ -1,0 +1,47 @@
+{
+  "build_dependencies": [
+    {
+      "path": "work/libsm64",
+      "url": "https://github.com/libsm64/libsm64.git",
+      "commit": "fd11813208272b4271d92bd92feb8f3fdbe61be5",
+      "patch": "patches/libsm64.patch",
+      "overlay": {
+        "patches/libsm64/host_pose.h": "src/host_pose.h"
+      },
+      "modified_files": {
+        "src/decomp/game/rendering_graph_node.c": "fc5047fbca99bf3c9220cf802f5e0ae1b04057399d2f776e38deb94d0cae9e48",
+        "src/fake_interaction.h": "5628f54068d219078f6ff989ddfe3c8109773017b51c4a37efefaf0bf74bd8b0",
+        "src/libsm64.c": "2bf67236ca760a95f0c3c753e56f0ea162e6f0ebd66ad52260e60ed6ab8fbcf4",
+        "src/libsm64.h": "187e24045d92fbdd4cde107a9e485b1b594be9557dfd58c1dff4efde98162414",
+        "src/load_surfaces.c": "08e5dbbe4c74ceed842884448c41420d19b54ffff29bf5932a0d95c67e4b4876",
+        "src/load_surfaces.h": "85fa751d35f1f506f73e0faebf6457936f865a975cfda8358fb8b32ccabc12bb",
+        "src/host_pose.h": "a9f357d57f1bff257d4dd7ef70acb8e238162e2d5ff5bc667dee0655a898a273"
+      }
+    },
+    {
+      "path": "work/minhook",
+      "url": "https://github.com/TsudaKageyu/minhook.git",
+      "commit": "8af6b4acae5a9388fd742b56fa79ece89d96f823"
+    }
+  ],
+  "compiler": {
+    "version": "Zig 0.13.0 Windows x86_64",
+    "target": "x86-windows-gnu",
+    "path": "work/tools/zig-windows-x86_64-0.13.0/zig.exe",
+    "sha256": "2e44af5bbf7a72ef8cbdae370284687c95d65a19affa469d2ad0364d905b8e84",
+    "local_archive": "work/tools/zig-0.13.0.zip",
+    "archive_sha256": "d859994725ef9402381e557c60bb57497215682e355204d754ee3df75ee3c158"
+  },
+  "testing": {
+    "python": "3.12",
+    "universal_modder": "0.2.0",
+    "local_python_deps": "work/python-deps",
+    "optional_packages": [
+      "pefile",
+      "numpy",
+      "Pillow",
+      "scipy",
+      "soulstruct"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+MARIOSOULS CHECKPOINT — 11 OCTOBER 2026
+
+Git tag: checkpoint-2026-10-11-mariosouls-v0.7
+Repository: C:\Users\Ted\Documents\Codex\2026-10-10\c-program-files-x86-steam-steamapps-2
+
+RETURN TO THIS PLAYABLE VERSION
+Close Dark Souls normally, then run Restore MarioSouls checkpoint.cmd in this folder.
+The restore verifies all 72 saved runtime files, backs up the files it replaces, and
+returns the installed mod and configuration to this checkpoint. It leaves character
+saves and the Mario ROM unchanged. It does not remove unrelated future mod files.
+
+Restore original game.cmd is different: that disables MarioSouls.
+
+KEEP THE LOCAL BACKUP
+The exact runtime is stored at:
+work\checkpoints\mariosouls-v0.7-runtime.zip
+Keep that file with the project. It is intentionally excluded from Git because it
+contains private game-derived collision data and local runtime files. A source clone
+alone cannot provide the exact runtime rollback. Do not delete ignored files with
+git clean -fdx. Saves have their own existing backups under work\um-state\backups.
+
+RETURN TO THE SOURCE
+The tag preserves our integration code, tests, build scripts, configuration, notes,
+and the complete local modifications to the pinned libsm64 dependency.
+From the repository, create a separate recovered working tree with:
+git worktree add ..\mariosouls-recovered checkpoint-2026-10-11-mariosouls-v0.7
+README.md explains restoring dependencies and rebuilding. The current local compiler
+and dependencies are retained, but are not committed to Git.
+
+This is a local repository; nothing has been uploaded.
+The checkpoint includes interaction, collision, combat and UI-layering work. Fresh
+NPC dialogue on Mario QA remains pending; the tag is not a full-game validation claim.

@@ -1,0 +1,85 @@
+# Source checkpoint only. Local runtime archives and game-derived data stay private.
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/dependencies.lock.json
+!/tools/
+/tools/*
+!/tools/*.py
+!/checkpoints/
+/checkpoints/*
+!/checkpoints/*.json
+!/checkpoints/*.ini
+!/patches/
+/patches/*
+!/patches/*.patch
+!/patches/libsm64/
+/patches/libsm64/*
+!/patches/libsm64/host_pose.h
+!/work/
+/work/*
+!/work/*.cpp
+!/work/*.c
+!/work/*.h
+!/work/*.def
+!/work/*.py
+!/work/*.ps1
+!/work/MODLOG.md
+!/work/MODDING_PLAN.md
+/work/asylum.evs.py
+!/work/combat-harness/
+/work/combat-harness/*
+!/work/combat-harness/*.py
+!/work/combat-harness/*.cpp
+!/work/combat-harness/*.md
+!/work/progression/
+/work/progression/*
+!/work/progression/*.py
+!/work/progression/*.cpp
+!/work/progression/*.md
+!/work/interaction-v2/
+/work/interaction-v2/*
+!/work/interaction-v2/*.py
+!/work/interaction-v2/*.cpp
+!/work/interaction-v2/*.md
+!/work/world-bridge/
+/work/world-bridge/*
+!/work/world-bridge/*.py
+!/work/world-bridge/*.cpp
+!/work/world-bridge/*.md
+!/work/ui-render/
+/work/ui-render/*
+!/work/ui-render/*.py
+!/work/ui-render/*.cpp
+!/work/ui-render/*.md
+!/work/docs/
+/work/docs/*
+!/work/docs/*.py
+!/work/docs/*.cpp
+!/work/docs/*.md
+!/work/field-notes/
+/work/field-notes/*
+!/work/field-notes/*.py
+!/work/field-notes/*.cpp
+!/work/field-notes/*.md
+!/work/interaction-v2/PLAN.txt
+!/work/interaction-v2/interaction.edl.json
+!/work/trailer/
+/work/trailer/*
+!/work/trailer/*.py
+!/work/trailer/edit.json
+!/outputs/
+/outputs/*
+!/outputs/*.txt
+!/outputs/*.csv
+!/outputs/*.ps1
+!/outputs/*.cmd
+!/outputs/MarioSouls attack timing measurements.json
+!/outputs/Combat harness/
+/outputs/Combat harness/*
+!/outputs/Combat harness/*.md
+!/outputs/Combat harness/*.ps1
+!/outputs/Combat harness/*.cmd
+!/outputs/Combat harness/Example punch sequence.json
+!/outputs/Combat harness/fixture-baseline.json

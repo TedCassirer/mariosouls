@@ -1,0 +1,11 @@
+Interaction repair contract
+
+Keep the same Mario instance throughout an interaction. A request is not an interaction mode. Mario owns locomotion while the request is pending; only confirmed native animations or an actual menu suspend his action simulation. Never wait for native walking to become idle to return control.
+
+Native Dark Souls owns interaction eligibility, object/NPC scripts, item quantity, healing, damage, ladder attachment and scripted displacement. Mario owns the displayed skeleton and locomotion outside confirmed actions. No inventory, quest, save or NPC state writes are needed.
+
+Filter native locomotion and attack inputs at the keyboard and XInput boundary. Route Y/Q to native interact and X/E to native use-goods as bounded single presses; raw input remains available to Mario. Native menus receive normal menu inputs; ladders receive only their intended controls. Preserve camera input.
+
+Classify actual native action phases. Known Estus: 7585 raise, 7586 drink, 7587 lower (native baseline 044822). Bonfire 7700-series; ladders 7000-series; doors and other scripted actions keep native root motion. Sample/render Mario animation phases with transitions rather than looping push-door for every event.
+
+Verify rejected interaction plus walking/jumping, direct Estus and native consumption/healing, rest/leave/resume, ladder pause/direction/dismount, door response and menus, death/focus cancellation, and controller routing. Test character only. Saves backed up with um; shared saves never restored. NPC dialogue requires a live NPC on this test save; do not resurrect Oscar or change quest flags.

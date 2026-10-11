@@ -1,0 +1,11 @@
+from pathlib import Path
+p=Path(__file__).with_name('mariosouls.cpp')
+s=p.read_text()
+s=s.replace('struct Vertex{float x,y,z;DWORD color;float u,v;};','struct Vertex{float x,y,z;DWORD color,shade;float u,v;};')
+s=s.replace('p.color=0xff000000|(r<<16)|(g<<8)|b;p.u=', 'p.color=0xff000000|(r<<16)|(g<<8)|b;Vec normal=unit({gnormal[i*3],gnormal[i*3+1],gnormal[i*3+2]});int light=int(255*(.4f+.6f*std::max(0.f,dot(normal,unit({-.3f,.8f,-.5f})))));p.shade=0xff000000|(light<<16)|(light<<8)|light;p.u=')
+s=s.replace('D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1','D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_SPECULAR|D3DFVF_TEX1')
+s=s.replace('d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);','d->SetRenderState(D3DRS_SPECULARENABLE,FALSE);d->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_MODULATE);d->SetTextureStageState(1,D3DTSS_COLORARG1,D3DTA_CURRENT);d->SetTextureStageState(1,D3DTSS_COLORARG2,D3DTA_SPECULAR);d->SetTextureStageState(1,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1);d->SetTextureStageState(1,D3DTSS_ALPHAARG1,D3DTA_CURRENT);d->SetTextureStageState(2,D3DTSS_COLOROP,D3DTOP_DISABLE);d->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_POINT);')
+s=s.replace('static unsigned rtCount=0,mainUses=0;','#include "startup.h"\nstatic unsigned rtCount=0,mainUses=0;')
+s=s.replace('if(graphFrames>0)--graphFrames;return originalPresent', 'if(graphFrames>0)--graphFrames;if(skipIntroPresent())return S_OK;return originalPresent')
+s=s.replace('MH_Initialize();MH_STATUS s=', 'MH_Initialize();installStartupHooks(table);MH_STATUS s=')
+p.write_text(s)

@@ -305,3 +305,15 @@ No live game input or installation; user previously chose to test personally.
 Live death/respawn and all-map navigation remain unverified for this build.
 
 Final validation: build, full offline test suite, doctor and the hash-pinned installer check-only all passed. No installation or game controls performed.
+
+## 2026-10-11: combined fixes installed with user approval
+
+User explicitly authorized installing all prepared fixes. Dark Souls was closed.
+The combined installer completed successfully; previous installation retained at
+work/checkpoints/before-framework-20261011-190112-372042. Read-back SHA256 checks
+matched all three installed binaries to the tested build and all 15 installed
+MSC2 caches to the prepared manifest. CollisionDirectory points at the installed
+cache folder; every previously existing file listed in the backup manifest is
+present in the backup. No game launch, game input or save modification performed.
+The fixes are installed; live cannon/load/resolution/pit death regressions remain
+for the user's gameplay test.

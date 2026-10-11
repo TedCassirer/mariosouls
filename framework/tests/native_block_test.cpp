@@ -24,6 +24,8 @@ static bool characterOwned(){return owned;}static bool nativeActionOwned(){retur
 static void logf(const char*,...){}
 struct Vec{float x,y,z;};
 static int(*nativeDamage)(int,int,int,float,float,float)=nullptr;
+static bool nativeTarget(uintptr_t,uint32_t){return false;}
+static int nativeDamageTarget(int,uintptr_t,uintptr_t,const float*){return -1;}
 #include "../hosts/ds1ptde/equipment_native.h"
 static void packet(int hp,int damage,int drain,int block=1,int broken=0,int br=0){
  put<int>(player+0x2d4,hp);put<int>(player+0x2d8,1000);

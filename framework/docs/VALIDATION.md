@@ -825,3 +825,20 @@ preventing Mario from reaching the kill plane. The new host/cache fix distinguis
 camera and lethal filters; protected landing damage remains unchanged. Offline
 geometry and actual guest fall checks are separate from live native death/respawn,
 which has not been exercised for this prepared revision. No game controls used.
+
+
+### 2026-10-11 seamless area and unlabelled-enemy regression (prepared)
+
+Video and installed-build logs reproduce repeated Firelink/Burg map-ID changes
+releasing the guest and waiting for native idle. Read-only live observation found
+an alive c1201 enemy whose script ID was -1; both melee loops excluded such actors.
+Native disassembly confirms D78660 resolves script IDs then calls DEA8E0 with
+actual source/target pointers. The prepared host uses that builder directly.
+
+Offline regression checks cover same-actor map rebinding, retained ownership,
+real actor/physics replacement, separate hit windows for two enemies with script
+ID -1, stale/recycled native handles, signature refusal, and the production x86
+thunk's registers/stack/return convention against a fake callee. These are not
+live damage measurements. The user requested preparation only; this build has
+not been installed or tested in-game. Running crossings, actual HP loss, weapon
+hits, stagger and soul rewards across the seam remain live checks.

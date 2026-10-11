@@ -27,14 +27,7 @@ static void projectileCastRate(bool cast){
  float current=0,next=0;if(!get(at,current))return;
  if(projectileRate.acquire(current,projectileProfile.castSpeed,next)&&put(at,next)){projectileRate.last=next;projectileRateActor=player;projectileRateAddress=at;}
 }
-static uintptr_t projectileOwner(uint32_t handle){
- if(handle==0xffffffffu)return 0;
- uintptr_t manager=read<uint32_t>(0x137d644);unsigned group=(handle>>14)&63,index=handle&0x3fff;
- uintptr_t limits=read<uint32_t>(manager+0x10);int groups=read<int>(limits+0xc)+2;
- if(!manager||!limits||groups<2||groups>64||group>=unsigned(groups))return 0;
- uintptr_t table=read<uint32_t>(manager+0x240+group*4);int count=read<int>(table);
- return table&&count>0&&count<=16384&&index<unsigned(count)?read<uint32_t>(read<uint32_t>(table+4)+index*32):0;
-}
+static uintptr_t projectileOwner(uint32_t handle){return nativeActor(handle);}
 struct ProjectileFlight {uintptr_t bullet=0,actor=0;uint32_t serial=0,owner=0;float age=0;Vec velocity{};unsigned bounces=0;float bouncedAt=-1,floorY=0;};
 static ProjectileFlight projectileFlights[128]; // Native pool also has 128 slots.
 static ProjectileFlight* projectileFind(uintptr_t bullet){

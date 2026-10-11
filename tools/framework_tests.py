@@ -43,7 +43,7 @@ def test(character,asset,runtime):
     f.run([f.BUILD/'equipment-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/debug_geometry_test.cpp',f.BUILD/'debug-geometry-test.exe')
     f.run([f.BUILD/'debug-geometry-test.exe'])
-    for name in ['controller','action_input','native_block']:
+    for name in ['controller','action_input','native_block','native_targets']:
         f.compile_cpp(f.FRAMEWORK/f'tests/{name}_test.cpp',f.BUILD/f'{name}-test.exe',extra=['-luser32','-ldxguid'])
         f.run([f.BUILD/f'{name}-test.exe'])
     f.compile_cpp(f.FRAMEWORK/'tests/adapter_test.cpp',f.BUILD/'adapter-test.exe')

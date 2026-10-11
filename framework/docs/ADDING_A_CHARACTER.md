@@ -231,3 +231,10 @@ movement. The host uses the same mesh/visibility path during native-driven
 presentation and clears outgoing combat flags. There is no new SDK ABI or guest
 memory access. Verify load, death/respawn, same-pointer map changes, explicit off,
 late/unreadable class data and switching to an unrelated save.
+
+
+Seamless host-area changes preserve guest instances and action state. An adapter
+must tolerate replacement static collision surfaces during locomotion and attacks.
+Do not use host script IDs as enemy identities: target resolution, deduplication
+and damage are host responsibilities. Test running across an area seam without
+stopping, attacks before/after it, and different enemies with missing script IDs.

@@ -112,7 +112,8 @@ static void combat(){
  const auto*attack=attackDefinition(characterWindow.move);const auto*automatic=attackDefinition(profile->automaticAttackId);
  for(uintptr_t at=begin;at<end;at+=4){
   uintptr_t npc=read<uint32_t>(at);if(!npc||npc==player)continue;
-  int team=read<int>(npc+0x74),hp=read<int>(npc+0x2d4),id=read<int>(npc+0x208);if((team!=6&&team!=7&&team!=9)||hp<=0||hp>100000||id<=0)continue;
+  int team=read<int>(npc+0x74),hp=read<int>(npc+0x2d4),id=read<int>(npc+0x208);if((team!=6&&team!=7&&team!=9)||hp<=0||hp>100000)continue;
+  uint32_t handle=read<uint32_t>(npc+4);if(!nativeTarget(npc,handle))continue;
   uintptr_t np=chain(npc+0x28,{0,0x1c});if(!np)continue;Vec center=read<Vec>(np+0x10);
   bool downward=characterWindow.move==SCCombat::None||characterWindow.move==profile->automaticAttackId;
   SCContact::Capsule capsule;bool shaped=targetCapsule(npc,center,capsule);
@@ -125,26 +126,27 @@ static void combat(){
   // feet above the enemy and tight horizontal overlap, not the old broad sphere.
   if(characterWindow.move==SCCombat::None&&automatic&&(contact&SC_CONTACT_AUTOMATIC)&&(state.flags&SC_AUTO_ATTACK_ELIGIBLE)&&automaticContact(delta,*automatic)){if(characterWindow.beginAutomatic(profile->automaticAttackId))combatPay();}
   int move=characterWindow.move;
-  if(!characterWindow.active(state,*profile)||!characterWindow.canHit(id,*profile))continue;
+  if(!characterWindow.active(state,*profile)||!characterWindow.canHit(int(handle),*profile))continue;
   if(move==profile->automaticAttackId){if(!automatic||!(contact&SC_CONTACT_AUTOMATIC)||!automaticContact(delta,*automatic))continue;}
   else if(!(contact&SC_CONTACT_ATTACK))continue;
   if(read<uint32_t>(read<uint32_t>(0x137d644)+0x3c)!=player)continue;
-  bool first=characterWindow.hit.empty();characterWindow.hit.insert(id);
+  bool first=characterWindow.hit.empty();characterWindow.hit.insert(int(handle));
   debugContact(pos,false);
   char fields[240];snprintf(fields,sizeof(fields),",\"move\":\"%s\",\"serial\":%d,\"target_id\":%d,\"power\":%.3f",attackName(move),characterWindow.serial,id,characterWindow.attackPower);harnessEvent("character_contact",fields);
   DWORD now=GetTickCount();float poise=characterBalance.poise[move],push=-1;
   bool pushAttack=characterImpactSupported&&characterImpact.knockbackCm[move]>0;
   if(pushAttack){
-   auto&cooldown=characterLastPush[id];bool ready=cooldown.ready(npc,now,characterImpact.cooldownMs);
+   auto&cooldown=characterLastPush[int(handle)];bool ready=cooldown.ready(npc,now,characterImpact.cooldownMs);
    float current=NAN,maximum=NAN;get(npc+0x1c0,current);get(npc+0x1c4,maximum);
    if(!ready)poise=0;
    push=shaped&&ready?SCImpact::distance(characterImpact.knockbackCm[move],current,maximum,poise,characterImpact.resistantPoise,capsule.radius,capsule.top+capsule.radius):0;
    if(push>0)cooldown.commit(npc,now);
    logf("Character push target=%d move=%s poise=%.2f/%.2f attack_poise=%.2f requested_m=%.3f ready=%d radius=%.3f height=%.3f",id,attackName(move),current,maximum,poise,push,ready,shaped?capsule.radius:0,shaped?capsule.top+capsule.radius:0);
-  }else{auto last=characterLastStagger.find(id);if(last!=characterLastStagger.end()&&DWORD(now-last->second)<1000)poise=0;else characterLastStagger[id]=now;}
-  harnessHitAttempt(id,hp,990050+move,0,"hit_attempt");int result=characterNativeHit(move,characterWindow.attackPower,poise,id,pos,push);harnessHitAttempt(id,hp,990050+move,result,"native_call_return");
+  }else{auto last=characterLastStagger.find(int(handle));if(last!=characterLastStagger.end()&&DWORD(now-last->second)<1000)poise=0;else characterLastStagger[int(handle)]=now;}
+  harnessHitAttempt(id,hp,990050+move,0,"hit_attempt");int result=characterNativeHit(move,characterWindow.attackPower,poise,npc,handle,pos,push);harnessHitAttempt(id,hp,990050+move,result,"native_call_return");
+  if(result==-2)continue; // Streamed/recycled target is not a broken damage hook.
   if(!characterPacketBuilt){if(harness.armed)harnessStop("native_damage_pipeline_unavailable");return;}
-  feedbackTrack(npc,id,hp,characterWindow.serial,move,pos+unit(p+Vec{0,.7f,0}-pos)*.05f);
+  feedbackTrack(npc,int(handle),hp,characterWindow.serial,move,pos+unit(p+Vec{0,.7f,0}-pos)*.05f);
   // Commit the guest contact reaction once, after eligibility/stamina checks. The
   // read-only probe never bounces an exhausted Character or resets an attack window.
   if(first&&characterPacketBuilt)guest->commitContact(character,local.x,local.y,local.z,160);

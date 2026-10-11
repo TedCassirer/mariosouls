@@ -67,6 +67,7 @@ static bool __cdecl characterBuildPacket(uintptr_t out,int id,uintptr_t effects,
 }
 static bool characterInstallDamage(){
  if(characterDamageReady)return true;
+ if(!nativeDamageEntryReady()){logf("Character native target entry signature refused");return false;}
  const unsigned char lookup[]={0x53,0x8b,0x5c,0x24,0x08,0x33,0xc0};
  const unsigned char packet[]={0x83,0xec,0x34,0x53,0x8b,0x5c,0x24,0x48};
  unsigned char bytes[8];
@@ -81,14 +82,17 @@ static bool characterInstallDamage(){
  for(int i=0;i<4;i++)if(MH_EnableHook(addresses[i])!=MH_OK){for(auto p:addresses){MH_DisableHook(p);MH_RemoveHook(p);}return false;}
  characterDamageReady=true;logf("Character-owned native attack templates ready");return true;
 }
-static int characterNativeHit(int move,float power,float poise,int target,Vec position,float knockback=-1){
+static int characterNativeHit(int move,float power,float poise,uintptr_t target,uint32_t handle,Vec position,float knockback=-1){
+ characterPacketBuilt=false;
+ if(!nativeTarget(target,handle)||!nativeTarget(player,read<uint32_t>(player+4)))return -2;
  if(!characterDamageReady||move<0||move>=int(profile->attackCount))return -1;
  uint16_t base=(uint16_t)std::clamp(power,0.f,2000.f),stagger=(uint16_t)poise;
  memcpy(characterAttacks[move]+0x50,&base,2);memcpy(characterAttacks[move]+0x5e,&stagger,2);
  float distance=knockback>=0?knockback:.3f;memcpy(characterAttacks[move]+0x10,&distance,4);
  characterPacketMove=move;characterPacketPower=power;characterPacketPoise=poise;characterPacketKnockback=knockback;characterPacketBuilt=false;
  int staminaBefore=read<int>(player+0x2e4);
- int result=nativeDamage(990050+move,10000,target,position.x,position.y,position.z);
+ alignas(16) float point[4]={position.x,position.y,position.z,0};
+ int result=nativeDamageTarget(990050+move,player,target,point);
  logf("Character native call stamina before=%d after=%d",staminaBefore,read<int>(player+0x2e4));
  characterPacketMove=-1;if(!characterPacketBuilt){logf("Character damage packet was not constructed; disabling outgoing damage");characterDamageReady=false;}
  return result;

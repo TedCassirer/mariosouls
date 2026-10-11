@@ -19,6 +19,10 @@ public:
  bool requested()const{return wanted;}
  uint32_t generation()const{return epoch;}
  bool matches(Identity next)const{return identity.valid()&&identity==next;}
+ bool sameActor(Identity next)const{return identity.valid()&&next.valid()&&identity.actor==next.actor&&identity.physics==next.physics&&identity.movement==next.movement;}
+ // A seamless area boundary does not replace the native actor or guest rig.
+ // Preserve action/stamina windows and movement; only the host terrain changes.
+ bool changeMap(Identity next){if(!character()||!sameActor(next))return false;identity=next;++epoch;return true;}
  void request(bool value){wanted=value;if(!value)settling=false;}
  void activate(Identity next){identity=next;mode=Owner::Character;wanted=true;settling=false;++epoch;}
  bool handoff(){if(!character())return false;mode=Owner::NativeAction;++epoch;return true;}

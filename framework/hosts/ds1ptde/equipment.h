@@ -68,16 +68,18 @@ static void equipmentContact(){
  auto point=[](Vec v){return SCContact::Point{v.x,v.y,v.z};};
  for(uintptr_t at=begin;at<end;at+=4){
   uintptr_t npc=read<uint32_t>(at);if(!npc||npc==player)continue;
-  int team=read<int>(npc+0x74),hp=read<int>(npc+0x2d4),id=read<int>(npc+0x208);if((team!=6&&team!=7&&team!=9)||hp<=0||hp>100000||id<=0||equipmentSwing.targets.count(id))continue;
+  int team=read<int>(npc+0x74),hp=read<int>(npc+0x2d4),id=read<int>(npc+0x208);if((team!=6&&team!=7&&team!=9)||hp<=0||hp>100000)continue;
+  uint32_t handle=read<uint32_t>(npc+4);if(!nativeTarget(npc,handle)||equipmentSwing.targets.count(int(handle)))continue;
   uintptr_t np=chain(npc+0x28,{0,0x1c});if(!np)continue;Vec center=read<Vec>(np+0x10);SCContact::Capsule cap;
   if(dot(center-feet,center-feet)>400||!targetCapsule(npc,center,cap))continue;
   SCContact::Point hit;if(!SCEquipment::sweep(point(previousA),point(previousB),point(equipmentBladeA),point(equipmentBladeB),cap,radius,hit))continue;
   Vec contact={hit.x,hit.y,hit.z};
-  if(!lineClear(feet+Vec{0,.65f,0},contact)||!worldLineClear(feet+Vec{0,.65f,0},contact,npc)||!equipmentSwing.claim(id))continue;
+  if(!lineClear(feet+Vec{0,.65f,0},contact)||!worldLineClear(feet+Vec{0,.65f,0},contact,npc)||!equipmentSwing.claim(int(handle)))continue;
   debugContact(contact,false);int behavior=equipmentSwingItem.attacks[equipmentSwing.combo].behavior;
-  harnessHitAttempt(id,hp,behavior,0,"hit_attempt");int result=equipmentNativeHit(equipmentSwingItem,equipmentSwing.combo,id,contact);harnessHitAttempt(id,hp,behavior,result,"native_call_return");
+  harnessHitAttempt(id,hp,behavior,0,"hit_attempt");int result=equipmentNativeHit(equipmentSwingItem,equipmentSwing.combo,npc,handle,contact);harnessHitAttempt(id,hp,behavior,result,"native_call_return");
+  if(result==-2)continue; // Area streaming must not permanently disable melee.
   if(!equipmentPacket.built||!equipmentPacket.valid){equipmentBroken=true;equipmentReset();if(harness.armed)harnessStop("equipment_native_packet_unverified");return;}
-  feedbackTrack(npc,id,hp,1000000+equipmentSwing.serial,SC_MAX_ATTACKS,contact);
+  feedbackTrack(npc,int(handle),hp,1000000+equipmentSwing.serial,SC_MAX_ATTACKS,contact);
   logf("Equipment hit serial=%d target=%d weapon=%d combo=%d hp_before=%d result=%d",equipmentSwing.serial,id,equipmentSwingItem.id,equipmentSwing.combo,hp,result);
  }
  // Native world-contact points are also eligible object hit locations. Do not

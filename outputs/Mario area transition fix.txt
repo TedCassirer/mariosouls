@@ -1,0 +1,26 @@
+Mario area-transition and melee fix - prepared 2026-10-11
+
+NOT INSTALLED. No live game inputs or damage tests performed for this revision.
+
+Save and close Dark Souls, then double-click Install area transition fix.cmd.
+The installer verifies the exact tested build and backs up the existing mod.
+This includes the previous cannon, loading, resolution, pit and event-floor fixes.
+
+Changes:
+- Map-only area changes preserve Mario's rig, locomotion and paid attack windows.
+- True actor reloads can resume Mario during safe native movement, without waiting for idle.
+- Unarmed and equipped melee target real native actors, including enemies whose script ID is -1.
+- Per-enemy hit tracking, poise cooldowns and delayed impact receipts use native handles.
+- Stale targets that stream out are skipped without permanently disabling combat.
+
+Offline validation: build, full framework regression tests and doctor passed.
+The native attack dispatch ABI was executed against a fake callee, not a live enemy.
+Actual damage, stagger, death and soul rewards after transitions need in-game confirmation.
+
+Suggested check using Mario QA:
+1. Hit an ordinary enemy before crossing areas and confirm its HP drops.
+2. Run continuously through the Firelink-to-Burg stair passage. Mario should retain normal movement and animations without needing to stop.
+3. Hit several enemies afterward with punches/kicks, then a weapon. Confirm HP loss and soul rewards on death.
+4. Cross back, repeat, then save/reload and confirm Mario still activates normally.
+
+If a problem remains, preserve DATA/mariosouls.log before restarting and note the location and equipped weapon.

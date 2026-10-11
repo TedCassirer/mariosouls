@@ -575,3 +575,24 @@ corrections cannot create support. The patch follows the native position and
 is cleared on upward movement, actual native descent, warp, ownership release
 or map change. It never enters the static cache, so disabled event geometry
 does not persist. Native collision and lethal surfaces remain authoritative.
+
+
+### Seamless areas and native targets
+
+A map number change with unchanged native actor, physics and movement pointers
+refreshes host terrain/hazards and the motion mailbox without recreating the guest
+or cancelling paid attack windows. Actor/physics replacement, death, native actions
+and invalid identities retain their existing handoff rules. Recovery from a true
+handoff uses the verified native active-action predicate, not an idle-animation
+requirement; walking no longer indefinitely delays reacquisition.
+
+PTDE melee targets use their native generation-bearing handles (+4), not optional
+script entity IDs (+208). The host validates handle-to-actor resolution before
+contact dispatch, retains per-attack deduplication and poise cooldowns by handle,
+and confirms HP changes only while the same handle resolves to the same actor.
+Unarmed and weapon hits enter the game's normal native attack builder directly
+with actor references; the pre-defense packet hooks remain unchanged. Streamed
+or recycled targets are skipped without disabling the damage hooks. Native HP,
+defenses, blocks, death and rewards remain authoritative. Script IDs remain in
+harness hit-attempt telemetry; impact receipt target fields now identify handles.
+No SDK ABI or character adapter changes are needed.

@@ -39,5 +39,13 @@ int main(){
  assert(!loading.canRetry({1,2,4,1801},false,1102));
  assert(loading.canRetry({1,2,4,1801},true,1103));
  loading.request(false);assert(!loading.canRetry(identity,true,1600));
+ // Repeated seamless Firelink/Burg crossings retain guest ownership. Actual
+ // actor/physics replacement and scripted ownership still require a handoff.
+ loading.activate({1,2,3,1002});auto generation=loading.generation();
+ assert(loading.changeMap({1,2,3,1001})&&loading.character()&&loading.matches({1,2,3,1001}));
+ assert(loading.generation()==generation+1);
+ assert(loading.changeMap({1,2,3,1002})&&loading.character());
+ assert(!loading.changeMap({1,4,3,1001})&&!loading.changeMap({4,2,3,1001})&&!loading.changeMap({1,2,3,-1}));
+ assert(loading.handoff()&&!loading.changeMap({1,2,3,1001}));
  puts("PASS motion ownership: single-use requests, backpressure, stale/epoch rejection, finite bounds, clock-rate parity, input latch, velocity clipping, actor lifecycle and timed interaction return");
 }

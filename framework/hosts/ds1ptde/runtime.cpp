@@ -141,6 +141,7 @@ static bool guestPose(int id,const SC_Pose*p,SC_State*s,SC_Mesh*m){return guest-
 #include "character_visibility.h"
 using DamageFn=int(WINAPI*)(int,int,int,float,float,float);
 static DamageFn nativeDamage=nullptr;
+#include "native_targets.h"
 #include "equipment_native.h"
 #include "starting_class.h"
 #include "native_combat.h"
@@ -259,6 +260,12 @@ static void updateGameplay(){
  harnessTick(focus,pad.connected);
  bool padToggle=controllerToggle.update(pad,focus,inputTime);if(padToggle)logf("controller Character toggle");
  SCSession::Identity identity={player,posData,mp,currentMap()};
+ if(characterSession.character()&&!nativeReaction&&!equipmentActionOwned&&cam&&!characterSession.matches(identity)&&characterSession.sameActor(identity)){
+  if(loadMap()&&characterSession.changeMap(identity)){
+   rebuildSurfaces();worldActivate();
+   logf("SESSION seamless map=%d; character rig, movement and attack windows preserved",identity.map);
+  }
+ }
  if(characterOwned()&&(!characterSession.matches(identity)||!cam)){logf("SESSION native actor changed; clearing pending work");releaseControl(true);}
  if(characterOwned()&&read<int>(player+0x2d4)<=0&&!characterSession.death()){
   launcherCancel();if(!deathBegin(acc))releaseControl(true);
@@ -276,7 +283,7 @@ static void updateGameplay(){
  if(characterSession.death()){deathTick(acc,pad.slot);return;}
  if(!characterOwned()&&characterSession.requested()){
   bool safe=focus&&identity.valid()&&cam&&read<int>(player+0x2d4)>0;
-  if(safe){auto o=nativeInteractionState();safe=o.valid&&o.idle&&!o.menu&&!o.event&&!o.ladder;}
+  if(safe){auto o=nativeInteractionState();safe=o.valid&&!o.menu&&!o.event&&!o.ladder&&nativeActiveAllowed(player,false)==1;}
   if(characterSession.canRetry(identity,safe,inputTime)){if(activate())logf("SESSION character resumed after stable native actor");else characterSession.failed(inputTime);}
  }
  static bool previousInteract=false,previousItem=false,previousActionFocus=false;static int previousActionSlot=-1;

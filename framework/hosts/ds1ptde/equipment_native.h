@@ -223,13 +223,15 @@ static void equipmentObservePacket(uintptr_t out,int id,uintptr_t context){
  equipmentPacket.poise=read<float>(out+0x28);equipmentPacket.valid=valid;
  logf("Equipment packet behavior=%d attack=%d weapon=%d observed=%d hand=%d power=%.2f/%.2f/%.2f/%.2f poise=%.2f valid=%d",id,equipmentPacket.attack,equipmentPacket.weapon,equipmentPacket.observedWeapon,equipmentPacket.hand,equipmentPacket.power[0],equipmentPacket.power[1],equipmentPacket.power[2],equipmentPacket.power[3],equipmentPacket.poise,valid);
 }
-static int equipmentNativeHit(const NativeEquipmentItem& sword,int combo,int target,Vec position){
+static int equipmentNativeHit(const NativeEquipmentItem& sword,int combo,uintptr_t target,uint32_t handle,Vec position){
+ if(!nativeTarget(target,handle)||!nativeTarget(player,read<uint32_t>(player+4)))return -2;
  if(!nativeDamage||!sword.valid||!sword.melee||combo<0||combo>1||equipmentPacket.expected)return -1;
  auto current=equipmentRead();
  if(!current.valid||!current.oneHanded||!current.right.melee||current.right.id!=sword.id)return -1;
  const auto& attack=sword.attacks[combo];if(!attack.valid)return -1;
  equipmentPacket={};equipmentPacket.expected=true;equipmentPacket.weapon=sword.id;equipmentPacket.behavior=attack.behavior;equipmentPacket.attack=attack.attack;
- int result=nativeDamage(attack.behavior,10000,target,position.x,position.y,position.z);
+ alignas(16) float point[4]={position.x,position.y,position.z,0};
+ int result=nativeDamageTarget(attack.behavior,player,target,point);
  equipmentPacket.expected=false;
  if(!equipmentPacket.built||!equipmentPacket.valid){logf("Equipment packet validation failed: built=%d valid=%d",equipmentPacket.built,equipmentPacket.valid);return -1;}
  return result;

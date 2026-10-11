@@ -405,3 +405,15 @@ to stable idle, completed a normal jump/landing, and walked about 1.7 m across
 the area without re-entering an endless fall. HP remained 564/573; no level-65
 save was loaded. A moving elevator and the later event removal were not tested
 live, so their behavior remains provisional.
+
+
+# Seamless area ownership and native actor targeting, 2026-10-11 (prepared)
+
+Preserve the guest rig, movement and paid attack windows across map-only changes;
+refresh host terrain and motion binding. True reload reacquisition now uses native
+active-action readiness instead of requiring idle. Resolve melee victims by native
+handles and dispatch through the shared normal native attack builder, including
+unlabelled enemies. Stale streamed targets no longer poison melee availability.
+The same handle validation protects delayed impact receipts and projectile owners.
+Added offline lifecycle, target identity and x86 ABI regression checks. Preparation
+only at the user's request; live transition/combat validation remains pending.

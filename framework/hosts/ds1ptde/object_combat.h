@@ -1,8 +1,6 @@
 #pragma once
-// Uses the same native damage entry builder as character hits, but passes a
-// native map object handle rather than resolving a character script ID.
-__attribute__((naked)) static int __cdecl worldDamageObject(int behavior,uintptr_t owner,uintptr_t target,const float* point){__asm__ volatile(
- "pushl %ebx\n pushl %esi\n pushl %edi\n movl 16(%esp),%ecx\n movl 20(%esp),%eax\n movl 24(%esp),%edx\n movl 28(%esp),%ebx\n pushl %ebx\n pushl %edx\n movl 0x137d6ac,%edx\n pushl %edx\n movl $0xdea8e0,%edi\n call *%edi\n popl %edi\n popl %esi\n popl %ebx\n ret\n");}
+// Shared native builder accepts both live actors and native map objects.
+static int worldDamageObject(int behavior,uintptr_t owner,uintptr_t target,const float* point){return nativeDamageTarget(behavior,owner,target,point);}
 static void combatObjects(){
  if(!characterOwned()||!worldObjectDamageReady||!combatEnabled||!characterDamageReady||!characterWindow.active(state,*profile))return;
  if(harness.armed&&harness.suppressOutgoing)return;

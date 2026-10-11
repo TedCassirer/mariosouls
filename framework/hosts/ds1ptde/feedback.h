@@ -53,7 +53,7 @@ static void feedbackPoll(){
  if(!feedbackEnabled)return;DWORD now=GetTickCount();
  for(size_t i=0;i<feedbackReceipts.size();){const auto r=feedbackReceipts[i];int hp=0,id=0;bool valid=false;
   if(r.object){int16_t shortHP=0;valid=get(r.target+4,id)&&get(r.target+0x2a,shortHP);hp=shortHP;}
-  else valid=get(r.target+0x208,id)&&get(r.target+0x2d4,hp);
+  else valid=get(r.target+4,id)&&nativeTarget(r.target,uint32_t(id))&&get(r.target+0x2d4,hp);
   int result=r.sample(id,hp,valid,now);if(result==1)feedbackConfirmed(r,hp,now);
   if(result)feedbackReceipts.erase(feedbackReceipts.begin()+i);else ++i;
  }

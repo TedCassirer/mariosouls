@@ -6,7 +6,7 @@ static Vec nativeReactionPrevious;
 static DWORD nativeReactionStarted=0;
 static int nativeReactionMap=-1,nativeReactionStartHP=0,nativeReactionStartStamina=0;
 
-static int nativeActiveAllowed(){
+static int nativeActiveAllowed(uintptr_t actor=player,bool captured=true){
  static int verified=0;
  if(!verified){
   // Chr ESD command100 / FDF1BB calls E2AEC0. Its bool assignment is at
@@ -18,9 +18,9 @@ static int nativeActiveAllowed(){
    get(uintptr_t(0xe323b0),accessBytes)&&!memcmp(accessBytes,access,sizeof(access))?1:-1;
   logf("Native passive action predicate signature=%d",verified==1);
  }
- if(verified!=1||!player||player!=lastPlayer||chain(playerSlot,{0,4,0})!=player)return -1;
+ if(verified!=1||!actor||chain(playerSlot,{0,4,0})!=actor||(captured&&actor!=lastPlayer))return -1;
  uintptr_t movement=0,action=0,owner=0;uint8_t allowed=255;
- if(!get(player+0x28,movement)||movement!=lastMap||!movement||
+ if(!get(actor+0x28,movement)||!movement||(captured&&movement!=lastMap)||
     !get(movement+0x2c,action)||!action||!get(action+0x10,owner)||owner!=movement||
     !get(action+0x3c,allowed)||allowed>1)return -1;
  return allowed;

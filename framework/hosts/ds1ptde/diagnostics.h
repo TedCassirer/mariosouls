@@ -154,9 +154,9 @@ static void diagnosticsTick() {
     }
     std::string id = profile ? profile->id : "unknown";
     job->json = diagnosticJournal.json(id, SC_BUILD_VERSION, SC_BUILD_COMMIT, SC_BUILD_SOURCE,
-                                       SC_BUILD_DIRTY);
+                                       SC_BUILD_DIRTY, "ds1ptde");
     job->review = SCDiagnostics::reviewHTML(diagnosticJournal.body(
-        id, SC_BUILD_VERSION, SC_BUILD_COMMIT, SC_BUILD_SOURCE, SC_BUILD_DIRTY));
+        id, SC_BUILD_VERSION, SC_BUILD_COMMIT, SC_BUILD_SOURCE, SC_BUILD_DIRTY, "ds1ptde"));
     HANDLE worker = CreateThread(nullptr, 0, diagnosticWorker, job, 0, nullptr);
     if (worker)
         CloseHandle(worker);

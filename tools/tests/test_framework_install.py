@@ -22,6 +22,7 @@ class Installation(unittest.TestCase):
             self.build / "characters/fixture",
             self.folder,
             self.root / "release",
+            self.root / "framework/hosts/ds1ptde",
         ]:
             p.mkdir(parents=True)
         self.runtime = self.game / "SoulsCharacterFramework/characters/fixture/runtime.dll"
@@ -60,8 +61,13 @@ class Installation(unittest.TestCase):
                 }
             )
         )
-        (self.root / "release/project.json").write_text(
-            json.dumps({"supported_exe_sha256": f.sha(self.game / "DARKSOULS.exe")})
+        (self.root / "framework/hosts/ds1ptde/edition.json").write_text(
+            json.dumps(
+                {
+                    "executable": "DARKSOULS.exe",
+                    "supported_exe_sha256": f.sha(self.game / "DARKSOULS.exe"),
+                }
+            )
         )
         self.patches = [
             patch.object(f, "ROOT", self.root),

@@ -46,7 +46,7 @@ current control handoff before automated input. Do not leave invincibility or
 QA controls enabled after a test.
 
 `python tools/framework.py qa` lists the maintained scenarios. See the
-[live QA guide](../framework/qa/README.md) for fixtures and arguments. Scenario
+[live QA guide](../framework/hosts/ds1ptde/qa/README.md) for fixtures and arguments. Scenario
 discovery and help are tested in CI without loading native game-access tools;
 that does not constitute a live run of those scenarios.
 
@@ -66,3 +66,11 @@ The remaining release matrix includes:
 
 A useful result distinguishes passed, failed and untested cases. Do not infer
 live success from a contract test or an animation alone.
+
+
+The shared suite now executes portable C/C++ ABI and core policy checks on Windows
+x86 and x64, compiles both implemented adapters for each, and loads a generated
+adapter through both DLL contracts. It includes a simulated host for lifecycle,
+native motion readiness, moving support and missing capabilities. This does not
+run a Remastered host or replace owned-asset/live checks. Timing tests preserve
+the existing PTDE caller policy. See [host preparation](../framework/docs/HOST_PORTING.md).

@@ -1,3 +1,4 @@
+#include "../../core/host_capabilities.h"
 // Verified PTDE layout: final scene copy, SHORT2 UI sprites, then text.
 // Install on the real device; its draw functions differ from the probe device.
 static bool uiComposited = false, uiInside = false, uiHooksReady = false;
@@ -85,7 +86,11 @@ static UILayout uiBoundary(IDirect3DDevice9 *d, UINT stride) {
 }
 
 static void uiComposite(IDirect3DDevice9 *d, UILayout layout) {
-    if (uiComposited || uiInside || layout == UILayout::Other)
+    SCHost::Capabilities capabilities{
+        (sceneDepth ? uint32_t(SCHost::SceneDepth) : 0u) |
+        (layout != UILayout::Other ? uint32_t(SCHost::BeforeHUD) : 0u)};
+    if (uiComposited || uiInside || layout == UILayout::Other ||
+        !SCHost::permits(capabilities, SCHost::Operation::WorldDraw))
         return;
     uiInside = true;
     uiComposited = drawComposite(d);

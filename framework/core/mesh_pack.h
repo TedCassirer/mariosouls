@@ -8,6 +8,11 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include <cstddef>
+#include <limits>
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+#error "SCMESH01 native decoder requires little-endian scalars"
+#endif
 
 namespace SCMesh {
 struct Vertex {
@@ -18,6 +23,10 @@ struct Vertex {
 };
 
 static_assert(sizeof(Vertex) == 72, "SCMESH01 vertex layout");
+static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559, "SCMESH01 float32");
+static_assert(offsetof(Vertex, bone) == 44 && offsetof(Vertex, weight) == 52 &&
+                  offsetof(Vertex, group) == 68,
+              "SCMESH01 serialized field offsets");
 
 struct Clip {
     std::string name;

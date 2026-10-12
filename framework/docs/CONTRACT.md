@@ -18,10 +18,10 @@ size/counts, validates finite values/weights/indices, and rejects trailing data.
 Character recipes generate this private pack; the host never parses guest archives.
 
 `sdk/character_api.h` is the authoritative declaration. Adapters are trusted native
-32-bit Windows DLLs, loaded in-process; validation is not a memory-safety sandbox.
+Windows DLLs matching their host architecture, loaded in-process; validation is not a memory-safety sandbox.
 Export `SoulsCharacterGetAPI` using C linkage and return null for any unsupported
-ABI version or API structure size. Functions use the compiler's default C calling
-convention. Build for `x86-windows-gnu`. Do not pass C++ containers, exceptions,
+ABI version or API structure size. Functions use explicit `SC_CALL` (C calling convention). PTDE builds for
+`x86-windows-gnu`; portable validation also builds `x86_64-windows-gnu`. Do not pass C++ containers, exceptions,
 allocator ownership or Dark Souls pointers across the boundary.
 
 ## Lifecycle and ownership
@@ -604,3 +604,11 @@ The host's bug reporter uses the existing descriptor identifier and opaque
 adapter capability or ABI change is required. Shared history and serialization
 live in `core/diagnostics.h`; platform collection and file/browser operations
 belong to the host. Reports never call guest simulation or write native memory.
+
+## Host preparation boundaries
+
+The internal renderer interface is `sdk/render_api.h`; it is not part of the
+character DLL ABI. Host capability requirements live in `core/host_capabilities.h`
+and are distinct from adapter flags. Shared timing is independent of graphics;
+the host decides when native readiness permits a tick. See [host porting](HOST_PORTING.md)
+for architecture limits, unsupported behavior and verification scope.

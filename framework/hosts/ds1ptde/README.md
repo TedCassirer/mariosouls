@@ -64,3 +64,11 @@ Native HP, stamina, inventory, quest state and rewards remain authoritative.
 Actor pointers and cached geometry must be invalidated when their owning game
 state changes. See the [SDK contract](../../docs/CONTRACT.md) and
 [test guide](../../../docs/TESTING.md) before changing these boundaries.
+
+
+Edition metadata, executable validation, configuration and installation live here
+in `edition.json`, `install.py` and `uninstall.py`. Native QA is in `qa/`.
+`render_device.h` implements the neutral mesh/texture/camera renderer boundary;
+depth capture, before-HUD composition and GPU lifetime remain PTDE-specific.
+See the [port checklist](PORT_CHECKLIST.md) for inputs, outputs and verification
+at each native integration point. No other edition is implemented.

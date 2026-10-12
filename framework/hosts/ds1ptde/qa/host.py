@@ -12,7 +12,7 @@ import re
 from ctypes import wintypes as wt
 from pathlib import Path
 
-WORK = Path(__file__).resolve().parents[2] / "work"
+WORK = Path(__file__).resolve().parents[4] / "work"
 sys.path.insert(0, str(WORK / "python-deps"))
 import pefile
 

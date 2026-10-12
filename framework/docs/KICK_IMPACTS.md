@@ -51,4 +51,4 @@ Intermediate/high-poise enemies, other bosses, all wall/ledge cases and every
 defensive special effect have not been verified live. See the
 [archived measurements and test conditions](https://github.com/TedCassirer/mariosouls/blob/53a8e61/framework/docs/KICK_IMPACTS.md)
 and the [current coverage guide](VALIDATION.md). The maintained
-[kick QA scenario](../qa/README.md) records native responses on a guarded fixture.
+[kick QA scenario](../hosts/ds1ptde/qa/README.md) records native responses on a guarded fixture.

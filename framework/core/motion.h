@@ -1,5 +1,6 @@
 #pragma once
 #include "../sdk/character_api.h"
+#include "timing.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -101,8 +102,8 @@ public:
     }
 };
 
-// Some event-owned platforms are absent from the prepared guest map and do not
-// appear in PTDE's contact list. Infer temporary support only when Havok rejects
+// Some event-owned platforms are absent from the prepared guest map.
+// Positions here are host-world metres. Infer support only when native physics rejects
 // successive downward guest requests. Native motion remains authoritative.
 class NativeSupport {
     Point previous{};
@@ -155,32 +156,8 @@ public:
     }
 };
 
-// One guest tick at most per rendered frame and only after its previous request
-// was consumed. Keep the fractional remainder; discard pause/stall backlog.
-class Clock {
-    double time = 0;
-
-public:
-    void clear() {
-        time = 0;
-    }
-
-    void advance(double dt) {
-        if (std::isfinite(dt) && dt > 0)
-            time = std::min(time + dt, 2. / SC_FIXED_HZ);
-    }
-
-    bool take(bool ready) {
-        if (!ready) {
-            time = std::min(time, 1. / SC_FIXED_HZ);
-            return false;
-        }
-        if (time + 1e-8 < 1. / SC_FIXED_HZ)
-            return false;
-        time = std::min(time - 1. / SC_FIXED_HZ, 1. / SC_FIXED_HZ);
-        return true;
-    }
-};
+// Compatibility name; the PTDE caller retains its one-tick-per-update policy.
+using Clock = SCTiming::Clock;
 
 class InputLatch {
     SC_Input stored{};

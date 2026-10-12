@@ -19,6 +19,8 @@
 #include "../../core/validation.h"
 #include "../../../work/minhook/include/MinHook.h"
 #include "memory.h"
+#include "render_device.h"
+static_assert(sizeof(void *) == 4, "PTDE native bindings require a 32-bit host");
 #include "character_state.h"
 #include "controller.h"
 #include "interaction.h"
@@ -570,9 +572,9 @@ static GameplayFrame pollGameplayFrame() {
 
 // Resolve map/actor replacement and death before any input reaches an adapter.
 static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
-    if (characterControl.session.character() && !nativeReaction && !equipmentActionOwned && cam &&
-        !characterControl.session.matches(frame.identity) &&
-        characterControl.session.sameActor(frame.identity)) {
+    if (SCSession::transition(characterControl.session, frame.identity, cam != 0,
+                              !nativeReaction && !equipmentActionOwned) ==
+        SCSession::Transition::SeamlessMap) {
         if (loadMap() && characterControl.session.changeMap(frame.identity)) {
             rebuildSurfaces();
             worldActivate();
@@ -580,7 +582,9 @@ static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
                  frame.identity.map);
         }
     }
-    if (characterOwned() && (!characterControl.session.matches(frame.identity) || !cam)) {
+    if (characterOwned() &&
+        SCSession::transition(characterControl.session, frame.identity, cam != 0, false) ==
+            SCSession::Transition::ReplaceActor) {
         logf("SESSION native actor changed; clearing pending work");
         releaseControl(true);
     }
@@ -1020,34 +1024,19 @@ static D3DMATRIX viewMatrix(Vec eye, Vec at) {
     return m;
 }
 
-struct Vertex {
-    float x, y, z;
-    DWORD color, shade;
-    float u, v;
-};
+using Vertex = SCRenderAPI::Vertex;
 
 #include "launcher_render.h"
 
-static bool draw(IDirect3DDevice9 *d, bool preview = false) {
+static bool draw(IDirect3DDevice9 *d, bool preview = false,
+                 SCRenderAPI::Phase phase = SCRenderAPI::Phase::Scene) {
     if (preview ? !classPreviewActive : !renderWanted())
         return false;
     bool drawCharacter = (preview || characterPresented()) && characterMesh.view.numTrianglesUsed;
-    if (!tex) {
-        if (FAILED(d->CreateTexture(profile->textureWidth, profile->textureHeight, 1, 0,
-                                    D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, NULL)))
-            return false;
-        D3DLOCKED_RECT lr;
-        if (SUCCEEDED(tex->LockRect(0, &lr, NULL, 0))) {
-            for (int y = 0; y < profile->textureHeight; y++) {
-                auto row = (uint32_t *)((BYTE *)lr.pBits + y * lr.Pitch);
-                for (int x = 0; x < profile->textureWidth; x++) {
-                    auto p = &characterMesh.atlasPixels[(y * profile->textureWidth + x) * 4];
-                    row[x] = (p[3] << 24) | (p[0] << 16) | (p[1] << 8) | p[2];
-                }
-            }
-            tex->UnlockRect(0);
-        }
-    }
+    PTDERenderer renderer(d, tex);
+    if (!renderer.texture(
+            {characterMesh.atlasPixels.data(), profile->textureWidth, profile->textureHeight}))
+        return false;
     IDirect3DStateBlock9 *saved = nullptr;
     if (FAILED(d->CreateStateBlock(D3DSBT_ALL, &saved)))
         return false;
@@ -1117,9 +1106,11 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false) {
     d->SetVertexShader(NULL);
     d->SetPixelShader(NULL);
     d->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX1);
-    d->SetTransform(D3DTS_WORLD, &world);
-    d->SetTransform(D3DTS_VIEW, &view);
-    d->SetTransform(D3DTS_PROJECTION, &proj);
+    SCRenderAPI::Camera renderCamera{};
+    memcpy(renderCamera.world, &world, sizeof(world));
+    memcpy(renderCamera.view, &view, sizeof(view));
+    memcpy(renderCamera.projection, &proj, sizeof(proj));
+    renderer.camera(renderCamera);
     d->SetRenderState(D3DRS_LIGHTING, FALSE);
     d->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     d->SetRenderState(D3DRS_ZENABLE, (preview || depthTest) ? TRUE : FALSE);
@@ -1161,10 +1152,12 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false) {
     d->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
     d->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
     d->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-    HRESULT hr = drawCharacter
-                     ? d->DrawPrimitiveUP(D3DPT_TRIANGLELIST, characterMesh.view.numTrianglesUsed,
-                                          verts.data(), sizeof(Vertex))
-                     : S_OK;
+    auto renderPhase = preview ? SCRenderAPI::Phase::Preview : phase;
+    HRESULT hr =
+        renderer.mesh({verts.data(), drawCharacter ? characterMesh.view.numTrianglesUsed : 0},
+                      {renderPhase, sceneDepth != nullptr})
+            ? S_OK
+            : E_FAIL;
     static bool logged = false;
     if (!logged) {
         logf("draw result=%08lx viewport=%ux%u fov=%.5f near=%.5f far=%.1f", hr, vp.Width,

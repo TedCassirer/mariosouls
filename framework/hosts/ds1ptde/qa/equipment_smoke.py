@@ -17,7 +17,7 @@ def main(arguments=None):
     parser.add_argument("pid", type=int)
     parser.add_argument("stage", choices=["safe", "front", "rear"])
     parser.add_argument(
-        "--output", type=Path, default=Path(__file__).resolve().parents[2] / "work/equipment-qa"
+        "--output", type=Path, default=Path(__file__).resolve().parents[4] / "work/equipment-qa"
     )
     args = parser.parse_args(arguments)
 

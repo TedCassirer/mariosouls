@@ -13,7 +13,7 @@ def main(arguments=None):
     parser.add_argument("stage", choices=["cycles", "rest", "enemy", "door", "incoming", "drop"])
     parser.add_argument("height", nargs="?", type=int, help="Drop height for the drop stage")
     parser.add_argument(
-        "--output", type=Path, default=Path(__file__).resolve().parents[2] / "work/body-qa"
+        "--output", type=Path, default=Path(__file__).resolve().parents[4] / "work/body-qa"
     )
     args = parser.parse_args(arguments)
     if args.stage == "drop" and args.height is None:

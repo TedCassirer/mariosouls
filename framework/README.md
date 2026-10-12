@@ -69,3 +69,8 @@ configuration values; an inventory/titanite upgrade interface is not implemented
 Mario's wider camera uses `[Camera.mario64] DistanceScale` (default `1.5`).
 `[Projectiles] Enabled=0` disables the bouncing-fireball extension. The feature
 guides above document further settings and their limits.
+
+
+Future edition work follows the [host preparation guide](docs/HOST_PORTING.md)
+and [PTDE integration inventory](hosts/ds1ptde/PORT_CHECKLIST.md). PTDE remains the
+only implemented host; passing x64 policy tests does not establish Remastered support.

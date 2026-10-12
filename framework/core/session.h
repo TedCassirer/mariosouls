@@ -141,6 +141,19 @@ public:
     }
 };
 
+enum class Transition { Stable, SeamlessMap, ReplaceActor };
+
+inline Transition transition(const Session &session, Identity next, bool cameraAvailable,
+                             bool seamlessAllowed) {
+    if (!session.visible())
+        return Transition::Stable;
+    if (cameraAvailable && session.matches(next))
+        return Transition::Stable;
+    if (cameraAvailable && seamlessAllowed && session.character() && session.sameActor(next))
+        return Transition::SeamlessMap;
+    return Transition::ReplaceActor;
+}
+
 // Completion stability is time-based, independent of rendering rate.
 class QuietGate {
     bool quiet = false;

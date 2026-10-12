@@ -20,7 +20,7 @@ The internal modules support the entry point; they are not additional competing
 build workflows. Character asset recipes stay with their adapters under
 `framework/characters/`. Host asset recipes stay under `framework/hosts/`.
 Live-game checks are separate from offline tests; see
-[the QA guide](../framework/qa/README.md).
+[the QA guide](../framework/hosts/ds1ptde/qa/README.md).
 `prepare-assets` and `preview-assets` dispatch recipes owned by the selected
 adapter; unsupported recipes fail explicitly. Link's mesh contact sheet uses
 `preview-assets`, while Mario's authored equipment poses use `preview-equipment`.

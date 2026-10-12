@@ -20,10 +20,10 @@ def check(root=ROOT):
     ]
     files += sorted((root / "docs").glob("*.md"))
     files += sorted((root / "framework/docs").glob("*.md"))
-    files += sorted((root / "framework/hosts").glob("*/README.md"))
+    files += sorted((root / "framework/hosts").glob("*/*.md"))
     files += sorted((root / "framework/characters").glob("*/*.md"))
     files += [
-        root / "framework/qa/README.md",
+        root / "framework/hosts/ds1ptde/qa/README.md",
         root / "tools/README.md",
         root / "tools/tests/README.md",
     ]

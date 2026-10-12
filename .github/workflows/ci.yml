@@ -24,12 +24,14 @@ jobs:
         run: python tools/framework.py format --check
       - name: Pinned build dependencies
         run: python tools/dependencies.py --setup --download-toolchain
-      - name: Shared checks (no game or ROM)
+      - name: Shared x86/x64 ABI, policy and simulated-host checks (no game or ROM)
         run: python tools/framework.py test --shared-only
       - name: Distribution source audit
         run: python tools/release.py check
       - name: Compile host, Mario adapter and runtime
         run: python tools/framework.py build --with-runtime
+      - name: Compile x64 guest runtime (portability only, no game host)
+        run: python framework/characters/mario64/build_runtime.py --target x86_64-windows-gnu --output work/framework-build/portability/x86_64-windows-gnu/runtime
       - name: Test report and build logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

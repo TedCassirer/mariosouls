@@ -39,7 +39,7 @@ Add live regression scenarios to the registry in `framework/qa/__main__.py`.
 They must expose help and remain safe to import without native game-access
 dependencies. Parse and validate arguments before importing those dependencies;
 keep the existing test-character and focus guards in the scenario itself.
-The [QA guide](framework/qa/README.md) explains the fixtures and command.
+The [QA guide](framework/hosts/ds1ptde/qa/README.md) explains the fixtures and command.
 
 Do not add game assets, dependency checkouts, generated caches, binaries, secrets
 or personal saves. The `.gitignore` uses an allowlist; new source directories

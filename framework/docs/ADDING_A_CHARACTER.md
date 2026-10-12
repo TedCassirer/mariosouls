@@ -238,3 +238,10 @@ must tolerate replacement static collision surfaces during locomotion and attack
 Do not use host script IDs as enemy identities: target resolution, deduplication
 and damage are host responsibilities. Test running across an area seam without
 stopping, attacks before/after it, and different enemies with missing script IDs.
+
+
+New adapters must compile against the x86 and x64 SDK checks without truncating
+pointers or assuming function-table byte sizes. Use `SC_CALL` for DLL callbacks,
+caller-owned buffers and semantic SDK categories. Guest asset offsets may remain
+fixed-width format values. Host memory, native IDs and graphics API calls belong
+to the edition host. See [host porting](HOST_PORTING.md) for the tested boundary.

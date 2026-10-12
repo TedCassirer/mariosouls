@@ -45,7 +45,7 @@ static bool drawComposite(IDirect3DDevice9 *d) {
         SUCCEEDED(d->SetDepthStencilSurface(sceneDepth)) && SUCCEEDED(d->SetViewport(&vp)) &&
         SUCCEEDED(d->Clear(0, nullptr, D3DCLEAR_TARGET, 0, 1, 0));
     if (rendered)
-        rendered = draw(d);
+        rendered = draw(d, false, SCRenderAPI::Phase::BeforeHUD);
     d->SetDepthStencilSurface(nullptr);
     d->SetRenderTarget(0, target);
     d->SetDepthStencilSurface(depth);

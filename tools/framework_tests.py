@@ -24,6 +24,7 @@ def shared_tests(render=False):
 
 def _shared_tests(render=False):
     f.architecture_check()
+    f.run([sys.executable, f.ROOT / "tools/tests", "test_host_editions"])
     f.run([sys.executable, f.ROOT / "tools/tests", "test_framework_install"])
     f.run([sys.executable, f.ROOT / "tools/tests", "test_release_tools"])
     f.run([sys.executable, f.ROOT / "tools/tests", "test_results"])
@@ -90,6 +91,9 @@ def _shared_tests(render=False):
         f.run([f.BUILD / f"{name}-test.exe"])
     f.compile_cpp(f.FRAMEWORK / "tests/adapter_test.cpp", f.BUILD / "adapter-test.exe")
     scaffold_check()
+    from framework_portability import check
+
+    check()
     (f.BUILD / "shared-test-report.json").write_text(
         json.dumps(
             {

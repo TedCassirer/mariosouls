@@ -253,13 +253,15 @@ public:
     }
 
     std::string json(const std::string &character, const std::string &version,
-                     const std::string &commit, const std::string &source, bool dirty) const {
-        std::string out =
-            "{\"schema\":1,\"host\":\"ds1ptde\",\"character\":" +
-            jsonString(identifier(character)) + ",\"version\":" + jsonString(version) +
-            ",\"commit\":" + jsonString(commit) + ",\"source_fingerprint\":" + jsonString(source) +
-            ",\"dirty_build\":" + (dirty ? "true" : "false") +
-            ",\"current\":" + frameJSON(previous) + ",\"frames\":[";
+                     const std::string &commit, const std::string &source, bool dirty,
+                     const std::string &host) const {
+        std::string out = "{\"schema\":1,\"host\":" + jsonString(identifier(host)) +
+                          ",\"character\":" + jsonString(identifier(character)) +
+                          ",\"version\":" + jsonString(version) +
+                          ",\"commit\":" + jsonString(commit) +
+                          ",\"source_fingerprint\":" + jsonString(source) +
+                          ",\"dirty_build\":" + (dirty ? "true" : "false") +
+                          ",\"current\":" + frameJSON(previous) + ",\"frames\":[";
         for (size_t i = 0; i < frameCount; i++) {
             if (i)
                 out += ',';
@@ -279,7 +281,8 @@ public:
     }
 
     std::string body(const std::string &character, const std::string &version,
-                     const std::string &commit, const std::string &source, bool dirty) const {
+                     const std::string &commit, const std::string &source, bool dirty,
+                     const std::string &host) const {
         const auto &f = previous;
         std::string recent = "\n- Recent diagnostic events: ";
         for (size_t i = eventCount > 6 ? eventCount - 6 : 0; i < eventCount; i++) {
@@ -291,9 +294,9 @@ public:
                "- Build: " +
                version + " / " + commit + (dirty ? " (modified source)" : "") +
                "\n- Source fingerprint: " + source + "\n- Character: " + identifier(character) +
-               "; host: ds1ptde; schema: 1\n- Area / cached area: " + std::to_string(f.map) +
-               " / " + std::to_string(f.cachedMap) +
-               "\n- Position: " + point(f.position, f.positionValid) +
+               "; host: " + identifier(host) +
+               "; schema: 1\n- Area / cached area: " + std::to_string(f.map) + " / " +
+               std::to_string(f.cachedMap) + "\n- Position: " + point(f.position, f.positionValid) +
                "\n- Owner: " + std::to_string(f.owner) +
                "; generation: " + std::to_string(f.generation) +
                "; rig: " + (f.rig ? "yes" : "no") + "\n- HP: " + std::to_string(f.hp) + " / " +

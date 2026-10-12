@@ -58,7 +58,7 @@ Outstanding gates include a clean second-PC install/uninstall, portable asset
 setup, full-game regression, input/display combinations, save safety, loader
 compatibility, exact-package distribution review and candidate sign-off.
 
-Use the [live QA guide](../qa/README.md) and [testing matrix](../../docs/TESTING.md).
+Use the [live QA guide](../hosts/ds1ptde/qa/README.md) and [testing matrix](../../docs/TESTING.md).
 All automated control requires backups, an eligible disposable test character
 and a current handoff. Never test on the owner's level-65 character.
 
@@ -67,3 +67,30 @@ equipment, reproduction steps, expected and actual results, and relevant HP,
 stamina, timing or movement measurements. Distinguish passed, failed and untested
 cases. Update the coverage summary with concise findings; keep private traces
 local and rely on Git history for superseded development notes.
+
+
+## Future host preparation — 2026-10-12
+
+PTDE remains the only supported host. No Remastered installation was available;
+no Remastered hooks, renderer or live compatibility were tested or claimed.
+
+Offline validation passed: the PTDE host and guest runtime build; existing PTDE
+shared policies and real synthetic D3D9 composition checks; shared C/C++ SDK,
+structure layout, pointer identity and policy checks executed as x86 and x64;
+generated-adapter DLL conformance in both architectures; Mario's owned-ROM
+adapter checks in both architectures (including slope, death, equipment and
+runtime lifecycle); Wind Waker Link's owned-asset adapter/mesh checks in x86 and adapter checks in x64; Python
+installer, release, edition-rejection and QA-discovery tests. The x64 Mario runtime
+was built separately from pinned private sources for adapter verification.
+
+The lifecycle fixture reuses production policies and compares extracted transition
+classification against the former PTDE predicates. It covers loading, death and
+respawn, seamless map changes, identity replacement, moving/removed native support,
+temporary native control, missing capabilities and clock/cooldown behavior.
+Timing checks preserve PTDE's existing one-tick-per-update caller behavior.
+
+These are offline results. No game launch, save access, installed binary change
+or test-character manipulation was performed for this preparation. A live PTDE
+regression pass remains necessary before distributing the refactor. See
+[host preparation](HOST_PORTING.md) and the
+[PTDE port checklist](../hosts/ds1ptde/PORT_CHECKLIST.md) for scope and remaining work.

@@ -1,5 +1,6 @@
 #pragma once
 #include "character_api.h"
+#include "calling_convention.h"
 /* Optional ABI: guest-owned launcher simulation + ROM-derived world props.
  * No native pointers. All positions are local cm; angles radians, pitch up.
  * begin is called only from a consumed world interaction; tick remains step().
@@ -21,11 +22,11 @@ typedef struct SC_LauncherState {
 typedef struct SC_LauncherAPI {
     uint32_t size, version, maxTriangles, textureWidth, textureHeight;
     const char *name, *operatorName;
-    uint32_t (*begin)(int32_t id, const float *position, float yaw);
-    void (*cancel)(int32_t id);
-    uint32_t (*query)(int32_t id, SC_LauncherState *state);
-    uint32_t (*texture)(SC_Texture *texture);
-    uint32_t (*mesh)(uint32_t part, float frame, float viewYaw, SC_Mesh *mesh);
+    uint32_t(SC_CALL *begin)(int32_t id, const float *position, float yaw);
+    void(SC_CALL *cancel)(int32_t id);
+    uint32_t(SC_CALL *query)(int32_t id, SC_LauncherState *state);
+    uint32_t(SC_CALL *texture)(SC_Texture *texture);
+    uint32_t(SC_CALL *mesh)(uint32_t part, float frame, float viewYaw, SC_Mesh *mesh);
 } SC_LauncherAPI;
 
-typedef const SC_LauncherAPI *(*SC_GetLauncherAPI)(uint32_t version, uint32_t size);
+typedef const SC_LauncherAPI *(SC_CALL *SC_GetLauncherAPI)(uint32_t version, uint32_t size);

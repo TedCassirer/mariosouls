@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 
+from host_editions import edition
 from profiles import load_profile as read_profile
 from profiles import profile_header as profile_header
 
@@ -18,12 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FRAMEWORK = ROOT / "framework"
 BUILD = ROOT / "work/framework-build"
 ZIG = ROOT / "work/tools/zig-windows-x86_64-0.13.0/zig.exe"
-GAME = Path(
-    os.environ.get(
-        "MARIOSOULS_GAME_DIR",
-        r"C:\Program Files (x86)\Steam\steamapps\common\Dark Souls Prepare to Die Edition\DATA",
-    )
-)
+PTDE = edition("ds1ptde")
+GAME = Path(os.environ.get("MARIOSOULS_GAME_DIR", PTDE["default_game_directory"]))
 
 
 def run(args, **kw):
@@ -39,13 +36,15 @@ def load_profile(character):
     return read_profile(character, FRAMEWORK / "characters")
 
 
-def compile_cpp(source, dest, includes=(), extra=()):
+def compile_cpp(source, dest, includes=(), extra=(), target="x86-windows-gnu"):
+    if target not in ("x86-windows-gnu", "x86_64-windows-gnu"):
+        raise ValueError("Unsupported validation target")
     dest.parent.mkdir(parents=True, exist_ok=True)
     args = [
         ZIG,
         "c++",
         "-target",
-        "x86-windows-gnu",
+        target,
         "-std=c++17",
         "-O2",
         "-static-libstdc++",
@@ -152,6 +151,8 @@ def build(character, adapter_only=False, with_runtime=False):
     receipt = {
         "framework_version": json.loads((ROOT / "release/project.json").read_text())["version"],
         "abi": 4,
+        "host": "ds1ptde",
+        "target": PTDE["target"],
         "character": character,
         "profile": p,
         "built_at": datetime.datetime.now().astimezone().isoformat(),
@@ -227,7 +228,17 @@ def architecture_check():
                 errors.append(str(f.relative_to(ROOT)) + ": guest runtime reference")
             if re.search(r"state\.raw(?:Action|Flags)\s*&", s):
                 errors.append(str(f.relative_to(ROOT)) + ": opaque guest state used as host logic")
-    for f in (FRAMEWORK / "characters").rglob("*.cpp"):
+    for base in ["core", "sdk"]:
+        for f in (FRAMEWORK / base).rglob("*"):
+            if f.suffix not in (".h", ".cpp", ".c"):
+                continue
+            if re.search(
+                r'#include\s*[<"](?:windows|d3d\d*|dinput|.*hosts/).*?[>"]', f.read_text(), re.I
+            ):
+                errors.append(str(f.relative_to(ROOT)) + ": host dependency in portable code")
+    for f in (FRAMEWORK / "characters").rglob("*"):
+        if f.suffix not in (".h", ".cpp", ".c"):
+            continue
         s = f.read_text()
         if re.search(r"\b(?:WriteProcessMemory|ReadProcessMemory|MH_CreateHook)\b", s):
             errors.append(str(f.relative_to(ROOT)) + ": native host access inside adapter")
@@ -328,6 +339,7 @@ def main():
     p.add_argument("arguments", nargs=argparse.REMAINDER)
     for name in ["build", "doctor", "test", "install"]:
         p = commands.add_parser(name)
+        p.add_argument("--host", default="ds1ptde")
         p.add_argument("--character", default="mario64")
         if name == "build":
             p.add_argument("--adapter-only", action="store_true")
@@ -335,7 +347,13 @@ def main():
         if name == "test":
             p.add_argument("--asset")
             p.add_argument("--runtime")
-            p.add_argument("--shared-only", action="store_true")
+            scope = p.add_mutually_exclusive_group()
+            scope.add_argument("--shared-only", action="store_true")
+            scope.add_argument(
+                "--portable-assets",
+                action="store_true",
+                help="Test owned assets in x64 adapter DLLs only; supply a 64-bit runtime",
+            )
             p.add_argument("--render", action="store_true")
         if name == "install":
             p.add_argument("--asset")
@@ -345,6 +363,7 @@ def main():
             p.add_argument("--equipment-directory")
             p.add_argument("--replace-loader", action="store_true")
     p = commands.add_parser("uninstall")
+    p.add_argument("--host", default="ds1ptde")
     p.add_argument("--check-only", action="store_true")
     p = commands.add_parser("new-character")
     p.add_argument("id")
@@ -355,9 +374,11 @@ def main():
         p.add_argument("--input", required=True)
         p.add_argument("--output", required=True)
     p = commands.add_parser("prepare-collision")
+    p.add_argument("--host", default="ds1ptde")
     p.add_argument("--map", required=True)
     p.add_argument("--output", required=True)
     p = commands.add_parser("prepare-equipment")
+    p.add_argument("--host", default="ds1ptde")
     p.add_argument("--game", default=str(GAME))
     p.add_argument("--output", required=True)
     p = commands.add_parser("preview-equipment")
@@ -368,13 +389,15 @@ def main():
     p.add_argument("--equipment-directory", required=True)
     p.add_argument("--output", required=True)
     args = parser.parse_args()
+    if hasattr(args, "host"):
+        edition(args.host)
     if args.command == "format":
         format_sources(args.check)
     elif args.command == "qa":
         run(
             [
                 sys.executable,
-                FRAMEWORK / "qa",
+                FRAMEWORK / "hosts/ds1ptde/qa",
                 *([args.scenario] if args.scenario else []),
                 *args.arguments,
             ]
@@ -429,7 +452,7 @@ def main():
             run(
                 [
                     sys.executable,
-                    FRAMEWORK / "qa/render_equipment.py",
+                    FRAMEWORK / "hosts/ds1ptde/qa/render_equipment.py",
                     output / "poses.bin",
                     "--props",
                     args.equipment_directory,
@@ -453,7 +476,12 @@ def main():
     elif args.command == "test":
         from framework_tests import test
 
-        test(args.character, args.asset, args.runtime, args.shared_only, args.render)
+        if args.portable_assets:
+            from framework_portability import check_owned_character
+
+            check_owned_character(args.character, args.asset, args.runtime)
+        else:
+            test(args.character, args.asset, args.runtime, args.shared_only, args.render)
     elif args.command == "install":
         from framework_install import install
 

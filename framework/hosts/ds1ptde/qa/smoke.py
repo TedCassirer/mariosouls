@@ -53,7 +53,7 @@ def main(pid):
         assert all(r["hp"] == baseline["hp"] for e in evidence for r in e["samples"]), (
             "Unexpected HP change in safe scene"
         )
-        out = Path(__file__).resolve().parents[2] / "work/framework-build/live-smoke.json"
+        out = Path(__file__).resolve().parents[4] / "work/framework-build/live-smoke.json"
         out.write_text(
             json.dumps(
                 {

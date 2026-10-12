@@ -69,6 +69,6 @@ live visual confirmation. Controller use, enemy hits/lethal damage while aiming
 and every interruption path have not all been verified live.
 
 See the [archived observations and camera investigation](https://github.com/TedCassirer/mariosouls/blob/53a8e61/framework/docs/CANNON.md),
-[current coverage](VALIDATION.md) and guarded [launcher QA scenario](../qa/README.md).
+[current coverage](VALIDATION.md) and guarded [launcher QA scenario](../hosts/ds1ptde/qa/README.md).
 Some launch trajectories reach roofs, awkward ledges or out-of-bounds areas;
 this integration does not make every direction a safe shortcut.

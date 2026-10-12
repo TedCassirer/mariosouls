@@ -10,7 +10,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-QA = Path(__file__).resolve().parents[2] / "framework/qa"
+QA = Path(__file__).resolve().parents[2] / "framework/hosts/ds1ptde/qa"
 
 
 class QaCommands(unittest.TestCase):

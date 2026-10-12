@@ -7,6 +7,8 @@
 #include <cassert>
 #include <cstdio>
 #include <initializer_list>
+#include <cstring>
+#include "../hosts/ds1ptde/render_device.h"
 #include "../hosts/ds1ptde/render_surfaces.h"
 
 static bool renderWanted() {
@@ -15,24 +17,34 @@ static bool renderWanted() {
 
 static bool failDraw = false;
 
-static bool draw(IDirect3DDevice9 *d) {
+static bool draw(IDirect3DDevice9 *d, bool = false,
+                 SCRenderAPI::Phase phase = SCRenderAPI::Phase::Scene) {
+    assert(phase == SCRenderAPI::Phase::BeforeHUD);
     if (failDraw)
         return false;
     D3DVIEWPORT9 v = {};
     d->GetViewport(&v);
 
-    struct V {
-        float x, y, z, w;
-        DWORD c;
-    };
-
-    V q[] = {{-.5f, -.5f, .5f, 1, 0xffff0000},
-             {v.Width - .5f, -.5f, .5f, 1, 0xffff0000},
-             {-.5f, v.Height - .5f, .5f, 1, 0xffff0000},
-             {v.Width - .5f, v.Height - .5f, .5f, 1, 0xffff0000}};
+    SCRenderAPI::Vertex q[] = {{0, 0, .5f, 0xffff0000, 0xffffffff, 0, 0},
+                               {float(v.Width), 0, .5f, 0xffff0000, 0xffffffff, 0, 0},
+                               {0, float(v.Height), .5f, 0xffff0000, 0xffffffff, 0, 0},
+                               {float(v.Width), 0, .5f, 0xffff0000, 0xffffffff, 0, 0},
+                               {float(v.Width), float(v.Height), .5f, 0xffff0000, 0xffffffff, 0, 0},
+                               {0, float(v.Height), .5f, 0xffff0000, 0xffffffff, 0, 0}};
+    IDirect3DTexture9 *unusedAtlas = nullptr;
+    PTDERenderer renderer(d, unusedAtlas);
+    SCRenderAPI::Camera camera{};
+    for (int n : {0, 5, 10, 15})
+        camera.world[n] = camera.view[n] = 1;
+    camera.projection[0] = 2.f / v.Width;
+    camera.projection[5] = -2.f / v.Height;
+    camera.projection[10] = camera.projection[15] = 1;
+    camera.projection[12] = -1;
+    camera.projection[13] = 1;
+    renderer.camera(camera);
     d->SetVertexShader(nullptr);
     d->SetPixelShader(nullptr);
-    d->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
+    d->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX1);
     d->SetTexture(0, nullptr);
     d->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
     d->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
@@ -45,7 +57,7 @@ static bool draw(IDirect3DDevice9 *d) {
     d->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     d->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     d->SetRenderState(D3DRS_LIGHTING, FALSE);
-    return SUCCEEDED(d->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, q, sizeof(V)));
+    return renderer.mesh({q, 2}, {phase, sceneDepth != nullptr});
 }
 
 #include "../hosts/ds1ptde/render_composite.h"
@@ -113,6 +125,26 @@ int main() {
     pp.BackBufferWidth = 32;
     pp.BackBufferHeight = 32;
     ok(api->CreateDevice(0, D3DDEVTYPE_HAL, w, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &pp, &d));
+    IDirect3DTexture9 *atlas = nullptr;
+    PTDERenderer backend(d, atlas);
+    uint8_t rgba[] = {12, 34, 56, 255};
+    assert(backend.texture({rgba, 1, 1}));
+    D3DLOCKED_RECT lock{};
+    ok(atlas->LockRect(0, &lock, nullptr, D3DLOCK_READONLY));
+    assert(*static_cast<uint32_t *>(lock.pBits) == 0xff0c2238u);
+    atlas->UnlockRect(0);
+    SCRenderAPI::Camera camera{};
+    for (int n : {0, 5, 10, 15})
+        camera.world[n] = camera.view[n] = camera.projection[n] = 1;
+    backend.camera(camera);
+    D3DMATRIX observed{};
+    ok(d->GetTransform(D3DTS_VIEW, &observed));
+    assert(!memcmp(&observed, camera.view, sizeof(observed)));
+    assert(!backend.mesh({nullptr, 0}, {SCRenderAPI::Phase::BeforeHUD, false}));
+    assert(backend.mesh({nullptr, 0}, {SCRenderAPI::Phase::BeforeHUD, true}));
+    atlas->Release();
+    atlas = nullptr;
+    puts("PASS D3D9 backend RGBA upload, camera layout and depth requirement");
     D3DVERTEXELEMENT9 elements[] = {{0, 0, D3DDECLTYPE_FLOAT3, 0, D3DDECLUSAGE_POSITION, 0},
                                     {0, 12, D3DDECLTYPE_UBYTE4N, 0, D3DDECLUSAGE_COLOR, 0},
                                     {0, 16, D3DDECLTYPE_FLOAT2, 0, D3DDECLUSAGE_TEXCOORD, 0},

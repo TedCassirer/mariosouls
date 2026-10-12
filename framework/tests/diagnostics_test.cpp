@@ -23,9 +23,9 @@ int main(int argc, char **argv) {
         if (std::string(argv[1]) == "--review") {
             Journal j;
             j.observe(frame(250));
-            puts(
-                reviewHTML(j.body("mario64", "0.9.0-dev.1", "test-build", "test-fingerprint", true))
-                    .c_str());
+            puts(reviewHTML(j.body("mario64", "0.9.0-dev.1", "test-build", "test-fingerprint", true,
+                                   "ds1ptde"))
+                     .c_str());
             return 0;
         }
         if (std::string(argv[1]) == "--stress") {
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
                 f.attack = i % 3;
                 j.observe(f);
             }
-            puts(j.json("mario64", "v", "c", "s", false).c_str());
+            puts(j.json("mario64", "v", "c", "s", false, "ds1ptde").c_str());
             return 0;
         }
         if (std::string(argv[1]) == "--wrap") {
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
             j.observe(frame(0xffffff00));
             j.observe(frame(0xfffffff0));
             j.observe(frame(0x00000100));
-            puts(j.json("mario64", "v", "c", "s", false).c_str());
+            puts(j.json("mario64", "v", "c", "s", false, "ds1ptde").c_str());
             return 0;
         }
         Journal j;
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
         f.position[0] = std::numeric_limits<float>::infinity();
         f.guestPosition[0] = std::numeric_limits<float>::quiet_NaN();
         j.observe(f);
-        puts(j.json("mario64", "0.9.0", "abc123", "fingerprint", false).c_str());
+        puts(j.json("mario64", "0.9.0", "abc123", "fingerprint", false, "ds1ptde").c_str());
         return 0;
     }
     assert(identifier("mario64") == "mario64" && identifier("C:\\Users\\name") == "unknown");
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
         f.attack = i % 3;
         journal.observe(f);
     }
-    auto json = journal.json("mario64", "v", "c", "s", false);
+    auto json = journal.json("mario64", "v", "c", "s", false, "ds1ptde");
     assert(json.size() < 512 * 1024);
     assert(json.find("\"time_ms\":0,") == std::string::npos &&
            json.find("\"time_ms\":2499750,") != std::string::npos);

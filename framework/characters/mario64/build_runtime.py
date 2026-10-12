@@ -23,7 +23,7 @@ SOURCE_DIRECTORIES = [
 ]
 
 
-def compiler_command(source_tree, output, toolchain):
+def compiler_command(source_tree, output, toolchain, target="x86-windows-gnu"):
     """Construct the pinned compiler invocation from the staged source tree."""
     sources = [str(p) for d in SOURCE_DIRECTORIES for p in sorted((source_tree / d).glob("*.c"))]
     sources.append(str(Path(__file__).with_name("runtime_body.c")))
@@ -31,7 +31,7 @@ def compiler_command(source_tree, output, toolchain):
         str(toolchain),
         "cc",
         "-target",
-        "x86-windows-gnu",
+        target,
         "-std=gnu11",
         "-O2",
         "-fno-strict-aliasing",
@@ -54,8 +54,10 @@ def compiler_command(source_tree, output, toolchain):
     return command
 
 
-def build_runtime(output):
+def build_runtime(output, target="x86-windows-gnu"):
     """Stage private sources and build the runtime, leaving the checkout untouched."""
+    if target not in ("x86-windows-gnu", "x86_64-windows-gnu"):
+        raise ValueError("Unsupported guest runtime validation target")
     output.mkdir(parents=True, exist_ok=True)
     subprocess.run([sys.executable, ROOT / "tools/dependencies.py"], check=True)
     checkout = ROOT / "work/libsm64"
@@ -64,7 +66,7 @@ def build_runtime(output):
     shutil.copytree(checkout / "src", staged / "src", dirs_exist_ok=True)
     prepare_geometry(ROOT, staged)
     prepare(staged)
-    command = compiler_command(staged, output, toolchain)
+    command = compiler_command(staged, output, toolchain, target)
     log = output / "runtime.build.log"
     print("Building Mario runtime from pinned sources", flush=True)
     with log.open("w") as stream:
@@ -79,8 +81,13 @@ def build_runtime(output):
 def main(arguments=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--target", choices=["x86-windows-gnu", "x86_64-windows-gnu"], default="x86-windows-gnu"
+    )
     args = parser.parse_args(arguments)
-    return build_runtime(args.output)
+    if args.target == "x86-windows-gnu":
+        return build_runtime(args.output)
+    return build_runtime(args.output, args.target)
 
 
 if __name__ == "__main__":

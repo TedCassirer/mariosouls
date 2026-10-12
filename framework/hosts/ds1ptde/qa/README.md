@@ -63,6 +63,6 @@ scenario. Exit the game through its native menu.
 
 Write captures and measurements to ignored `work/` or `outputs/`. Do not commit
 saves, raw process observations or game-derived images. Record concise findings
-in [Validation](../docs/VALIDATION.md), distinguishing live observations from
-offline test results. See [Testing](../../docs/TESTING.md) for the remaining
+in [Validation](../../../docs/VALIDATION.md), distinguishing live observations from
+offline test results. See [Testing](../../../../docs/TESTING.md) for the remaining
 release matrix.

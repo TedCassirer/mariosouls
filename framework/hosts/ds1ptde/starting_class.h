@@ -10,7 +10,8 @@ static float classPreviewYaw = 0, classPreviewAspect = 2968.f / 3768.f;
 static bool classPreviewFace = false;
 
 static void classConfigure() {
-    auto entry = (SC_GetClassProfile)GetProcAddress(adapterModule, "SoulsCharacterGetClassProfile");
+    auto entry =
+        (SC_GetClassProfile)GetProcAddress(adapter.module, "SoulsCharacterGetClassProfile");
     auto p = entry ? entry(SC_CLASS_PROFILE_VERSION, sizeof(SC_ClassProfile)) : nullptr;
     classEnabled = GetPrivateProfileIntA("Framework", "StartingClass", 1, ini) && SCClass::valid(p);
     if (classEnabled) {
@@ -97,10 +98,10 @@ static void classInstall() {
 static void classPreviewRelease() {
     if (classPreview >= 0) {
         visualReset();
-        guest->destroy(classPreview);
+        adapter.api->destroy(classPreview);
         classPreview = -1;
-        guest->surfaces(nullptr, 0, 0);
-        characterMesh.view.numTrianglesUsed = 0;
+        adapter.api->surfaces(nullptr, 0, 0);
+        adapter.mesh.view.numTrianglesUsed = 0;
     }
     classPreviewActive = false;
 }
@@ -110,7 +111,7 @@ static void classTick() {
     bool wanted = classCreationMenu() && classSelected();
     if (!wanted)
         classPreviewRelease();
-    if (wanted && !characterOwned() && character < 0) {
+    if (wanted && !characterOwned() && characterSession.instance.id < 0) {
         if (classPreview < 0) {
             // Preview-only floor. No world physics, health, input capture or native actor.
             SC_Surface floor = {};
@@ -119,8 +120,8 @@ static void classTick() {
             floor.vertices[1][2] = 1000;
             floor.vertices[2][0] = 1000;
             floor.vertices[2][2] = -1000;
-            guest->surfaces(&floor, 1, 0);
-            classPreview = guest->create(0, 0, 0, 0);
+            adapter.api->surfaces(&floor, 1, 0);
+            classPreview = adapter.api->create(0, 0, 0, 0);
         }
         static DWORD last = 0;
         DWORD now = GetTickCount();
@@ -132,7 +133,8 @@ static void classTick() {
             SC_Pose pose = {};
             pose.phase = -1;
             pose.yaw = classPreviewYaw;
-            classPreviewActive = guestPose(classPreview, &pose, &state, &characterMesh.view);
+            classPreviewActive = guestPose(classPreview, &pose, &characterSession.instance.state,
+                                           &adapter.mesh.view);
             if (!classPreviewActive)
                 classPreviewRelease();
         }
@@ -142,8 +144,8 @@ static void classTick() {
     auto decision = classSelection.observe(player, known, classEnabled && matches, currentMap(),
                                            player && read<int>(player + 0x2d4) > 0);
     if (decision == SCClass::Decision::Enable) {
-        characterControl.session.request(true);
+        characterSession.control.session.request(true);
     } else if (decision == SCClass::Decision::Disable) {
-        characterControl.session.request(false);
+        characterSession.control.session.request(false);
     }
 }

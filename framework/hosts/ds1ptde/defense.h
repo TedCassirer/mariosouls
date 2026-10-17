@@ -8,9 +8,10 @@ extern "C" {
 __attribute__((used)) void *defenseOriginalRegen = nullptr, *defenseOriginalHit = nullptr;
 
 __attribute__((used, noinline)) void __cdecl characterPoiseAdjust(float *value, uintptr_t actor) {
-    if (defenseReady && characterOwned() && actor == ownedActor && actor == player &&
-        chain(gameSlots.player, {0, 4, 0}) == actor &&
-        read<uintptr_t>(actor + 0x28) == ownedMovement && read<int>(actor + 0x2d4) > 0)
+    if (defenseReady && characterOwned() && actor == characterSession.native.actor &&
+        actor == player && chain(gameSlots.player, {0, 4, 0}) == actor &&
+        read<uintptr_t>(actor + 0x28) == characterSession.native.movement &&
+        read<int>(actor + 0x2d4) > 0)
         *value = SCReaction::poise(*value, defenseProfile.bonusPoise);
 }
 }
@@ -18,13 +19,13 @@ __attribute__((used, noinline)) void __cdecl characterPoiseAdjust(float *value, 
 
 static void defenseConfigure() {
     auto entry =
-        (SC_GetReactionProfile)GetProcAddress(adapterModule, "SoulsCharacterGetReactionProfile");
+        (SC_GetReactionProfile)GetProcAddress(adapter.module, "SoulsCharacterGetReactionProfile");
     const auto p = entry ? entry(SC_REACTION_PROFILE_VERSION, sizeof(SC_ReactionProfile)) : nullptr;
     defenseSupported = SCReaction::valid(p);
     if (!defenseSupported)
         return;
     defenseProfile = *p;
-    std::string section = std::string("Defense.") + profile->id;
+    std::string section = std::string("Defense.") + adapter.profile->id;
     defenseProfile.bonusPoise =
         float(GetPrivateProfileIntA(section.c_str(), "BonusPoise", int(p->bonusPoise), ini));
     defenseProfile.lightReactionSpeed =
@@ -36,7 +37,7 @@ static void defenseConfigure() {
     if (!SCReaction::valid(&defenseProfile))
         defenseProfile = *p;
     auto recoveryEntry =
-        (SC_GetRecoveryProfile)GetProcAddress(adapterModule, "SoulsCharacterGetRecoveryProfile");
+        (SC_GetRecoveryProfile)GetProcAddress(adapter.module, "SoulsCharacterGetRecoveryProfile");
     const auto recovery =
         recoveryEntry ? recoveryEntry(SC_RECOVERY_PROFILE_VERSION, sizeof(SC_RecoveryProfile))
                       : nullptr;

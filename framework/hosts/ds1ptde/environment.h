@@ -8,7 +8,7 @@ static uint32_t environmentFrame = 0;
 
 static void environmentConfigure() {
     auto entry =
-        (SC_GetEnvironmentAPI)GetProcAddress(adapterModule, "SoulsCharacterGetEnvironmentAPI");
+        (SC_GetEnvironmentAPI)GetProcAddress(adapter.module, "SoulsCharacterGetEnvironmentAPI");
     const auto api = entry ? entry(SC_ENVIRONMENT_VERSION, sizeof(SC_EnvironmentAPI)) : nullptr;
     environmentAPI = SCEnvironment::valid(api) ? api : nullptr;
     environmentReady = environmentAPI && PTDEEnvironment::available();
@@ -17,8 +17,8 @@ static void environmentConfigure() {
 }
 
 static uint32_t environmentObserve(bool focus) {
-    if (!environmentAPI || !characterOwned() || character < 0 || player != ownedActor ||
-        read<int>(player + 0x2d4) <= 0)
+    if (!environmentAPI || !characterOwned() || characterSession.instance.id < 0 ||
+        player != characterSession.native.actor || read<int>(player + 0x2d4) <= 0)
         return 0;
     SC_Environment e{sizeof(e), SC_ENVIRONMENT_BURNING_FLOOR, 0, GetTickCount()};
     PTDEEnvironment::Effects effects;
@@ -30,14 +30,14 @@ static uint32_t environmentObserve(bool focus) {
         e.flags |= SC_ENV_CONTACT;
     if ((valid && effects.protectedLava) || (rings && (ring1 == 139 || ring2 == 139)))
         e.flags |= SC_ENV_PROTECTED;
-    if ((state.flags & SC_GROUNDED) || worldNativeSupport.supported())
+    if ((characterSession.instance.state.flags & SC_GROUNDED) || worldNativeSupport.supported())
         e.flags |= SC_ENV_GROUNDED;
     auto native = nativeInteractionState();
     PTDERecovery::State passive;
     const bool ordinary = nativeRecoveryReady && PTDERecovery::inspect(player, passive) &&
                           PTDERecovery::kind(passive.id) != PTDEReaction::Kind::Other;
     const int allowed = nativeActiveAllowed();
-    const uintptr_t tracks = read<uint32_t>(ownedMovement + 0x18);
+    const uintptr_t tracks = read<uint32_t>(characterSession.native.movement + 0x18);
     const bool paired = !tracks || (read<uint32_t>(tracks + 28 * 0x9c + 4) != 0xffffffffu &&
                                     read<int>(tracks + 28 * 0x9c) >= 0);
     if (focus && native.valid && !native.menu && !native.event && !native.ladder &&
@@ -49,7 +49,7 @@ static uint32_t environmentObserve(bool focus) {
             e.flags |= SC_ENV_CONTACT | SC_ENV_CONTROL_ALLOWED;
         }
     }
-    const uint32_t result = environmentAPI->observe(character, &e);
+    const uint32_t result = environmentAPI->observe(characterSession.instance.id, &e);
     if (result & SC_ENV_REACTION_STARTED) {
         combatReset();
     }

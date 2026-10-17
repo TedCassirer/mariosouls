@@ -31,13 +31,13 @@ Class selection/manual intent, native identity, locomotion ownership and visual 
 
 Movement uses a bounded request/acknowledgement bridge. Native collision/support is reconciled before another guest tick or outgoing contact. Seamless map changes refresh terrain without discarding a still-valid actor/guest binding; true actor replacement invalidates stale requests and targets. A failed replacement draw must not hide the only visible player.
 
-The PTDE host remains one translation unit. Its feature headers share internal state and have an explicit include order; they are not independent public modules. See [PTDE source map](hosts/ds1ptde/README.md) and [Mario ownership](characters/mario64/README.md).
+The PTDE host remains one translation unit with explicit include order. `character_state.h` now owns adapter resources and the non-copyable gameplay/presentation session, while neutral mesh storage lives in `core/character_storage.h`. Preview/cinematic/audio and feature-specific hook/lease state still have edition-local owners/statics; the fragments are not independent public modules. See [PTDE source map](hosts/ds1ptde/README.md) and [Mario ownership](characters/mario64/README.md).
 
 ## Rendering and time
 
 The internal [renderer interface](sdk/render_api.h) accepts borrowed meshes/textures, camera matrices, depth availability and scene/before-HUD/preview phases. PTDE implements it with D3D9, including DSfix scene/UI/depth handling. No DX11 backend exists.
 
-Character, equipment, cannon, impact flashes, diagnostic lines and screen text/reticles use that boundary. CPU geometry helpers stay in core; D3D9 resources/pipeline state stay in PTDE's backend. Native camera extraction, scene/UI recognition and composition remain edition-specific.
+Character, equipment, cannon, impact flashes, diagnostic lines and screen text/reticles use that boundary. CPU geometry helpers stay in core; D3D9 resources/pipeline state stay in PTDE's backend. Native camera extraction, scene/UI recognition and composition remain edition-specific. Character/camera assembly uses `core/character_presentation.h`; F8 captures neutral observations in PTDE and reuses `core/debug_presentation.h` for shape/panel assembly. See the concrete [presentation-first port handoff](docs/REMASTERED_HANDOFF.md).
 
 Guest simulation targets 30 Hz independently of render cadence. The current PTDE caller consumes at most one tick per update and waits for native motion acknowledgement; low update rates can still slow simulation. Render-only interpolation smooths validated mesh/attachment and native-anchor snapshots without advancing simulation or changing hit detection.
 

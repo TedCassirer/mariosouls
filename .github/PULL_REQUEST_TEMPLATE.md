@@ -8,6 +8,8 @@ For framework changes, identify the owning host/core/SDK/adapter/tool responsibi
 
 Check the [architecture rules](../framework/docs/ARCHITECTURE.md): no native/graphics dependencies in core/SDK, no guest internals/character-name gameplay branches in hosts, no native game access in adapters and no gameplay work in drawing. Distinguish intended design from remaining implementation debt; explain any affected bounded exception instead of silently expanding it.
 
+For presentation/session changes, identify the snapshot producer, CPU buffer owner, borrow duration, current-actor validation and native restoration authority. Keep native observations separate from shared character/debug builders; report remaining edition-local state/include-order debt.
+
 ## Validation
 
 List compilation actually run and its result. Record manual game checks separately, including build/settings/area, and identify unverified behavior. A build or scaffold is not gameplay/port evidence.

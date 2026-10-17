@@ -9,10 +9,11 @@ static void combatObjects() {
     if (!combatUnarmedReady())
         return;
     if (!characterOwned() || !worldObjectDamageReady || !combatEnabled ||
-        !hostPermits(SCHost::Operation::Combat) || !characterWindow.active(state, *profile))
+        !hostPermits(SCHost::Operation::Combat) ||
+        !characterWindow.active(characterSession.instance.state, *adapter.profile))
         return;
     int move = characterWindow.move;
-    if (move < 0 || (profile->attacks[move].flags & SC_ATTACK_NO_OBJECTS))
+    if (move < 0 || (adapter.profile->attacks[move].flags & SC_ATTACK_NO_OBJECTS))
         return;
     uintptr_t manager = read<uintptr_t>(0x137d5f8), maps = read<uintptr_t>(manager + 0x20);
     int count = read<int>(manager + 0x1c);
@@ -20,7 +21,8 @@ static void combatObjects() {
         return;
     int serial = characterWindow.serial;
     Vec p = read<Vec>(playerPhysics + 0x10),
-        forward = {sinf(state.faceAngle), 0, cosf(state.faceAngle)};
+        forward = {sinf(characterSession.instance.state.faceAngle), 0,
+                   cosf(characterSession.instance.state.faceAngle)};
     for (int m = 0; m < count; m++) {
         uintptr_t map = maps + m * 0xec, objects = read<uintptr_t>(map + 0x40);
         int n = read<int>(map + 0x3c);
@@ -29,8 +31,9 @@ static void combatObjects() {
         for (int j = 0; j < n; j++) {
             uintptr_t obj = objects + j * 0xc0;
             int handle = int(read<uint32_t>(obj + 4));
-            if (!characterWindow.canHit(handle, *profile) || read<int16_t>(obj + 0x2a) <= 0 ||
-                !(read<uint8_t>(obj + 0x2d) & 0x40) || !read<uintptr_t>(obj + 0x90))
+            if (!characterWindow.canHit(handle, *adapter.profile) ||
+                read<int16_t>(obj + 0x2a) <= 0 || !(read<uint8_t>(obj + 0x2d) & 0x40) ||
+                !read<uintptr_t>(obj + 0x90))
                 continue;
             Vec at = {read<float>(obj + 0x6c), read<float>(obj + 0x7c) + .7f,
                       read<float>(obj + 0x8c)};
@@ -39,9 +42,10 @@ static void combatObjects() {
                     dot(c.point - p, c.point - p) < dot(at - p, at - p))
                     at = c.point;
             Vec delta = at - (p + Vec{0, .7f, 0});
-            float radius = profile->attacks[move].rangeCm * .01f;
+            float radius = adapter.profile->attacks[move].rangeCm * .01f;
             if (fabsf(delta.y) > 1.5f || delta.x * delta.x + delta.z * delta.z > radius * radius ||
-                (!(profile->attacks[move].flags & SC_ATTACK_RADIAL) && dot(delta, forward) < 0))
+                (!(adapter.profile->attacks[move].flags & SC_ATTACK_RADIAL) &&
+                 dot(delta, forward) < 0))
                 continue;
             if (!lineClear(p + Vec{0, .7f, 0}, at) || !worldLineClear(p + Vec{0, .7f, 0}, at, obj))
                 continue;

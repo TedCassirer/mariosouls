@@ -26,7 +26,7 @@ static void cutsceneUnhide(const PTDECutscene::Frame &current) {
 static void cutsceneRelease() {
     cutsceneUnhide(cutsceneFrame);
     if (cutsceneCharacter >= 0)
-        guest->destroy(cutsceneCharacter);
+        adapter.api->destroy(cutsceneCharacter);
     cutsceneCharacter = -1;
     cutsceneMesh.view.numTrianglesUsed = 0;
     cutsceneRendered = false;
@@ -35,7 +35,7 @@ static void cutsceneRelease() {
 static bool cutsceneVisible() {
     return cutsceneFrame.active && cutsceneFrame.usable && cutsceneFrame.visible &&
            cutsceneCharacter >= 0 && cutsceneMesh.view.numTrianglesUsed &&
-           characterControl.session.requested();
+           characterSession.control.session.requested();
 }
 
 static void cutsceneObserve() {
@@ -43,7 +43,7 @@ static void cutsceneObserve() {
     if (!current.same(cutsceneFrame)) {
         cutsceneUnhide(current);
         if (cutsceneCharacter >= 0)
-            guest->destroy(cutsceneCharacter);
+            adapter.api->destroy(cutsceneCharacter);
         cutsceneCharacter = -1;
         cutsceneMesh.view.numTrianglesUsed = 0;
         cutsceneRendered = false;
@@ -53,7 +53,7 @@ static void cutsceneObserve() {
 }
 
 static void cutsceneTick() {
-    if (!ready || !characterControl.session.requested() || !cutsceneFrame.active ||
+    if (!ready || !characterSession.control.session.requested() || !cutsceneFrame.active ||
         !cutsceneFrame.usable || !cutsceneFrame.visible) {
         cutsceneRelease();
         return;
@@ -63,8 +63,8 @@ static void cutsceneTick() {
         if (cutsceneRetry && int32_t(now - cutsceneRetry) < 0)
             return;
         classPreviewRelease();
-        cutsceneMesh.allocate(*profile);
-        cutsceneCharacter = guest->create(0, 0, 0, -3.14159265f);
+        cutsceneMesh.allocate(*adapter.profile);
+        cutsceneCharacter = adapter.api->create(0, 0, 0, -3.14159265f);
         cutscenePoseTime = GetTickCount() - 34;
     }
     if (cutsceneCharacter < 0) {
@@ -76,7 +76,7 @@ static void cutsceneTick() {
         pose.kind = SC_POSE_NEUTRAL;
         pose.phase = -1;
         pose.yaw = -3.14159265f;
-        if (!guest->pose(cutsceneCharacter, &pose, &cutsceneState, &cutsceneMesh.view) ||
+        if (!adapter.api->pose(cutsceneCharacter, &pose, &cutsceneState, &cutsceneMesh.view) ||
             !cutsceneMesh.view.numTrianglesUsed) {
             cutsceneRelease();
             cutsceneRetry = now + 1000;

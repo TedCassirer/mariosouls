@@ -4,7 +4,7 @@ MarioSouls has a Windows installer candidate and a source-checkout workflow. Bot
 
 ## Windows installer candidate
 
-`MarioSouls-<version>-Setup.exe` is an experimental candidate, not yet a published or fully verified player release. Once approved, download it only from this project's GitHub Releases.
+`MarioSouls-<version>-Setup.exe` is an experimental installer preview, not a fully verified stable release. Download it only from this project's [GitHub Releases](https://github.com/TedCassirer/mariosouls/releases), and read the verification limits in its release notes. Releases in a private repository require repository access.
 
 1. Close Dark Souls. Open the installer on Windows 10/11 x64 with .NET Framework 4.8.
 2. Choose PTDE's `DATA` folder and your own US SM64 8 MiB big-endian `.z64` ROM.

@@ -187,7 +187,7 @@ static NativeEquipmentItem equipmentItem(int id) {
 
 static NativeEquipment equipmentRead() {
     NativeEquipment equipment;
-    if (!player || player != ownedActor || read<int>(player + 0x2d4) <= 0)
+    if (!player || player != characterSession.native.actor || read<int>(player + 0x2d4) <= 0)
         return equipment;
     uintptr_t stats = chain(0x1378700, {0, 8});
     if (!stats || !get(stats + 0x230, equipment.stance) ||
@@ -219,7 +219,7 @@ static bool equipmentNativeGuard() {
                        ? 1
                        : -1;
     }
-    if (verified != 1 || !player || player != ownedActor)
+    if (verified != 1 || !player || player != characterSession.native.actor)
         return false;
     uintptr_t movement = chain(player + 0x28, {0, 0x2c});
     uint8_t flags = 0;
@@ -288,7 +288,7 @@ static bool equipmentBlockPacketLayout() {
 static void equipmentObserveNativeBlock(uintptr_t actor, int currentStamina, int value,
                                         uintptr_t caller, uintptr_t packet) {
     if (caller != 0xe6c1e6 || !characterOwned() || nativeActionOwned() || actor != player ||
-        actor != ownedActor)
+        actor != characterSession.native.actor)
         return;
     uint8_t blocked = 0, broken = 255, breakResult = 255;
     int damage = -1, drain = -1, hp = 0, maxHP = 0;
@@ -328,7 +328,7 @@ static bool equipmentConsumeNativeBlock(uintptr_t actor, int hpBefore, int hpAft
     equipmentBlockImpact = {};
     ReleaseSRWLockExclusive(&equipmentBlockImpactLock);
     bool matched = impact.valid && characterOwned() && !nativeActionOwned() && actor == player &&
-                   actor == ownedActor && impact.actor == actor && hpAfter > 0 &&
+                   actor == characterSession.native.actor && impact.actor == actor && hpAfter > 0 &&
                    hpBefore > hpAfter && impact.hpBefore == hpBefore && impact.hpAfter == hpAfter &&
                    DWORD(GetTickCount() - impact.observed) <= 100;
     return matched;
@@ -341,7 +341,7 @@ static bool equipmentConsumeNativeGuardBreak(uintptr_t actor) {
     ReleaseSRWLockExclusive(&equipmentBlockImpactLock);
     int hp = 0, stamina = 0;
     bool matched = impact.valid && characterOwned() && !nativeActionOwned() && actor == player &&
-                   actor == ownedActor && impact.actor == actor &&
+                   actor == characterSession.native.actor && impact.actor == actor &&
                    DWORD(GetTickCount() - impact.observed) <= 100 && get(actor + 0x2d4, hp) &&
                    hp == impact.hp && get(actor + 0x2e4, stamina) && stamina == impact.stamina;
     return matched;

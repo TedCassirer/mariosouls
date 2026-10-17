@@ -27,11 +27,12 @@ static int nativeActiveAllowed(uintptr_t actor = player, bool captured = true) {
         logMessage("Native passive action predicate signature=%d", verified == 1);
     }
     if (verified != 1 || !actor || chain(gameSlots.player, {0, 4, 0}) != actor ||
-        (captured && actor != ownedActor))
+        (captured && actor != characterSession.native.actor))
         return -1;
     uintptr_t movement = 0, action = 0, owner = 0;
     uint8_t allowed = 255;
-    if (!get(actor + 0x28, movement) || !movement || (captured && movement != ownedMovement) ||
+    if (!get(actor + 0x28, movement) || !movement ||
+        (captured && movement != characterSession.native.movement) ||
         !get(movement + 0x2c, action) || !action || !get(action + 0x10, owner) ||
         owner != movement || !get(action + 0x3c, allowed) || allowed > 1)
         return -1;
@@ -110,8 +111,8 @@ static bool nativeReactionTick(double &acc, bool focus, bool priorityReaction = 
     Vec host{};
     float nativeYaw = 0;
     int hp = 0, stamina = 0;
-    if (!characterOwned() || nativeActionOwned() || character < 0 || !playerPhysics ||
-        !playerCamera || !get(playerPhysics + 0x10, host) || !isfinite(host.x) ||
+    if (!characterOwned() || nativeActionOwned() || characterSession.instance.id < 0 ||
+        !playerPhysics || !playerCamera || !get(playerPhysics + 0x10, host) || !isfinite(host.x) ||
         !isfinite(host.y) || !isfinite(host.z) || !get(playerPhysics + 4, nativeYaw) ||
         !isfinite(nativeYaw) || !get(player + 0x2d4, hp) || hp <= 0 ||
         !get(player + 0x2e4, stamina) || stamina < -50 ||
@@ -138,7 +139,7 @@ static bool nativeReactionTick(double &acc, bool focus, bool priorityReaction = 
         worldRelease();
         combatReset();
         actionReset();
-        characterControl.resetSimulation();
+        characterSession.control.resetSimulation();
         pendingNativeHurt = 0;
 
         // Emit the reaction pose immediately, then keep ordinary fixed-rate posing.
@@ -162,9 +163,9 @@ static bool nativeReactionTick(double &acc, bool focus, bool priorityReaction = 
     InterlockedExchange(&equipmentGuardInput, 0);
     InterlockedExchange(&actionRoute, LONG(ActionRoute::Locked));
     actionFlags(true);
-    Vec local = (host - origin) * 100;
+    Vec local = (host - characterSession.instance.origin) * 100;
     if (fabsf(local.x) > 4000 || fabsf(local.y) > 8000 || fabsf(local.z) > 4000) {
-        origin = host;
+        characterSession.instance.origin = host;
         rebuildSurfaces();
         local = {0, 0, 0};
     }
@@ -184,8 +185,9 @@ static bool nativeReactionTick(double &acc, bool focus, bool priorityReaction = 
         if (priority) {
             // Keep the higher-priority guest action intact while the native
             // ordinary reaction executes its normal exit on the game thread.
-            guest->setPosition(character, local.x, local.y, local.z);
-        } else if (!guestPose(character, &pose, &state, &characterMesh.view)) {
+            adapter.api->setPosition(characterSession.instance.id, local.x, local.y, local.z);
+        } else if (!guestPose(characterSession.instance.id, &pose, &characterSession.instance.state,
+                              &adapter.mesh.view)) {
             logMessage("Native reaction pose rejected; native handback");
             releaseControl();
             acc = 0;
@@ -213,16 +215,17 @@ static bool nativeReactionTick(double &acc, bool focus, bool priorityReaction = 
                                         defenseReady ? defenseProfile.returnQuietMs : 100)) {
         nativeRecoveryReset();
         if (priority)
-            guest->setPosition(character, local.x, local.y, local.z);
+            adapter.api->setPosition(characterSession.instance.id, local.x, local.y, local.z);
         else
-            guest->resume(character, local.x, local.y, local.z, pose.yaw);
-        state.position[0] = local.x;
-        state.position[1] = local.y;
-        state.position[2] = local.z;
-        state.velocity[0] = state.velocity[1] = state.velocity[2] = 0;
-        state.forwardSpeed = 0;
-        state.faceAngle = pose.yaw;
-        SCState::clearCombat(state);
+            adapter.api->resume(characterSession.instance.id, local.x, local.y, local.z, pose.yaw);
+        characterSession.instance.state.position[0] = local.x;
+        characterSession.instance.state.position[1] = local.y;
+        characterSession.instance.state.position[2] = local.z;
+        characterSession.instance.state.velocity[0] = characterSession.instance.state.velocity[1] =
+            characterSession.instance.state.velocity[2] = 0;
+        characterSession.instance.state.forwardSpeed = 0;
+        characterSession.instance.state.faceAngle = pose.yaw;
+        SCState::clearCombat(characterSession.instance.state);
         pendingNativeHurt = 0;
         lastHP = hp;
         defenseRateRelease();
@@ -231,7 +234,7 @@ static bool nativeReactionTick(double &acc, bool focus, bool priorityReaction = 
         nativeReactionIncomingUntil = 0;
         nativeReactionReturnGate.clear();
         worldActivate();
-        characterControl.resetSimulation();
+        characterSession.control.resetSimulation();
         actionFlags(false);
         InterlockedExchange(&actionRoute, LONG(ActionRoute::Character));
         acc = 0;

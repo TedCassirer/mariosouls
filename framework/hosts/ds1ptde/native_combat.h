@@ -6,9 +6,9 @@ static bool characterImpactSupported = false;
 
 static void impactConfigure() {
     auto entry =
-        (SC_GetImpactProfile)GetProcAddress(adapterModule, "SoulsCharacterGetImpactProfile");
+        (SC_GetImpactProfile)GetProcAddress(adapter.module, "SoulsCharacterGetImpactProfile");
     auto p = entry ? entry(SC_IMPACT_PROFILE_VERSION, sizeof(SC_ImpactProfile)) : nullptr;
-    characterImpactSupported = SCImpact::valid(p, profile->attackCount);
+    characterImpactSupported = SCImpact::valid(p, adapter.profile->attackCount);
     if (characterImpactSupported)
         characterImpact = *p;
 }
@@ -33,7 +33,7 @@ characterFilterStamina(uintptr_t actor, int value, uintptr_t caller, uintptr_t p
 
 extern "C" __attribute__((used, noinline)) uintptr_t characterLookup(int id, int kind,
                                                                      uintptr_t out, int behavior) {
-    if (id < 990050 || id >= 990050 + int(profile->attackCount))
+    if (id < 990050 || id >= 990050 + int(adapter.profile->attackCount))
         return 0;
 
     if (kind != 1)
@@ -125,7 +125,7 @@ static bool characterInstallDamage() {
         logMessage("Character packet signature refused");
         return false;
     }
-    for (int i = 0; i < int(profile->attackCount); i++) {
+    for (int i = 0; i < int(adapter.profile->attackCount); i++) {
         memcpy(characterAttacks[i], characterAttackTemplate, 128);
         memcpy(characterBehaviors[i], characterBehaviorTemplate, 32);
         int id = 990050 + i;
@@ -163,7 +163,7 @@ static int characterNativeHit(int move, float power, float poise, uintptr_t targ
     characterPacketBuilt = false;
     if (!nativeTarget(target, handle) || !nativeTarget(player, read<uint32_t>(player + 4)))
         return -2;
-    if (!characterDamageReady || move < 0 || move >= int(profile->attackCount))
+    if (!characterDamageReady || move < 0 || move >= int(adapter.profile->attackCount))
         return -1;
     uint16_t base = (uint16_t)std::clamp(power, 0.f, 2000.f), stagger = (uint16_t)poise;
     memcpy(characterAttacks[move] + 0x50, &base, 2);

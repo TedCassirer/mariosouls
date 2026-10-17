@@ -2,7 +2,7 @@
 
 static bool launcherVisible() {
     return launcherAvailable && launcherApi && characterOwned() && !nativeActionOwned() &&
-           !characterControl.session.death();
+           !characterSession.control.session.death();
 }
 
 static void launcherDrawPart(SCRenderAPI::Renderer &renderer, SCRenderAPI::Context context,
@@ -88,7 +88,7 @@ static void launcherDraw(SCRenderAPI::Renderer &renderer, SCRenderAPI::Context c
     else if (launcherState.phase != SC_LAUNCHER_AIMING) {
         Vec at = launcherPlace + Vec{0, -3.35f, 0};
         if (launcherState.phase == SC_LAUNCHER_OPENING)
-            at.y = origin.y + launcherState.propLift * .01f;
+            at.y = characterSession.instance.origin.y + launcherState.propLift * .01f;
         float yaw = launcherState.phase == SC_LAUNCHER_OPENING ? launcherState.yaw : launcherYaw;
         float pitch = launcherState.phase == SC_LAUNCHER_OPENING ? -launcherState.pitch : 0;
         launcherDrawPart(renderer, context, SC_LAUNCHER_BASE, at, yaw, 0);

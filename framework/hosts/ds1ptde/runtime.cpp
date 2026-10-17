@@ -49,6 +49,7 @@ static bool launcherBusy();
 static SCHost::Capabilities hostCapabilities(bool beforeHUD = false);
 static bool hostPermits(SCHost::Operation operation);
 static void equipmentReset();
+static void equipmentActionsReset();
 static void feedbackReset();
 static void feedbackSettings();
 static void actionReset();
@@ -96,65 +97,32 @@ using SCNativeMemory::read;
 
 #include "native_bindings.h"
 
-struct Vec {
-    float x, y, z;
-
-    Vec operator+(Vec b) const {
-        return {x + b.x, y + b.y, z + b.z};
-    }
-
-    Vec operator-(Vec b) const {
-        return {x - b.x, y - b.y, z - b.z};
-    }
-
-    Vec operator*(float s) const {
-        return {x * s, y * s, z * s};
-    }
-};
-
 static void debugContact(Vec at, bool confirmed);
 
-static float dot(Vec a, Vec b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-static Vec cross(Vec a, Vec b) {
-    return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
-}
-
-static Vec unit(Vec v) {
-    float n = sqrtf(dot(v, v));
-    return n > .0001f ? v * (1 / n) : Vec{0, 0, 1};
-}
-
 static HostBindings::Slots gameSlots;
+static HostCharacter::AdapterResources adapter;
+static HostCharacter::Session characterSession;
 // Current native observations are refreshed once per gameplay frame. The owned
 // snapshot guards restoration: an address must still belong to the same actor.
 static uintptr_t player, playerPhysics, playerCamera;
-static uintptr_t ownedActor, ownedMovement;
 static int loadedMap = -1, lastHP = 0;
 static unsigned pendingNativeHurt = 0;
-static uint32_t savedFlags1, savedMapFlags;
-static SCFlags::Lease actionControlLocks;
-static bool hideNative = false, disableMapHit = false;
 static int renderMode = 1;
 static int depthTest = 1;
 static bool combatEnabled = false;
 static bool ready = false, nativeReaction = false, equipmentActionOwned = false;
 static DWORD nativeReactionIncomingUntil = 0;
-static HostCharacter::ControlState characterControl;
-static bool presentationActive = false;
 
 static bool characterOwned() {
-    return characterControl.session.visible();
+    return characterSession.control.session.visible();
 }
 
 static bool characterPresented() {
-    return characterOwned() || presentationActive;
+    return characterOwned() || characterSession.presentation.active;
 }
 
 static bool nativeActionOwned() {
-    return characterControl.session.action() || characterControl.session.death();
+    return characterSession.control.session.action() || characterSession.control.session.death();
 }
 
 static Vec interactionPrevious;
@@ -162,18 +130,6 @@ static int interactionMap = -1;
 #include "action_input.h"
 #include "feedback_rumble.h"
 #include "controller_hooks.h"
-
-static int character = -1;
-static Vec origin;
-static SC_State state{};
-static const SC_CharacterAPI *guest = nullptr;
-static const SC_Descriptor *profile = nullptr;
-static HMODULE adapterModule = nullptr;
-static HostCharacter::MeshBuffers characterMesh;
-static SCVisual::MeshHistory visualMesh;
-static SCVisual::Anchor visualAnchor;
-static float visualAlpha = 1;
-static bool visualFocused = false;
 
 static double visualTime() {
     static LARGE_INTEGER frequency = {};
@@ -185,16 +141,16 @@ static double visualTime() {
 }
 
 static void visualReset() {
-    visualMesh.clear();
-    visualAnchor.clear();
+    characterSession.visual.clear();
 }
 
 static void visualCapture(int id, uint32_t mode, const SC_State &s, const SC_Mesh &m) {
     SC_Attachments hands = {sizeof(SC_Attachments)};
-    if (!guest->attachments || !(profile->capabilities & SC_CAP_EQUIPMENT) ||
-        !guest->attachments(id, &hands) || hands.size != sizeof(hands) || (hands.valid & ~3u))
+    if (!adapter.api->attachments || !(adapter.profile->capabilities & SC_CAP_EQUIPMENT) ||
+        !adapter.api->attachments(id, &hands) || hands.size != sizeof(hands) || (hands.valid & ~3u))
         hands = {sizeof(SC_Attachments)};
-    visualMesh.capture(m, s.position, hands, visualTime(), (uint64_t(uint32_t(id)) << 32) | mode);
+    characterSession.visual.mesh.capture(m, s.position, hands, visualTime(),
+                                         (uint64_t(uint32_t(id)) << 32) | mode);
 }
 
 static std::vector<Vec> mapVertices;
@@ -204,7 +160,7 @@ static WAVEHDR audioHeaders[4] = {};
 static int16_t audioBuffers[4][2176] = {};
 
 static void pumpAudio() {
-    if (!guest || !(profile->capabilities & SC_CAP_AUDIO))
+    if (!adapter.api || !(adapter.profile->capabilities & SC_CAP_AUDIO))
         return;
     unsigned queued = 0;
     int freeIndex = -1;
@@ -216,7 +172,7 @@ static void pumpAudio() {
     }
     if (freeIndex < 0)
         return;
-    unsigned n = guest->audio(queued, 1100, audioBuffers[freeIndex], 1088);
+    unsigned n = adapter.api->audio(queued, 1100, audioBuffers[freeIndex], 1088);
     if (audioOut && n && n <= 1088) {
         audioHeaders[freeIndex].dwBufferLength = n * 4;
         waveOutWrite(audioOut, &audioHeaders[freeIndex], sizeof(WAVEHDR));
@@ -224,7 +180,7 @@ static void pumpAudio() {
 }
 
 static bool guestStep(int id, const SC_Input *input, SC_State *s, SC_Mesh *m) {
-    bool ok = guest->step(id, input, s, m) && SC::frame(*s, *m, *profile);
+    bool ok = adapter.api->step(id, input, s, m) && SC::frame(*s, *m, *adapter.profile);
     if (ok)
         visualCapture(id, 0, *s, *m);
     else
@@ -233,7 +189,7 @@ static bool guestStep(int id, const SC_Input *input, SC_State *s, SC_Mesh *m) {
 }
 
 static bool guestPose(int id, const SC_Pose *p, SC_State *s, SC_Mesh *m) {
-    bool ok = guest->pose(id, p, s, m) && SC::frame(*s, *m, *profile);
+    bool ok = adapter.api->pose(id, p, s, m) && SC::frame(*s, *m, *adapter.profile);
     if (ok)
         visualCapture(id, p->kind + 1, *s, *m);
     else
@@ -295,40 +251,46 @@ static void releaseControl(bool preserveRequest = true) {
     nativeReactionIncomingUntil = 0;
     nativeRecoveryReset();
     environmentReset();
-    equipmentActionOwned = false;
-    characterControl.session.request(preserveRequest && characterControl.session.requested());
+    equipmentActionsReset();
+    characterSession.control.session.request(preserveRequest &&
+                                             characterSession.control.session.requested());
     visibilityRelease();
     bodyRelease();
     worldRelease();
-    characterControl.resetSimulation();
+    characterSession.control.resetSimulation();
     pendingNativeHurt = 0;
     combatReset();
     actionReset();
-    if (guest)
-        guest->surfaces(nullptr, 0, 1);
+    if (adapter.api)
+        adapter.api->surfaces(nullptr, 0, 1);
     actionCancelPulse();
     InterlockedExchange(&actionRoute, LONG(ActionRoute::Free));
     HostController::setOwner(-1);
-    if (characterOwned() && ownedActor && chain(gameSlots.player, {0, 4, 0}) == ownedActor &&
-        read<uint32_t>(ownedActor + 0x28) == ownedMovement) {
-        uint32_t f1 = read<uint32_t>(ownedActor + 0x1fc), f2 = read<uint32_t>(ownedActor + 0x3c4);
-        put(ownedActor + 0x1fc, (f1 & ~0x4000u) | (savedFlags1 & 0x4000));
-        put(ownedActor + 0x3c4, actionControlLocks.update(f2, 0));
-        if (disableMapHit || worldMode == 1)
-            put(ownedMovement + 0xc4,
-                (read<uint32_t>(ownedMovement + 0xc4) & ~0x10u) | (savedMapFlags & 0x10u));
+    if (characterOwned() && characterSession.native.actor &&
+        chain(gameSlots.player, {0, 4, 0}) == characterSession.native.actor &&
+        read<uint32_t>(characterSession.native.actor + 0x28) == characterSession.native.movement) {
+        uint32_t f1 = read<uint32_t>(characterSession.native.actor + 0x1fc),
+                 f2 = read<uint32_t>(characterSession.native.actor + 0x3c4);
+        put(characterSession.native.actor + 0x1fc,
+            (f1 & ~0x4000u) | (characterSession.native.flags1 & 0x4000));
+        put(characterSession.native.actor + 0x3c4,
+            characterSession.native.controlLocks.update(f2, 0));
+        if (characterSession.native.disableMapHit || worldMode == 1)
+            put(characterSession.native.movement + 0xc4,
+                (read<uint32_t>(characterSession.native.movement + 0xc4) & ~0x10u) |
+                    (characterSession.native.mapFlags & 0x10u));
     }
-    characterControl.session.release();
-    actionControlLocks.abandon();
+    characterSession.control.session.release();
+    characterSession.native.controlLocks.abandon();
     if (audioOut)
         waveOutReset(audioOut);
-    if (character >= 0) {
-        guest->destroy(character);
-        character = -1;
+    if (characterSession.instance.id >= 0) {
+        adapter.api->destroy(characterSession.instance.id);
+        characterSession.instance.id = -1;
     }
-    characterMesh.view.numTrianglesUsed = 0;
+    adapter.mesh.view.numTrianglesUsed = 0;
     logMessage("native controls restored; character requested=%d",
-               characterControl.session.requested());
+               characterSession.control.session.requested());
 }
 
 static bool activate() {
@@ -347,38 +309,44 @@ static bool activate() {
         return false;
     }
     hazardPreviousValid = false;
-    origin = read<Vec>(playerPhysics + 0x10);
-    if (!isfinite(origin.x) || !isfinite(origin.y) || !isfinite(origin.z))
+    characterSession.instance.origin = read<Vec>(playerPhysics + 0x10);
+    if (!isfinite(characterSession.instance.origin.x) ||
+        !isfinite(characterSession.instance.origin.y) ||
+        !isfinite(characterSession.instance.origin.z))
         return false;
     rebuildSurfaces();
 
     // Missing static terrain is not an activation veto: native Havok owns
     // event-controlled floors and airborne spawns. Never snap to a cached floor.
-    character = guest->create(0, 0, 0, read<float>(playerPhysics + 4) - 3.14159265f);
-    if (character < 0)
+    characterSession.instance.id =
+        adapter.api->create(0, 0, 0, read<float>(playerPhysics + 4) - 3.14159265f);
+    if (characterSession.instance.id < 0)
         return false;
     combatReset();
-    guest->nativeDamage(character, 0);
-    state = {};
-    state.attackId = state.interruptedAttackId = -1;
-    state.position[1] = 0;
-    savedFlags1 = read<uint32_t>(player + 0x1fc);
-    actionControlLocks.abandon();
-    ownedActor = player;
-    ownedMovement = read<uint32_t>(player + 0x28);
-    savedMapFlags = read<uint32_t>(ownedMovement + 0xc4);
-    hideNative =
+    adapter.api->nativeDamage(characterSession.instance.id, 0);
+    characterSession.instance.state = {};
+    characterSession.instance.state.attackId = characterSession.instance.state.interruptedAttackId =
+        -1;
+    characterSession.instance.state.position[1] = 0;
+    characterSession.native.flags1 = read<uint32_t>(player + 0x1fc);
+    characterSession.native.controlLocks.abandon();
+    characterSession.native.actor = player;
+    characterSession.native.movement = read<uint32_t>(player + 0x28);
+    characterSession.native.mapFlags = read<uint32_t>(characterSession.native.movement + 0xc4);
+    characterSession.native.hide =
         classSelection.required() || GetPrivateProfileIntA("MarioSouls", "HideNative", 0, ini) != 0;
-    if (hideNative && !hostPermits(SCHost::Operation::Replacement)) {
+    if (characterSession.native.hide && !hostPermits(SCHost::Operation::Replacement)) {
         logMessage("Character refused: mesh-only visibility hook unavailable");
-        guest->destroy(character);
-        character = -1;
+        adapter.api->destroy(characterSession.instance.id);
+        characterSession.instance.id = -1;
         return false;
     }
-    disableMapHit = GetPrivateProfileIntA("MarioSouls", "DisableMapHit", 1, ini) != 0;
+    characterSession.native.disableMapHit =
+        GetPrivateProfileIntA("MarioSouls", "DisableMapHit", 1, ini) != 0;
 
     lastHP = read<int>(player + 0x2d4);
-    characterControl.session.activate({player, playerPhysics, ownedMovement, loadedMap});
+    characterSession.control.session.activate(
+        {player, playerPhysics, characterSession.native.movement, loadedMap});
     if (!bodyCapture()) {
         logMessage("BODY validation failed; native handback");
         releaseControl();
@@ -386,11 +354,12 @@ static bool activate() {
     }
     worldActivate();
     visibilityCapture();
-    characterControl.resetSimulation();
+    characterSession.control.resetSimulation();
     SC_Pose initial = {};
     initial.yaw = read<float>(playerPhysics + 4) - 3.14159265f;
     initial.phase = -1;
-    if (!guestPose(character, &initial, &state, &characterMesh.view)) {
+    if (!guestPose(characterSession.instance.id, &initial, &characterSession.instance.state,
+                   &adapter.mesh.view)) {
         releaseControl();
         return false;
     }

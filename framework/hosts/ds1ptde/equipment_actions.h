@@ -1,5 +1,6 @@
 #pragma once
 #include "../../core/native_action.h"
+#include "../../core/native_action_preparation.h"
 // Native input requests only. No fabricated throw links, animation requests,
 // damage packets, stamina writes or invulnerability flags in this lane.
 static SCNativeAction::Buttons equipmentActionButtons;
@@ -7,6 +8,22 @@ static SCNativeAction::Completion equipmentActionCompletion;
 static NativeEquipment equipmentActionGear;
 static Vec equipmentActionPrevious;
 static int equipmentActionMap = -1, equipmentActionCast = 0;
+
+// This request owns no spell/projectile data. Native physics must first accept
+// the handoff, just as for item use. The eventual pulse is consumed only once.
+struct EquipmentCastRequest {
+    SCNativeAction::GroundSettle footing;
+    int pulse = 0, slot = -1;
+    bool fromPad = false, observed = false;
+};
+
+static EquipmentCastRequest equipmentCastRequest;
+
+static void equipmentActionsReset() {
+    equipmentActionOwned = false;
+    equipmentActionCast = 0;
+    equipmentCastRequest = {};
+}
 
 struct EquipmentActionTrack {
     int id = -1, kind = 0;
@@ -96,28 +113,51 @@ static bool equipmentActionsInput(SC_Input &input, bool leftAttack, bool parry, 
     auto edge = equipmentActionButtons.sample(input.attack, leftAttack, parry, focus, player, slot);
     if (equipmentActionButtons.suppressAttack())
         input.attack = 0;
-    if (!focus || !characterOwned() || nativeActionOwned() || nativeReaction ||
-        equipmentActionOwned || !profile || !(profile->capabilities & SC_CAP_NATIVE_COMBAT) ||
-        !equipmentCapable() || equipmentBroken || equipmentSwing.running() || pendingNativeHurt ||
-        actionPending() || characterLandingRecovery || !(state.flags & SC_GROUNDED) ||
-        !(state.flags & SC_CAN_EQUIP_ACTION) || state.attackId >= 0 || input.jump || input.crouch ||
-        !combatEnabled || !hostPermits(SCHost::Operation::Combat) ||
-        !hostPermits(SCHost::Operation::Interaction) || read<int>(player + 0x2e4) <= 0)
-        return false;
     auto gear = equipmentRead();
-    auto o = nativeInteractionState();
-    if (!gear.valid || !gear.oneHanded || !o.valid || !o.idle || o.menu || o.event || o.ladder)
-        return false;
     int cast = equipmentPyromancy()
                    ? (edge.attack && gear.right.pyromancy      ? SC_EQUIPMENT_CAST_RIGHT
                       : edge.leftAttack && gear.left.pyromancy ? SC_EQUIPMENT_CAST_LEFT
                                                                : 0)
                    : 0;
+    auto rejected = [&](const char *reason) {
+        // Errors on an actual cast press only; never record idle frames/input.
+        if (cast)
+            logMessage("Native cast rejected hand=%s reason=%s guest_flags=%x stance=%d "
+                       "gear_valid=%d stamina=%d facilities=%x",
+                       cast == SC_EQUIPMENT_CAST_LEFT ? "left" : "right", reason,
+                       characterSession.instance.state.flags, gear.stance, gear.valid,
+                       read<int>(player + 0x2e4), hostCapabilities().available);
+        return false;
+    };
+    if (!focus || !characterOwned() || nativeActionOwned() || equipmentActionOwned)
+        return rejected("native_control");
+    if (!adapter.profile || !(adapter.profile->capabilities & SC_CAP_NATIVE_COMBAT) ||
+        !equipmentCapable() || equipmentBroken)
+        return rejected("equipment_unavailable");
+    if (nativeReaction || pendingNativeHurt || actionPending() || characterLandingRecovery)
+        return rejected("recovery_or_interaction");
+    if (!(characterSession.instance.state.flags & SC_GROUNDED) ||
+        !(characterSession.instance.state.flags & SC_CAN_EQUIP_ACTION))
+        return rejected("guest_footing_or_action");
+    if (equipmentSwing.running() || characterSession.instance.state.attackId >= 0 || input.jump ||
+        input.crouch)
+        return rejected("guest_attack_jump_or_crouch");
+    if (!combatEnabled || !hostPermits(SCHost::Operation::Combat) ||
+        !hostPermits(SCHost::Operation::Interaction) || read<int>(player + 0x2e4) <= 0)
+        return rejected("combat_or_input_unavailable");
+    auto o = nativeInteractionState();
+    if (!gear.valid || !gear.oneHanded || !o.valid || !o.idle || o.menu || o.event || o.ladder) {
+        if (cast)
+            logMessage("Native cast unavailable valid=%d idle=%d grounded=%d menu=%d event=%d "
+                       "ladder=%d",
+                       o.valid, o.idle, o.grounded, o.menu, o.event, o.ladder);
+        return rejected("native_state");
+    }
     bool doParry = !cast && edge.parry && gear.left.shield && equipmentProp(gear.left.model);
     bool frontal = gear.left.shield && input.guard;
     bool doCritical = edge.attack &&
                       (gear.right.kind == SC_EQUIPMENT_SWORD ||
-                       (profile->capabilities & SC_CAP_MELEE_FAMILIES)) &&
+                       (adapter.profile->capabilities & SC_CAP_MELEE_FAMILIES)) &&
                       gear.right.melee && equipmentProp(gear.right.model) &&
                       equipmentCriticalCandidate(frontal);
     if (!cast && !doParry && !doCritical)
@@ -125,25 +165,34 @@ static bool equipmentActionsInput(SC_Input &input, bool leftAttack, bool parry, 
     int pulse = cast == SC_EQUIPMENT_CAST_LEFT ? 5 : doParry ? 3 : 4;
     // Validate the current keyboard binding before handing off when no pad exists.
     if (slot < 0 && !actionCombatBindingReady(pulse))
-        return false;
+        return rejected("keyboard_binding");
     combatReset();
     actionReset();
     worldRelease();
-    characterControl.resetSimulation();
+    characterSession.control.resetSimulation();
     equipmentActionOwned = true;
     equipmentActionCast = cast;
     equipmentActionGear = gear;
     equipmentCurrent = gear;
     equipmentActionMap = currentMap();
     equipmentActionPrevious = read<Vec>(playerPhysics + 0x10);
-    equipmentActionCompletion.begin(GetTickCount());
+    const DWORD now = GetTickCount();
+    equipmentActionCompletion.begin(now);
+    equipmentCastRequest = {};
     equipmentActionButtons.consume();
 
     pendingNativeHurt = 0;
     lastHP = read<int>(player + 0x2d4);
     InterlockedExchange(&actionRoute, LONG(ActionRoute::Locked));
     actionFlags(true);
-    actionQueue(pulse, GetTickCount(), slot >= 0);
+    if (cast) {
+        equipmentCastRequest.footing.begin(now);
+        equipmentCastRequest.pulse = pulse;
+        equipmentCastRequest.slot = slot;
+        equipmentCastRequest.fromPad = slot >= 0;
+    } else {
+        actionQueue(pulse, now, slot >= 0);
+    }
 
     return true;
 }
@@ -159,8 +208,8 @@ static bool equipmentActionsTick(double &acc, bool focus) {
                        (castAnimation == 6204 || castAnimation == 6304 || castAnimation == 6404 ||
                         castAnimation == 6504));
     auto gear = equipmentRead();
-    if (!o.valid || !gear.valid || player != ownedActor || currentMap() != equipmentActionMap ||
-        !isfinite(host.y) ||
+    if (!o.valid || !gear.valid || player != characterSession.native.actor ||
+        currentMap() != equipmentActionMap || !isfinite(host.y) ||
         dot(host - equipmentActionPrevious, host - equipmentActionPrevious) > 64 ||
         read<int>(player + 0x2d4) <= 0) {
         logMessage("Native equipment ownership invalid; native handback");
@@ -172,17 +221,49 @@ static bool equipmentActionsTick(double &acc, bool focus) {
         actionCancelPulse();
     if (o.menu || o.event || o.ladder) {
         projectileRateRelease();
-        equipmentActionOwned = false;
+        equipmentActionsReset();
         beginInteraction(-1, false);
         return true;
     }
+    bool cancelled = false;
+    if (equipmentCastRequest.pulse) {
+        const bool left = equipmentActionCast == SC_EQUIPMENT_CAST_LEFT;
+        const auto &item = left ? gear.left : gear.right;
+        const auto &requested = left ? equipmentActionGear.left : equipmentActionGear.right;
+        auto prepared =
+            equipmentCastRequest.footing.update(o.grounded && o.idle, focus, GetTickCount());
+        // Switching equipment/device or taking damage during preparation must
+        // never cast from a stale hand or dispatch a delayed attack on refocus.
+        bool matching = gear.oneHanded && item.pyromancy && item.id == requested.id &&
+                        (left ? gear.leftSlot == equipmentActionGear.leftSlot
+                              : gear.rightSlot == equipmentActionGear.rightSlot) &&
+                        HostController::owner() == equipmentCastRequest.slot;
+        bool available = combatEnabled && hostPermits(SCHost::Operation::Combat) &&
+                         hostPermits(SCHost::Operation::Interaction) &&
+                         read<int>(player + 0x2e4) > 0;
+        if (!matching || !available || read<int>(player + 0x2d4) < lastHP ||
+            prepared == SCNativeAction::Preparation::Cancelled) {
+            cancelled = true;
+            equipmentCastRequest.pulse = 0;
+            logMessage("Native cast cancelled before input hand=%s matching=%d available=%d "
+                       "grounded=%d idle=%d focus=%d",
+                       left ? "left" : "right", matching, available, o.grounded, o.idle, focus);
+        } else if (prepared == SCNativeAction::Preparation::Ready) {
+            const DWORD now = GetTickCount();
+            actionQueue(equipmentCastRequest.pulse, now, equipmentCastRequest.fromPad);
+            equipmentCastRequest.pulse = 0;
+            equipmentActionCompletion.begin(now);
+        }
+    }
+    equipmentCastRequest.observed |=
+        track.kind == SC_EQUIPMENT_CAST_LEFT || track.kind == SC_EQUIPMENT_CAST_RIGHT;
     // Never continue displaying an old weapon after a native gear change.
     equipmentActionGear = gear;
     equipmentCurrent = gear;
     equipmentActionPrevious = host;
     InterlockedExchange(&actionRoute, LONG(ActionRoute::Locked));
     actionFlags(true);
-    Vec local = (host - origin) * 100;
+    Vec local = (host - characterSession.instance.origin) * 100;
     SC_Pose pose = {};
     pose.kind = SC_POSE_NATIVE_COMBAT;
     pose.phase = -1;
@@ -207,13 +288,14 @@ static bool equipmentActionsTick(double &acc, bool focus) {
                           uint32_t(track.kind),
                           std::clamp(phase, 0.f, 1.f),
                           0};
-    if (track.kind == 0 && track.busy) {
+    if (!equipmentCastRequest.pulse && track.kind == 0 && track.busy) {
         pose.kind = SC_POSE_STAGGER;
         e.swing = 0;
     }
     for (int step = 0; acc >= 1. / SC_FIXED_HZ && step < 3; step++, acc -= 1. / SC_FIXED_HZ) {
-        if (!guest->equipment(character, &e) ||
-            !guestPose(character, &pose, &state, &characterMesh.view)) {
+        if (!adapter.api->equipment(characterSession.instance.id, &e) ||
+            !guestPose(characterSession.instance.id, &pose, &characterSession.instance.state,
+                       &adapter.mesh.view)) {
             releaseControl(true);
             acc = 0;
             return true;
@@ -221,24 +303,32 @@ static bool equipmentActionsTick(double &acc, bool focus) {
         pumpAudio();
     }
     lastHP = read<int>(player + 0x2d4);
-    if (equipmentActionCompletion.update(track.busy, o.idle, focus, GetTickCount())) {
+    if (cancelled ||
+        (!equipmentCastRequest.pulse &&
+         equipmentActionCompletion.update(track.busy, o.idle, focus, GetTickCount()))) {
+        if (equipmentActionCast && !cancelled && !equipmentCastRequest.observed)
+            logMessage("Native cast input was not accepted hand=%s",
+                       equipmentActionCast == SC_EQUIPMENT_CAST_LEFT ? "left" : "right");
         projectileRateRelease();
         actionCancelPulse();
-        equipmentActionOwned = false;
+        equipmentActionsReset();
         equipmentReset();
-        guest->resume(character, local.x, local.y, local.z, pose.yaw);
-        state.position[0] = local.x;
-        state.position[1] = local.y;
-        state.position[2] = local.z;
-        state.faceAngle = pose.yaw;
-        state.flags = 0;
-        state.attackId = state.interruptedAttackId = -1;
-        state.velocity[0] = state.velocity[1] = state.velocity[2] = state.forwardSpeed = 0;
-        state.landingRecoveryTicks = 0;
+        adapter.api->resume(characterSession.instance.id, local.x, local.y, local.z, pose.yaw);
+        characterSession.instance.state.position[0] = local.x;
+        characterSession.instance.state.position[1] = local.y;
+        characterSession.instance.state.position[2] = local.z;
+        characterSession.instance.state.faceAngle = pose.yaw;
+        characterSession.instance.state.flags = 0;
+        characterSession.instance.state.attackId =
+            characterSession.instance.state.interruptedAttackId = -1;
+        characterSession.instance.state.velocity[0] = characterSession.instance.state.velocity[1] =
+            characterSession.instance.state.velocity[2] =
+                characterSession.instance.state.forwardSpeed = 0;
+        characterSession.instance.state.landingRecoveryTicks = 0;
         pendingNativeHurt = 0;
         nativeReactionIncomingUntil = 0;
         worldActivate();
-        characterControl.resetSimulation();
+        characterSession.control.resetSimulation();
         actionFlags(false);
         InterlockedExchange(&actionRoute, LONG(ActionRoute::Character));
         acc = 0;

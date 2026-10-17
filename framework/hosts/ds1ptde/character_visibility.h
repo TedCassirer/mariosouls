@@ -17,7 +17,7 @@ static CharacterVisibilityFn characterOriginalVisibility = nullptr;
 static bool characterVisibilityReady = false;
 
 static bool visibilityIdentity(uintptr_t actor) {
-    return actor && actor == player && actor == ownedActor &&
+    return actor && actor == player && actor == characterSession.native.actor &&
            chain(gameSlots.player, {0, 4, 0}) == actor;
 }
 
@@ -38,7 +38,7 @@ static bool visibilityBit(uintptr_t model, unsigned flags, unsigned dirty, bool 
 static void visibilityCapture() {
     AcquireSRWLockExclusive(&characterVisibilityLock);
     characterVisibility = {};
-    if (characterVisibilityReady && hideNative && visibilityIdentity(player)) {
+    if (characterVisibilityReady && characterSession.native.hide && visibilityIdentity(player)) {
         auto &v = characterVisibility;
         v.actor = player;
         v.body = read<uint32_t>(player + 0x24);
@@ -75,7 +75,7 @@ static void __fastcall characterVisibilityHook(uintptr_t actor, uintptr_t) {
     characterOriginalVisibility(actor);
     AcquireSRWLockExclusive(&characterVisibilityLock);
     const auto &v = characterVisibility;
-    if (v.armed && hideNative && characterPresented() && actor == v.actor &&
+    if (v.armed && characterSession.native.hide && characterPresented() && actor == v.actor &&
         visibilityIdentity(actor)) {
         // Read current model identities after the native call. Equipment reloads can
         // replace models; never write a saved pointer after it leaves this actor.

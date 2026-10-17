@@ -42,6 +42,7 @@ def check(character):
                 ["-shared"],
                 target=target,
             )
+            f.validate_binary_target(out / (character + ".dll"), target)
             if profile["assets"].get("runtime"):
                 f.run(
                     [
@@ -53,6 +54,7 @@ def check(character):
                         out / "runtime",
                     ]
                 )
+                f.validate_binary_target(out / "runtime" / profile["assets"]["runtime"], target)
     print(
         "Compiled C/C++ SDK and shared headers for x86/x64, plus x64 guest binaries. No binaries executed; PTDE remains x86 only."
     )

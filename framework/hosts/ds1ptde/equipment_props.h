@@ -87,12 +87,16 @@ static bool equipmentSocketValid(const float *m) {
             if (fabsf(m[j * 4] * m[k * 4] + m[j * 4 + 1] * m[k * 4 + 1] +
                       m[j * 4 + 2] * m[k * 4 + 2]) > .025f)
                 return false;
-    Vec offset = {m[12] - state.position[0], m[13] - state.position[1], m[14] - state.position[2]};
+    Vec offset = {m[12] - characterSession.instance.state.position[0],
+                  m[13] - characterSession.instance.state.position[1],
+                  m[14] - characterSession.instance.state.position[2]};
     return dot(offset, offset) < 300 * 300 && fabsf(m[15] - 1) < .0001f;
 }
 
 static Vec equipmentPoint(const float *m, Vec local, Vec renderOrigin) {
-    Vec t = {m[12], m[13], m[14]}, p = {state.position[0], state.position[1], state.position[2]};
+    Vec t = {m[12], m[13], m[14]}, p = {characterSession.instance.state.position[0],
+                                        characterSession.instance.state.position[1],
+                                        characterSession.instance.state.position[2]};
     Vec rotation = {m[0] * local.x + m[4] * local.y + m[8] * local.z,
                     m[1] * local.x + m[5] * local.y + m[9] * local.z,
                     m[2] * local.x + m[6] * local.y + m[10] * local.z};
@@ -108,11 +112,13 @@ static void equipmentDrawProp(SCRenderAPI::Renderer &renderer, EquipmentProp &p,
     auto sample = [&](const float *local, int axis, bool direction) {
         float cm[3] = {local[0] * (direction ? 1.f : 100.f), local[1] * (direction ? 1.f : 100.f),
                        local[2] * (direction ? 1.f : 100.f)};
-        return visualMesh.socket(hand, m, state.position, cm, axis, visualAlpha, direction);
+        return characterSession.visual.mesh.socket(hand, m,
+                                                   characterSession.instance.state.position, cm,
+                                                   axis, characterSession.visual.alpha, direction);
     };
     float offset[3] = {renderOrigin.x, renderOrigin.y, renderOrigin.z};
-    SCGeometry::propMesh(p.vertices, p.indices, sample, state.position, offset,
-                         characterBody.modelScale, verts);
+    SCGeometry::propMesh(p.vertices, p.indices, sample, characterSession.instance.state.position,
+                         offset, characterBody.modelScale, verts);
     SCRenderAPI::Material style{};
     style.image = {p.rgba.data(), p.width, p.height};
     style.color = SCRenderAPI::ColorMode::Modulate;

@@ -2,7 +2,24 @@
 
 Meaningful changes are recorded here by development version. The detailed, maintained inventory of current behavior and tuning is [Features and tweaks](docs/FEATURES_AND_TWEAKS.md). Git retains earlier implementation history; no public release date is implied by this development log.
 
-## 0.9.0-dev.1 - unreleased
+## 0.9.0-dev.2 - experimental preview
+
+### Fire Flower cast handoff
+
+- Wait for confirmed native footing before sending either hand's cast input, using the existing 150-ms grounding policy instead of spending the button pulse during movement handoff. Cancel stale requests on focus/device/equipment changes, damage or a one-second preparation timeout. LB/L1 remains left cast; native spell charges and bouncing-fireball behavior are unchanged.
+- Add bounded errors for rejected, cancelled or natively unaccepted cast requests. Compilation/source evidence only: the reported left-hand failure and this candidate still need live verification; no install is implied.
+
+### Host-port preparation
+
+- Separate validated PTDE camera/actor observation from neutral character vertices/camera matrices and backend graphics-state restoration. Split F8 native capture from reusable diagnostic shape/panel assembly; keep existing lens, lighting, layers, retention and interpolation behavior.
+- Give module/mesh resources and gameplay/presentation/control/visual/native-restoration state explicit non-copyable owners. Preserve native release ordering, single-instance coordination and graphics-callback update scheduling; document remaining feature-local state/include-order debt.
+- Compile the extracted CPU storage/presentation headers for x86/x64, inspect x64 guest/runtime PE machine types, and provide a concrete presentation-only Remastered handoff. These checks do not verify PTDE gameplay or implement Remastered. Game installation and live verification were not part of this preparation.
+
+### Distribution
+
+- Package a new source-based Windows installer from this committed revision, with matching source, manifest and SHA-256 checksums. Mark the GitHub release as experimental and retain pending game/installer checks explicitly; preserve the previous draft/assets and existing game installations.
+
+## 0.9.0-dev.1 - earlier development snapshot
 
 ### Host-port preparation
 

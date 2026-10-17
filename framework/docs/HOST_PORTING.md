@@ -19,6 +19,8 @@ Keep native locomotion, collision, input, HP/stamina, inventory and combat in co
 
 This is a milestone definition, not verified Remastered behavior. A presentation-only bootstrap does not establish movement, interaction or combat support.
 
+For concrete reusable entry points, ownership, missing-operation fallbacks and acceptance evidence, use [REMASTERED_HANDOFF.md](REMASTERED_HANDOFF.md). It includes the scheduling investigation still required; no actual Remastered host is supplied.
+
 ## Rendering boundary
 
 [render_api.h](../sdk/render_api.h) is an internal C++ interface, not the character DLL ABI. It describes existing presentation needs:
@@ -33,11 +35,11 @@ This is a milestone definition, not verified Remastered behavior. A presentation
 | Context | Scene, before-HUD or preview phase, and actual depth availability |
 | Viewport | Target-pixel rectangle for screen-layout scaling |
 
-CPU prop/cannon transforms, screen quads and fitting live in [core/render_geometry.h](../core/render_geometry.h); diagnostic shapes live in [core/debug_geometry.h](../core/debug_geometry.h). Edition code selects native equipment/sockets, supplies camera/actor observations and assembles text. Equipment props, cannon, hit flashes and F8 diagnostics use the same renderer as Mario. Their presentation code contains no D3D9 drawing/resource calls.
+Character vertices/camera matrices come from [core/character_presentation.h](../core/character_presentation.h), using explicit validated mesh/actor/lens inputs. CPU prop/cannon transforms, screen quads and fitting live in [core/render_geometry.h](../core/render_geometry.h). [core/debug_presentation.h](../core/debug_presentation.h) expands bounded value-only shape observations through [core/debug_geometry.h](../core/debug_geometry.h) and assembles diagnostic panels. Edition code selects native equipment/sockets, captures camera/actor/debug observations and translates native state into labels/counters; it does not own reusable vertex/text assembly. Equipment props, cannon, hit flashes and F8 diagnostics use the same renderer as Mario. Their presentation code contains no D3D9 drawing/resource calls.
 
 PTDE's [render_device.h](../hosts/ds1ptde/render_device.h) owns FVF, pipeline state, RGBA upload and cached managed textures. CPU images remain immutable/alive for the host session; Reset clears backend textures for lazy re-upload. [font_atlas.h](../hosts/ds1ptde/font_atlas.h) rasterizes a Windows font to RGBA without a graphics device. GDI is not a portable renderer requirement.
 
-Camera extraction, D3D9 matrix preparation, state capture/restoration, scene/depth surfaces, DSfix sizing, preview targets, cinematic recognition and final composition remain PTDE-owned. This is not a generic render graph. A DX11 implementation must translate conventions/resources and rediscover its scene/UI boundary. Before-HUD submissions refuse missing depth; diagnostic through-walls drawing disables depth testing only within a valid composition.
+Camera extraction/lens defaults, D3D9 state capture/restoration, scene/depth surfaces, DSfix sizing, preview targets, cinematic recognition and final composition remain PTDE-owned. Matrix construction itself is neutral CPU code; PTDE supplies validated camera/actor inputs through `render_observation.h`. GPU restoration is a backend-owned synchronous `StateScope`. This is not a generic render graph. A DX11 implementation must translate conventions/resources and rediscover its scene/UI boundary. Before-HUD submissions refuse missing depth; diagnostic through-walls drawing disables depth testing only within a valid composition.
 
 ## Selecting and building a host
 

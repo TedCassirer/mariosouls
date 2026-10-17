@@ -10,12 +10,12 @@ static bool equipmentConfirmedGuard = false, equipmentBroken = false,
 static Vec equipmentBladeA{}, equipmentBladeB{}, equipmentOldBladeA{}, equipmentOldBladeB{};
 
 static bool equipmentCapable() {
-    return profile && (profile->capabilities & SC_CAP_EQUIPMENT) && guest && guest->equipment &&
-           guest->attachments;
+    return adapter.profile && (adapter.profile->capabilities & SC_CAP_EQUIPMENT) && adapter.api &&
+           adapter.api->equipment && adapter.api->attachments;
 }
 
 static bool equipmentPyromancy() {
-    return equipmentCapable() && (profile->capabilities & SC_CAP_PYROMANCY);
+    return equipmentCapable() && (adapter.profile->capabilities & SC_CAP_PYROMANCY);
 }
 
 static uint32_t equipmentCasterKind(const NativeEquipmentItem &item) {
@@ -31,14 +31,14 @@ static void equipmentReset() {
     equipmentConfirmedGuard = false;
     equipmentPreviousBlade = false;
     equipmentCurrent = {};
-    if (equipmentCapable() && character >= 0) {
-        guest->equipment(character, &appearance);
+    if (equipmentCapable() && characterSession.instance.id >= 0) {
+        adapter.api->equipment(characterSession.instance.id, &appearance);
     }
 }
 
 static bool equipmentMelee() {
     return (equipmentCurrent.right.kind == SC_EQUIPMENT_SWORD ||
-            (profile && (profile->capabilities & SC_CAP_MELEE_FAMILIES))) &&
+            (adapter.profile && (adapter.profile->capabilities & SC_CAP_MELEE_FAMILIES))) &&
            !equipmentBroken && equipmentCurrent.valid && equipmentCurrent.oneHanded &&
            equipmentCurrent.right.melee && equipmentProp(equipmentCurrent.right.model);
 }
@@ -66,9 +66,10 @@ static void equipmentInput(SC_Input &input) {
     // guest punches/kicks require the optional unarmed focus.
     if (!melee && !combatUnarmedReady())
         input.attack = 0;
-    bool grounded = (state.flags & SC_GROUNDED) && (state.flags & SC_CAN_EQUIP_ACTION) &&
-                    state.attackId < 0 && !pendingNativeHurt && !actionPending() &&
-                    !characterLandingRecovery;
+    bool grounded = (characterSession.instance.state.flags & SC_GROUNDED) &&
+                    (characterSession.instance.state.flags & SC_CAN_EQUIP_ACTION) &&
+                    characterSession.instance.state.attackId < 0 && !pendingNativeHurt &&
+                    !actionPending() && !characterLandingRecovery;
     bool eligible = melee && grounded &&
                     (equipmentSwing.running() || (!input.jump && !input.crouch)) && combatEnabled &&
                     hostPermits(SCHost::Operation::Combat);
@@ -109,7 +110,7 @@ static void equipmentInput(SC_Input &input) {
         equipmentSwing.running() ? uint32_t(equipmentSwing.combo + 1) : 0,
         equipmentSwing.phase(),
         equipmentConfirmedGuard ? 1.f : 0.f};
-    if (!guest->equipment(character, &pose)) {
+    if (!adapter.api->equipment(characterSession.instance.id, &pose)) {
         logMessage("Equipment presentation rejected; disabling equipment");
         equipmentBroken = true;
         equipmentReset();
@@ -118,7 +119,8 @@ static void equipmentInput(SC_Input &input) {
 
 static bool equipmentGetHands() {
     equipmentHands = {sizeof(SC_Attachments)};
-    if (!equipmentCapable() || !guest->attachments(character, &equipmentHands) ||
+    if (!equipmentCapable() ||
+        !adapter.api->attachments(characterSession.instance.id, &equipmentHands) ||
         equipmentHands.size != sizeof(equipmentHands) || (equipmentHands.valid & ~3u))
         return false;
     if ((equipmentHands.valid & 1) && !equipmentSocketValid(equipmentHands.right))
@@ -149,9 +151,11 @@ static void equipmentContact() {
                                            .5f,
                                        .09f, .22f)
                           : .09f;
-    equipmentBladeA = equipmentPoint(equipmentHands.right,
-                                     {0, 0, headed ? prop->bounds[5] * .55f : .02f}, origin);
-    equipmentBladeB = equipmentPoint(equipmentHands.right, {0, 0, prop->bounds[5]}, origin);
+    equipmentBladeA =
+        equipmentPoint(equipmentHands.right, {0, 0, headed ? prop->bounds[5] * .55f : .02f},
+                       characterSession.instance.origin);
+    equipmentBladeB = equipmentPoint(equipmentHands.right, {0, 0, prop->bounds[5]},
+                                     characterSession.instance.origin);
     Vec previousA = equipmentPreviousBlade ? equipmentOldBladeA : equipmentBladeA,
         previousB = equipmentPreviousBlade ? equipmentOldBladeB : equipmentBladeB;
     equipmentOldBladeA = equipmentBladeA;
@@ -163,7 +167,10 @@ static void equipmentContact() {
               end = read<uint32_t>(r + 8);
     if (!begin || end < begin || end - begin > 16384)
         return;
-    Vec feet = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
+    Vec feet = characterSession.instance.origin + Vec{characterSession.instance.state.position[0],
+                                                      characterSession.instance.state.position[1],
+                                                      characterSession.instance.state.position[2]} *
+                                                      .01f;
     auto point = [](Vec v) { return SCContact::Point{v.x, v.y, v.z}; };
     for (uintptr_t at = begin; at < end; at += 4) {
         uintptr_t npc = read<uint32_t>(at);

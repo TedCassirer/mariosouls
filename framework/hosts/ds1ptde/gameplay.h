@@ -22,12 +22,12 @@ static GameplayFrame pollGameplayFrame() {
     presentationValidate();
     if (!cutsceneFrame.active)
         classTick();
-    if (characterOwned() && !characterControl.session.requested())
+    if (characterOwned() && !characterSession.control.session.requested())
         releaseControl(false);
     DWORD fg = 0;
     GetWindowThreadProcessId(GetForegroundWindow(), &fg);
     bool focus = fg == GetCurrentProcessId();
-    visualFocused = focus;
+    characterSession.visual.focused = focus;
     debugInput(focus);
     feedbackFocused = focus;
     if (!focus)
@@ -55,26 +55,27 @@ static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
         acc = 0;
         return false;
     }
-    if (SCSession::transition(characterControl.session, frame.identity, playerCamera != 0,
+    if (SCSession::transition(characterSession.control.session, frame.identity, playerCamera != 0,
                               !nativeReaction && !equipmentActionOwned) ==
         SCSession::Transition::SeamlessMap) {
-        if (loadMap() && characterControl.session.changeMap(frame.identity)) {
+        if (loadMap() && characterSession.control.session.changeMap(frame.identity)) {
             rebuildSurfaces();
             worldActivate();
         }
     }
     if (characterOwned() &&
-        SCSession::transition(characterControl.session, frame.identity, playerCamera != 0, false) ==
-            SCSession::Transition::ReplaceActor) {
+        SCSession::transition(characterSession.control.session, frame.identity, playerCamera != 0,
+                              false) == SCSession::Transition::ReplaceActor) {
         logMessage("SESSION native actor changed; clearing pending work");
         releaseControl(true);
     }
-    if (characterOwned() && read<int>(player + 0x2d4) <= 0 && !characterControl.session.death()) {
+    if (characterOwned() && read<int>(player + 0x2d4) <= 0 &&
+        !characterSession.control.session.death()) {
         launcherCancel();
         if (!deathBegin(acc))
             releaseControl(true);
     }
-    if (characterControl.session.death() && read<int>(player + 0x2d4) > 0) {
+    if (characterSession.control.session.death() && read<int>(player + 0x2d4) > 0) {
         releaseControl(true);
         acc = 0;
     }
@@ -83,22 +84,22 @@ static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
         // A pending load request is not a visible character. Pressing the toggle
         // while still human should enable the guest, not cancel automatic activation.
         if (characterPresented()) {
-            characterControl.session.request(false);
+            characterSession.control.session.request(false);
             releaseControl(false);
         } else {
-            characterControl.session.request(true);
+            characterSession.control.session.request(true);
             if (!activate())
-                characterControl.session.failed(frame.inputTime);
+                characterSession.control.session.failed(frame.inputTime);
         }
     }
     cameraTick();
-    if (!equipmentActionOwned || characterControl.session.death())
+    if (!equipmentActionOwned || characterSession.control.session.death())
         projectileRateRelease();
-    if (characterControl.session.death()) {
+    if (characterSession.control.session.death()) {
         deathTick(acc, frame.pad.slot);
         return false;
     }
-    if (!characterOwned() && characterControl.session.requested()) {
+    if (!characterOwned() && characterSession.control.session.requested()) {
         bool safe =
             frame.focus && frame.identity.valid() && playerCamera && read<int>(player + 0x2d4) > 0;
         if (safe) {
@@ -106,9 +107,9 @@ static bool updateCharacterLifecycle(const GameplayFrame &frame, double &acc) {
             safe = o.valid && !o.menu && !o.event && !o.ladder &&
                    nativeActiveAllowed(player, false) == 1;
         }
-        if (characterControl.session.canRetry(frame.identity, safe, frame.inputTime)) {
+        if (characterSession.control.session.canRetry(frame.identity, safe, frame.inputTime)) {
             if (!activate())
-                characterControl.session.failed(frame.inputTime);
+                characterSession.control.session.failed(frame.inputTime);
         }
     }
     return true;
@@ -218,7 +219,11 @@ static bool prepareCharacterSimulation(const GameplayFrame &frame, double &acc) 
         return false;
     worldPause(!frame.focus);
     Vec host = read<Vec>(playerPhysics + 0x10),
-        expected = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
+        expected =
+            characterSession.instance.origin + Vec{characterSession.instance.state.position[0],
+                                                   characterSession.instance.state.position[1],
+                                                   characterSession.instance.state.position[2]} *
+                                                   .01f;
     if (dot(host - expected, host - expected) > 64) {
         logMessage("native warp/load detected");
         releaseControl(true);
@@ -231,18 +236,22 @@ static bool prepareCharacterSimulation(const GameplayFrame &frame, double &acc) 
         return false;
     }
     worldHostSurfaces();
-    if (fabsf(state.position[0]) > 4000 || fabsf(state.position[2]) > 4000 ||
-        fabsf(state.position[1]) > 5000) {
-        Vec shift = {state.position[0], state.position[1], state.position[2]};
-        origin = origin + shift * .01f;
+    if (fabsf(characterSession.instance.state.position[0]) > 4000 ||
+        fabsf(characterSession.instance.state.position[2]) > 4000 ||
+        fabsf(characterSession.instance.state.position[1]) > 5000) {
+        Vec shift = {characterSession.instance.state.position[0],
+                     characterSession.instance.state.position[1],
+                     characterSession.instance.state.position[2]};
+        characterSession.instance.origin = characterSession.instance.origin + shift * .01f;
         rebuildSurfaces();
-        guest->setPosition(character, 0, 0, 0);
-        for (size_t i = 0; i < characterMesh.view.numTrianglesUsed * 3; i++) {
-            characterMesh.positions[i * 3] -= shift.x;
-            characterMesh.positions[i * 3 + 1] -= shift.y;
-            characterMesh.positions[i * 3 + 2] -= shift.z;
+        adapter.api->setPosition(characterSession.instance.id, 0, 0, 0);
+        for (size_t i = 0; i < adapter.mesh.view.numTrianglesUsed * 3; i++) {
+            adapter.mesh.positions[i * 3] -= shift.x;
+            adapter.mesh.positions[i * 3 + 1] -= shift.y;
+            adapter.mesh.positions[i * 3 + 2] -= shift.z;
         }
-        state.position[0] = state.position[1] = state.position[2] = 0;
+        characterSession.instance.state.position[0] = characterSession.instance.state.position[1] =
+            characterSession.instance.state.position[2] = 0;
         // Contact/support patches use the same local coordinates as static
         // terrain. Refresh them before another guest step after a rebase;
         // otherwise a long lift ride loses its floor for one simulation tick.
@@ -322,19 +331,23 @@ static void simulateCharacter(const GameplayFrame &frame, double dt, double &acc
         input.attack = 0;
     // Capture short taps even on render frames without a simulation tick. Consume
     // paused time instead of accumulating a catch-up burst. The host keeps running.
-    characterControl.input.sample(input, GetTickCount());
-    characterControl.clock.advance(dt);
+    characterSession.control.input.sample(input, GetTickCount());
+    characterSession.control.clock.advance(dt);
     bool stepped = false;
-    Vec stepFrom = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
+    Vec stepFrom =
+        characterSession.instance.origin + Vec{characterSession.instance.state.position[0],
+                                               characterSession.instance.state.position[1],
+                                               characterSession.instance.state.position[2]} *
+                                               .01f;
     if (!frame.focus) {
-        characterControl.input.clear();
-        characterControl.clock.clear();
+        characterSession.control.input.clear();
+        characterSession.control.clock.clear();
     } else if (SCFeedback::pending(feedbackPause.until, GetTickCount())) {
         feedbackPause.filter(input, GetTickCount());
-        characterControl.clock.clear();
+        characterSession.control.clock.clear();
         pumpAudio();
-    } else if (characterControl.clock.take(worldReady())) {
-        input = characterControl.input.take(GetTickCount());
+    } else if (characterSession.control.clock.take(worldReady())) {
+        input = characterSession.control.input.take(GetTickCount());
 
         if (equipmentActionButtons.suppressAttack())
             input.attack = 0;
@@ -346,10 +359,12 @@ static void simulateCharacter(const GameplayFrame &frame, double dt, double &acc
 
         // Burning-floor presentation must not be overwritten by a generic guest
         // flinch. Native passive reactions were resolved before this phase.
-        guest->nativeDamage(character,
-                            (environmentFrame & SC_ENV_REACTION_OWNED) ? 0 : pendingNativeHurt);
+        adapter.api->nativeDamage(characterSession.instance.id,
+                                  (environmentFrame & SC_ENV_REACTION_OWNED) ? 0
+                                                                             : pendingNativeHurt);
         pendingNativeHurt = 0;
-        if (!guestStep(character, &input, &state, &characterMesh.view)) {
+        if (!guestStep(characterSession.instance.id, &input, &characterSession.instance.state,
+                       &adapter.mesh.view)) {
             logMessage("Adapter frame rejected; restoring native controls");
             releaseControl();
             return;
@@ -358,10 +373,13 @@ static void simulateCharacter(const GameplayFrame &frame, double dt, double &acc
 
         pumpAudio();
         if (launcherApi)
-            launcherApi->query(character, &launcherState);
+            launcherApi->query(characterSession.instance.id, &launcherState);
         launcherCameraTick();
     }
-    Vec p = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
+    Vec p = characterSession.instance.origin + Vec{characterSession.instance.state.position[0],
+                                                   characterSession.instance.state.position[1],
+                                                   characterSession.instance.state.position[2]} *
+                                                   .01f;
     if (p.y < -1000 && isfinite(p.y)) {
         environmentKill(acc, "outside_world");
         return;
@@ -372,7 +390,8 @@ static void simulateCharacter(const GameplayFrame &frame, double dt, double &acc
         return;
     }
     actionFlags(false);
-    put(ownedMovement + 0xc4, read<uint32_t>(ownedMovement + 0xc4) & ~0x10u);
+    put(characterSession.native.movement + 0xc4,
+        read<uint32_t>(characterSession.native.movement + 0xc4) & ~0x10u);
     if (stepped && !worldSubmit(stepFrom, p)) {
         logMessage("WORLD rejected movement request; native controls restored");
         releaseControl();
@@ -407,6 +426,7 @@ static void update() {
     if (!cutsceneFrame.active)
         presentationTick();
     cutsceneTick();
-    if ((!visualFocused) || SCFeedback::pending(feedbackPause.until, GetTickCount()))
-        visualMesh.freeze();
+    if ((!characterSession.visual.focused) ||
+        SCFeedback::pending(feedbackPause.until, GetTickCount()))
+        characterSession.visual.mesh.freeze();
 }

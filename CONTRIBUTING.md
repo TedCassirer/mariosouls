@@ -19,6 +19,8 @@ python tools/framework.py build --check-portability
 
 CI compiles; there are no automated gameplay suites. Use the [manual checklist](docs/TESTING.md) when game verification is appropriate, and state which cases remain untested. Never use the owner's level-65 character. Agent-driven controls need a current handoff.
 
+Character/camera assembly and debug geometry/panels now have explicit neutral input builders; PTDE supplies observations and owns native restoration/GPU state. Keep their borrowed-input and output lifetimes intact. Use the current resource/session owners rather than introducing a parallel global instance; do not convert native cleanup into destructor side effects. Preview/cinematic/audio state and include order remain bounded debt, documented in the architecture specification. A port starts from the [presentation-only handoff](framework/docs/REMASTERED_HANDOFF.md).
+
 ## Keep the behavior record current
 
 Update [features and tweaks](docs/FEATURES_AND_TWEAKS.md) whenever behavior, tuning, configuration or defaults change. Include values/units, source locations, limitations and verification status. Add meaningful changes to the unreleased section of [CHANGELOG.md](CHANGELOG.md).

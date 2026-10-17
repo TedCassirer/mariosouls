@@ -62,7 +62,7 @@ static bool bodyCapture() {
     BodyBinding b;
     b.actor = player;
     b.physics = playerPhysics;
-    b.movement = ownedMovement;
+    b.movement = characterSession.native.movement;
     b.proxy = read<uintptr_t>(playerPhysics + 0x38);
     for (int i = 0; i < 2; i++)
         b.parts[i] = read<uintptr_t>(playerPhysics + 0x44 + i * 4);

@@ -14,7 +14,8 @@ Follow the [architecture rules](../../docs/ARCHITECTURE.md) when extending this 
 | Native action ownership | `actions.h`, `interaction.h`, `native_reaction.h`, `equipment_actions.h` |
 | Motion/support/terrain | `world.h`, `native_support.h`, `terrain.h`, `arena_floor.h`, `body.h`, `hazards.h` |
 | Damage/equipment/reactions | `combat.h`, `native_combat.h`, `equipment_native.h`, `defense.h`, `recovery_native.h` |
-| Rendering and UI order | `render_character.h`, `render_device.h`, `render_surfaces.h`, `render_composite.h`, `ui_order.h` |
+| Rendering and UI order | `render_observation.h`, `render_character.h`, `render_device.h`, `render_surfaces.h`, `render_composite.h`, `ui_order.h` |
+| Read-only diagnostics | `debug_observation.h`, `debug_view.h`, shared `core/debug_presentation.h` |
 | Class/preview | `starting_class.h`, `class_preview.h`, `unarmed_equipment.h` |
 | Props/assets/setup | `equipment_props.h`, `archive.py`, `prepare_collision.py`, `prepare_equipment.py`, `setup.py`, `player_setup.py`, `installer.cs`, `edition.json` |
 
@@ -28,7 +29,7 @@ The separate update routine currently runs from `endScene` once per Present. Fix
 
 `gameplay.h` observes actor/camera/input, resolves lifecycle intent, routes contextual actions, reconciles native movement/support and advances a ready fixed-rate guest tick. Native-owned action/cinematic/death presentation is separate. `render_character.h` consumes validated snapshots; drawing cannot call guest simulation.
 
-`player`, `playerPhysics` and `playerCamera` describe current observations. `ownedActor` and `ownedMovement` identify the objects whose scoped modifications may be restored. `loadedMap` identifies terrain; `origin` converts native metres into local SDK centimetres. `characterControl` owns intent, session and clock/input latches. Resetting simulation does not invent a new class choice or ownership epoch.
+`player`, `playerPhysics` and `playerCamera` describe current observations. `characterSession.native.actor` and `.movement` identify the objects whose scoped modifications may be restored. `loadedMap` identifies terrain; `characterSession.instance.origin` converts native metres into local SDK centimetres. `characterSession.control` owns intent, session and clock/input latches. Resetting simulation does not invent a new class choice or ownership epoch.
 
 Native controls retain menus, scripts, paired combat and death. Guest appearance can persist while locomotion waits for a safe native identity. Visibility suppression begins only after usable replacement data/drawing exists; invalid native identity or teardown restores scoped fields safely.
 
@@ -54,3 +55,11 @@ Stock/DSfix have focused historical checks. A native-hook compile or successful 
 Remastered requires new native discovery and a DX11 host implementation. Preserve the [integration inventory](PORT_CHECKLIST.md), [host-porting obligations](../../docs/HOST_PORTING.md), [SDK contract](../../docs/CONTRACT.md) and [manual checklist](../../../docs/TESTING.md). Update [Features and tweaks](../../../docs/FEATURES_AND_TWEAKS.md) when behavior/defaults change.
 
 Logging is bounded startup/error information. F8 diagnostics are read-only observations; no gameplay automation or cheat menu is part of this host.
+
+## Explicit presentation and lifetime inputs
+
+`render_observation.h` captures/validates actor/camera/preview/cinematic data and supplies the neutral camera/mesh builders in `core/character_presentation.h`. `render_character.h` composes the result; `render_device.h::StateScope` owns synchronous D3D9 state restoration. The original update/hook cadence remains intact.
+
+`debug_observation.h` owns native/guest capture and retention; `core/debug_presentation.h` owns value-only diagnostic shape/panel assembly; `debug_view.h` submits it through the renderer. Native addresses and probing remain in this edition.
+
+`character_state.h` explicitly owns module/CPU mesh resources and the non-copyable instance/control/visual/native-lease/presentation session. CPU storage is neutral `core/character_storage.h`. Cleanup order is still explicit in `runtime.cpp`, with current-actor checks before restoring native bits. Preview/cinematic/audio and feature-local statics/include ordering remain bounded debt. See the [port handoff](../../docs/REMASTERED_HANDOFF.md); these headers are not a portable native host implementation.

@@ -32,6 +32,8 @@ The first Remastered milestone is presentation only: separately loaded x64 host,
 
 All new gameplay integration belongs to `framework/`. Share capabilities through the SDK instead of adding character-name switches to the host. A Mario-only fix belongs in Mario's adapter unless the underlying responsibility is native or shared.
 
+Use `core/character_presentation.h` for reusable character/camera assembly and `core/debug_presentation.h` for diagnostic geometry/panels. A host supplies validated observations; it must not put native reads or guest callbacks into those builders. PTDE's explicit resource/session owners are in `character_state.h`, with neutral owned CPU buffers in `core/character_storage.h`. Preserve existing release order and actor-bound restoration rather than adding native writes to destructors. Preview/cinematic/audio/feature-local state and translation-unit include order remain documented debt. See the concrete [Remastered handoff](framework/docs/REMASTERED_HANDOFF.md).
+
 All character/equipment/cannon/feedback/debug drawing must use the internal renderer. Keep neutral CPU geometry in reusable core helpers, guest-specific geometry in the adapter and native observations in the edition; D3D state/resources stay in its backend. Derive host operation availability from verified hooks and current observations, retaining local guards. Build/link recipes belong in the edition too; selecting a new host must not silently compile PTDE or reuse its output/install paths.
 
 ## Architecture rules for every change

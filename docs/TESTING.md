@@ -24,7 +24,7 @@ Use disposable characters and separate save backups. Never test on the owner's l
 | Overlay | Hidden at startup; F8, F9 and F10 behave without changing gameplay |
 | Interactions | Contextual A, NPC, door, bonfire, ladder and Estus; include slopes and open menus; Y must not trigger world interaction |
 | Combat | Glove +0/+upgrades, each attack, stamina exhaustion, weapon families, blocks, parries and criticals |
-| Fire Flower controls | Left-hand LB/L1/right mouse cast versus right-hand B/RB/left mouse; native charges; RT/Tab must not cast; shield LB guard/RT parry; LT/L2 crouch/ground pound; release/repress after casting, item/focus changes and menus; F6 restores native bindings |
+| Fire Flower controls | Left-hand LB/L1/right mouse cast versus right-hand B/RB/left mouse; native charges; RT/Tab must not cast; shield LB guard/RT parry; LT/L2 crouch/ground pound; release/repress after casting, item/focus changes and menus; left Flame with empty right hand/gloves/sword, flat ground/stairs; 150-ms native footing preparation or one-second cancellation with no queued input; compare `[Projectiles] Enabled=0`; F6 restores native bindings |
 | Incoming damage | Melee/projectile hits, armor/statuses, healing, heavy/airborne recovery, lethal damage and grabs |
 | Environment | Reduced landings versus lethal pits; lava with/without ring; enemy-fire priority/cooldown |
 | Death / streaming | One-shot death, respawn, and area crossing while moving followed by successful attacks |
@@ -33,7 +33,7 @@ Use disposable characters and separate save backups. Never test on the owner's l
 
 This is a checklist, not a statement that every case already passes. Scope each check to the changed behavior rather than claiming broad compatibility from a small sample.
 
-After renderer/capability refactoring, repeat the relevant rows in stock PTDE and DSfix: character and held-prop textures/lighting, impact flashes, cannon/reticle/prompt, all F8 layers/depth modes, native UI ordering, resolution change and device reset. Include loading/movement, interaction/Estus, combat, death/respawn and a moving area transition. Compilation does not establish visual or fallback parity; no such live check was performed for this architectural change. No Remastered game check is possible from the PTDE build.
+After renderer/capability/session refactoring, repeat the relevant rows in stock PTDE and DSfix: character and held-prop textures/lighting, impact flashes, cannon/reticle/prompt, all F8 layers/depth modes, native UI ordering, resolution change and device reset. Include creation-preview trait menus, cinematic camera/root handling, loading/movement, interaction/Estus, combat, death/respawn and a moving area transition. The current source extraction also separates native render/debug observation from CPU assembly and groups native restoration/guest state; explicitly verify F6 restoration and device reset do not cross those lifetimes. Compilation does not establish visual or fallback parity; no such live check was performed for this architectural change. No Remastered game check is possible from the PTDE build.
 
 ## Record useful evidence
 

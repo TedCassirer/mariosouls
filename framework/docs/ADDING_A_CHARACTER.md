@@ -36,6 +36,8 @@ Host presentation submits equipment, cannon, feedback, diagnostic lines and scre
 
 Body scale is distinct from speed and jump distance. `SC_CAP_NATIVE_WALLS` requires verified host motion/collision; it cannot be used to bypass a native wall with guest-only movement. Environment callbacks may request presentation/movement reactions but never write native HP, stamina, inventory or immunity.
 
+The host owns mesh storage (`core/character_storage.h`) and renders validated outputs through `core/character_presentation.h` and the internal renderer. Adapters supply guest meshes/poses; they do not read native cameras or build backend state. Diagnostic observations/panels are neutral presentation data, not adapter permission to inspect the game. Keep all borrowed SDK arrays valid for the documented call lifetime.
+
 ## Compile and verify
 
 Build the adapter and full host integration, then use `build --check-portability` for the intended portable declarations/guest outputs. A runtime is built only when the manifest requires one and its recipe exists. No behavioral test discovery or simulated-host runner is available.

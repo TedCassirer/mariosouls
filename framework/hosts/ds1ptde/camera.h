@@ -53,7 +53,7 @@ static void cameraConfigure() {
     cameraSupported = false;
     cameraDefaultScale = 1.f;
     auto entry =
-        (SC_GetCameraProfile)GetProcAddress(adapterModule, "SoulsCharacterGetCameraProfile");
+        (SC_GetCameraProfile)GetProcAddress(adapter.module, "SoulsCharacterGetCameraProfile");
     if (!entry)
         return;
     auto p = entry(SC_CAMERA_PROFILE_VERSION, sizeof(SC_CameraProfile));
@@ -66,12 +66,13 @@ static void cameraConfigure() {
 }
 
 static void cameraTick() {
-    if (!cameraSupported || !characterOwned() || player != ownedActor || !playerCamera) {
+    if (!cameraSupported || !characterOwned() || player != characterSession.native.actor ||
+        !playerCamera) {
         cameraRelease();
         return;
     }
     char section[80], value[32], fallback[32];
-    snprintf(section, sizeof(section), "Camera.%s", profile->id);
+    snprintf(section, sizeof(section), "Camera.%s", adapter.profile->id);
     snprintf(fallback, sizeof(fallback), "%.3f", cameraDefaultScale);
     GetPrivateProfileStringA(section, "DistanceScale", fallback, value, sizeof(value), ini);
     char *end = nullptr;

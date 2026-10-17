@@ -97,8 +97,9 @@ static void feedbackTrack(uintptr_t target, int id, int before, int serial, int 
     for (const auto &r : feedbackReceipts)
         if (r.target == target && r.object == object && r.serial == serial)
             return;
-    float multiplier =
-        move >= 0 && move < int(profile->attackCount) ? profile->attacks[move].multiplier : 1.f;
+    float multiplier = move >= 0 && move < int(adapter.profile->attackCount)
+                           ? adapter.profile->attacks[move].multiplier
+                           : 1.f;
     feedbackReceipts.push_back(
         {target, id, serial, move, before, GetTickCount(), object, at.x, at.y, at.z, multiplier});
 }

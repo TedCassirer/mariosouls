@@ -4,6 +4,31 @@
 // D3D9 resources and fixed-function state stay behind the presentation boundary.
 // CPU images are immutable and remain alive for the host session.
 namespace PTDEGraphics {
+// Synchronous draw lease. Restore on every early return as well as success.
+class StateScope {
+    IDirect3DStateBlock9 *saved = nullptr;
+
+public:
+    explicit StateScope(IDirect3DDevice9 *device) {
+        if (FAILED(device->CreateStateBlock(D3DSBT_ALL, &saved)))
+            saved = nullptr;
+    }
+
+    StateScope(const StateScope &) = delete;
+    StateScope &operator=(const StateScope &) = delete;
+
+    ~StateScope() {
+        if (saved) {
+            saved->Apply();
+            saved->Release();
+        }
+    }
+
+    bool valid() const {
+        return saved != nullptr;
+    }
+};
+
 struct Image {
     IDirect3DDevice9 *device;
     const uint8_t *pixels;

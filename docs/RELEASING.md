@@ -1,6 +1,6 @@
 # Release preparation
 
-GitHub Releases do not require Actions. Build locally, then upload the files to a draft prerelease. Publication is a separate human decision; successful compilation does not establish a stable player release.
+GitHub Releases do not require Actions. Build locally, then upload the files to a draft prerelease. Publish only when the human explicitly requests a release; mark development versions as prereleases and describe remaining verification. Successful compilation does not establish a stable player release.
 
 ## Build the installer
 
@@ -22,7 +22,7 @@ The player exporter explicitly leaves unsupported Havok shape types in native co
 - `Setup.exe --inspect <private-output.json>` checks embedded payload hashes and exports package metadata, without installation or game control.
 - In a fresh private cache, run the embedded Python with `player_setup.py prepare --game <PTDE DATA> --rom <owned ROM>`. It builds and exports assets without changing game files.
 - Inspect filenames/content, licenses, hashes and private-data exclusions. Attach source and checksums with the executable.
-- Before publication, manually verify GUI install/update/uninstall on a disposable game copy, with/without DSfix, interrupted setup, protected folders and a second PC. Then follow the [manual game checklist](TESTING.md). Never use the owner's level-65 character.
+- Before claiming a stable player release, manually verify GUI install/update/uninstall on a disposable game copy, with/without DSfix, interrupted setup, protected folders and a second PC. An explicitly requested experimental prerelease must clearly list any of these checks that remain pending. Then follow the [manual game checklist](TESTING.md). Never use the owner's level-65 character.
 
 Report compilation, payload inspection, preparation, installation/removal and live gameplay separately. The first candidate is experimental; pending checks are not implied to pass.
 
@@ -38,4 +38,8 @@ Report compilation, payload inspection, preparation, installation/removal and li
 
 Push reviewed source, select a new version tag at its commit, and create a draft prerelease. Attach the `.exe`, matching source ZIP, manifest and SHA-256 list. Include owned-ROM requirements, first-run downloads/building, supported PTDE edition, DSfix handling, unsigned status, controls, known limitations and actual verification. Never reuse checkpoint tags or silently replace an existing asset.
 
-Draft preparation is not approval to publish or upload to Nexus. [GitHub's release guide](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) covers manual uploads; Actions minutes are not required.
+Draft preparation alone is not approval to publish or upload to Nexus. An explicit request for a GitHub release authorizes that release; it does not change repository visibility, authorize Nexus uploads or authorize installation into the maintainer's game. Keep the source revision/tag and all asset checksums matched. Create a new version instead of replacing another draft's assets. [GitHub's release guide](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) covers manual uploads; Actions minutes are not required.
+
+## 0.9.0-dev.2 preview
+
+This preview adds the host presentation/state/debug boundary extraction and a candidate Fire Flower cast-handoff fix. Left/right casts settle native footing before input dispatch; the reported left-hand failure has not been reproduced and verified on this revision. Describe it as a candidate, not a confirmed gameplay fix. The previous installer's preparation/file-operation evidence remains historical. Current compilation and package inspection are separate from pending GUI/second-PC/live-game checks.

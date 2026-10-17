@@ -31,10 +31,10 @@ extern "C" __attribute__((used, noinline)) uint32_t nativeRecoveryEnd(uintptr_t 
     const uintptr_t tracks = read<uint32_t>(current.movement + 0x18);
     const bool paired = !tracks || (read<uint32_t>(tracks + 28 * 0x9c + 4) != 0xffffffffu &&
                                     read<int>(tracks + 28 * 0x9c) >= 0);
-    const bool permitted = actor == player && actor == ownedActor &&
-                           current.movement == ownedMovement && interaction.valid &&
-                           !interaction.menu && !interaction.event && !interaction.ladder &&
-                           !paired && foreground == GetCurrentProcessId();
+    const bool permitted = actor == player && actor == characterSession.native.actor &&
+                           current.movement == characterSession.native.movement &&
+                           interaction.valid && !interaction.menu && !interaction.event &&
+                           !interaction.ladder && !paired && foreground == GetCurrentProcessId();
     if (!PTDERecovery::matches(request, actor, action, read<int>(actor + 0x2d4), currentMap(),
                                GetTickCount(), current, permitted))
         return original;

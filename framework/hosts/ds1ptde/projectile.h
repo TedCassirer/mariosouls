@@ -20,10 +20,11 @@ static void projectileRateRelease() {
 }
 
 static void projectileConfigure() {
-    auto entry = (SC_GetProjectileProfile)GetProcAddress(adapterModule,
+    auto entry = (SC_GetProjectileProfile)GetProcAddress(adapter.module,
                                                          "SoulsCharacterGetProjectileProfile");
     auto p = entry ? entry(SC_PROJECTILE_PROFILE_VERSION, sizeof(SC_ProjectileProfile)) : nullptr;
-    projectileSupported = SCProjectile::valid(p) && (profile->capabilities & SC_CAP_PYROMANCY);
+    projectileSupported =
+        SCProjectile::valid(p) && (adapter.profile->capabilities & SC_CAP_PYROMANCY);
     if (projectileSupported)
         projectileProfile = *p;
 }
@@ -104,7 +105,7 @@ static bool __fastcall projectileFly(uintptr_t self, uintptr_t, uintptr_t bullet
         uintptr_t actor = projectileOwner(read<uint32_t>(bullet + 0x8c));
 
         if (projectileEnabled() && characterOwned() && equipmentActionOwned && actor == player &&
-            player == ownedActor && read<int>(player + 0x2d4) > 0) {
+            player == characterSession.native.actor && read<int>(player + 0x2d4) > 0) {
             for (auto &slot : projectileFlights)
                 if (!slot.bullet || read<uint32_t>(slot.bullet + 4) != slot.serial ||
                     read<int>(slot.bullet + 0x70) != 2) {

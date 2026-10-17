@@ -89,20 +89,21 @@ static void rebuildSurfaces() {
     bool flip = GetPrivateProfileIntA("MarioSouls", "FlipWinding", 1, ini) != 0;
     for (size_t i = 0; i < mapVertices.size(); i += 3) {
         Vec center = (mapVertices[i] + mapVertices[i + 1] + mapVertices[i + 2]) * (1.f / 3);
-        if (fabsf(center.x - origin.x) > 110 || fabsf(center.z - origin.z) > 110 ||
-            fabsf(center.y - origin.y) > 110)
+        if (fabsf(center.x - characterSession.instance.origin.x) > 110 ||
+            fabsf(center.z - characterSession.instance.origin.z) > 110 ||
+            fabsf(center.y - characterSession.instance.origin.y) > 110)
             continue;
         SC_Surface surface = {};
         for (int v = 0; v < 3; v++) {
-            Vec q = (mapVertices[i + (flip ? 2 - v : v)] - origin) * 100;
+            Vec q = (mapVertices[i + (flip ? 2 - v : v)] - characterSession.instance.origin) * 100;
             surface.vertices[v][0] = (int)roundf(q.x);
             surface.vertices[v][1] = (int)roundf(q.y);
             surface.vertices[v][2] = (int)roundf(q.z);
         }
-        if (SCTerrain::staticSurface(profile->capabilities, surface))
+        if (SCTerrain::staticSurface(adapter.profile->capabilities, surface))
             surfaces.push_back(surface);
     }
-    guest->surfaces(surfaces.data(), surfaces.size(), 0);
+    adapter.api->surfaces(surfaces.data(), surfaces.size(), 0);
 }
 
 static bool lineClear(Vec a, Vec b) {

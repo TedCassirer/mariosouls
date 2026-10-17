@@ -63,13 +63,26 @@ Keep these responsibilities distinct even where the current host composes them i
 
 1. **Observe:** validate current actor/physics/movement/camera/map identity, native ownership/state and input. Native memory access/layout knowledge stays in the host; shared policies receive neutral observations and opaque identity values they must not dereference.
 2. **Resolve lifecycle:** apply saved class/manual intent, loading, death/respawn, streaming, actor replacement and temporary native control before consuming guest input.
-3. **Route input/actions:** consume contextual buttons once, arbitrate menus/interactions/equipment/cannon, and retain native control for protected actions.
+3. **Route input/actions:** consume contextual buttons once, arbitrate menus/interactions/equipment/cannon, and retain native control for protected actions. Native cast intent reuses the existing grounding-preparation policy before input dispatch; it owns no spell/charge/projectile state. PTDE binds the pending request to the current hand/item/slot/device and cancels it on native ineligibility or handback; its completion clock starts when input is dispatched.
 4. **Reconcile:** validate a native motion acknowledgement/support snapshot before allowing the next guest step or outgoing contact. Position correction is not an animation/physics tick.
 5. **Simulate:** consume a ready fixed guest tick, collect bounded semantic state/mesh, validate it and submit an identity-bound native movement request. Native HP/stamina/damage remain authoritative.
 6. **Present:** pose native-owned actions and interpolate validated visual snapshots without acquiring locomotion or opening attack windows.
 7. **Draw:** consume snapshots, materials/camera/depth/phase and restore native graphics state. Draw functions cannot call `step`, `pose`, `resolveMotion`, advance simulation clocks, consume input or apply damage. Sampling visual interpolation/time is presentation, not a simulation step.
 
 Class/selection intent, visible replacement and locomotion ownership are separate states. A presentation-only host can show the guest while native movement remains active. Loss of movement readiness must not itself require a human model; inability to provide a safe replacement must retain native visibility. Never hide the only usable player representation.
+
+PTDE's composition root owns two non-copyable lifetime aggregates in `character_state.h`:
+
+| Owner | Contents and lifetime | Cleanup authority |
+| --- | --- | --- |
+| `AdapterResources` | Module, borrowed API/descriptor and host-owned `SCCharacterStorage::MeshBuffers`/immutable atlas; process/DLL lifetime, independent of device Reset | Loader validates before use; partial initialization shuts down before unloading. Hot unload is unsupported. |
+| `Session::instance` | Gameplay/presentation guest ID, local origin and semantic state | Existing activate/presentation/release paths create/destroy; native control can change without destroying the instance. |
+| `Session::control` | Neutral intent/ownership policy, fixed-step clock and latched input | Explicit gameplay handoff clears queued simulation; requested intent can survive. |
+| `Session::visual` | Render-only mesh/socket history, anchor history, alpha and focus | Cleared on existing lifecycle discontinuities; device Reset does not respawn the guest. |
+| `Session::native` | Captured actor/movement identity, original bits, control-bit lease and visibility/map-hit intent | `releaseControl` checks live actor/movement identity before restoring; destructors never write native memory. |
+| `Session::presentation` | Native-owned appearance binding, previous position, cadence/retry times | Presentation validates/relinquishes its binding explicitly, separately from locomotion. |
+
+CPU mesh storage is shared neutral code in `core/character_storage.h`; Windows module handles and native restoration data remain PTDE-owned. Preview/cinematic instance IDs, their visibility leases, body/world/action leases and audio output still have separate edition-owned state. These scopes coordinate Mario's single live instance; the aggregates do not implement hot swap or a universal session manager. Native observations remain transient reads, not saved authoritative state. Release sequencing stays explicit in the composition root and is not replaced by destructor cleanup at DLL detach.
 
 Actor/physics/movement replacement invalidates tickets, saved modifications, contacts and target identities. Restore fields only when they still belong to the captured actor/generation. A seamless map change may keep a valid guest binding while refreshing terrain; it must not discard paid attack state or retain stale targets. Device Reset is graphics lifetime, not a guest respawn or a new class selection.
 
@@ -78,6 +91,12 @@ The current PTDE policy is 30-Hz simulation, bounded backlog, at most one guest 
 Native hooks and adapter callbacks are also lifetime/thread boundaries. Keep hook-local native observation/submission bounded; hand work across native/guest phases through the existing ownership and synchronization rules rather than calling a guest from an arbitrary new hook. Do not assume multi-thread-safe guest entry or move GPU resource work onto an unrelated thread. Keep loader-entry work minimal and preserve exact hook registers, stack cleanup and floating-point state. A 64-bit port must rediscover those conventions instead of widening PTDE assembly mechanically.
 
 ## 5. Rendering contract
+
+`core/character_presentation.h` owns camera-matrix and character-vertex assembly. `CameraInput` supplies finite metre-space eye/target, radian FOV, aspect, near/far metres and an optional validated rigid camera-world matrix. `MeshInput` borrows a validated SDK mesh/feet in centimetres, a metre-space render origin, model scale, optional matching interpolation history/alpha and an optional validated rigid cinematic transform. The caller owns all arrays/history through the synchronous call; output vectors belong to the caller. There are no actor pointers, clocks, native reads, guest callbacks or graphics calls in these builders. They cannot decide lifecycle or advance animation.
+
+PTDE's `render_observation.h` validates live actor/camera or cinematic identity, selects its established lens defaults/preview framing and render-only native anchor correction, then supplies those inputs. `render_character.h` composes the submissions. `render_device.h::StateScope` captures/restores D3D9 state on success and early returns. Camera matrix conventions remain explicit; a future backend must translate them.
+
+Diagnostics use a separate boundary: `debug_observation.h` owns native selection, identity/cache cadence, read-only guest probing and F8/F9/F10 input. It records bounded value-only `SCDebugView::Observations` and translated `Panel` fields. `core/debug_presentation.h` assembles line/text/background vertices without reading a host or guest. `debug_view.h` submits those outputs through the renderer; the edition supplies its immutable font atlas. Shape snapshots own values, panel strings are borrowed only during assembly, and render buffers are borrowed during submission. Native object origins remain markers, never fabricated collision bounds.
 
 All character/equipment/cannon/impact/debug geometry uses [render_api.h](../sdk/render_api.h). Reusable CPU assembly belongs in core; native observations/selection and guest-specific mesh generation stay with their owners. The renderer consumes explicit mesh/line/screen submissions and materials: texture/color mode, filtering, shade, depth test/write, alpha cutoff and blending.
 
@@ -125,9 +144,9 @@ Before editing, name the authority and the boundary being changed. If a feature 
 
 These are facts about the current implementation, not patterns for new work:
 
-- PTDE is one translation unit with implementation-fragment headers, shared globals and explicit include order. Conceptual layers do not mean independent modules, injected services or hot-swappable instances already exist. Keep dependencies visible; incremental state extraction must preserve hook/native lifetime.
+- PTDE remains one translation unit with implementation-fragment headers and explicit include order. Adapter resources and gameplay/presentation/control/native-restoration state now have explicit owners in `character_state.h`; feature-specific observation/hook/lease state, audio, preview and cinematics still use edition-local statics. This is incremental ownership extraction, not independent host modules or hot-swappable instances. Keep subsequent extraction scoped to actual lifetimes and preserve native cleanup order.
 - PTDE currently dispatches its separate update routine from graphics callbacks once per Present. Its fixed clock/backpressure and draw functions are separate, but native scheduling is not fully independent of render opportunities. Do not claim a complete native scheduler, multithreaded simulation or frame-rate independence at arbitrarily low FPS. A port must establish appropriate native update/acknowledgement integration from evidence.
-- Current camera/matrix assembly, preview/cinematic recognition, native selection/text gathering and Windows font rasterization remain edition-owned. The neutral renderer does not automatically port these integrations.
+- Camera/actor observation, preview/cinematic recognition, debug data gathering, font rasterization and composition remain edition-owned. Camera matrices, Mario vertex assembly and diagnostic shape/panel assembly are reusable CPU helpers. Equipment/cannon/feedback selection still reads edition state before calling neutral helpers; those host fragments are not ready-made modules to copy into another edition. No render graph, DX11 backend or native scheduler is supplied.
 - Mario's runtime permits one live instance; host preview/presentation/locomotion paths coordinate that lifetime. Do not assume general multi-instance or adapter hot unloading.
 - The manual equipment-preview tool still selects the existing PTDE prop preview path. It is a bounded asset-authoring tool, not shared native support or a portable game-test system. Do not spread that dependency into the shared build/link path or another host.
 - Windows x86/x64 compilation is the checked portability scope. No Remastered hooks, DX11 backend, installer or gameplay evidence is supplied. Other OS/game/character support is not inferred.

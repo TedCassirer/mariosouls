@@ -10,7 +10,7 @@ The mod has been tested in focused development sessions **with and without DSfix
 
 You need your own PTDE installation and a **US Super Mario 64 ROM in big-endian `.z64` format**. ROMs and game assets are not included.
 
-A Windows installer candidate is being prepared for GitHub Releases. `MarioSouls-<version>-Setup.exe` provides Install/Update and Uninstall, with game-folder and ROM selection. It includes Python, downloads pinned build/asset tools, builds locally and exports data from your own game. No separate developer tools are required. See [installation details](docs/INSTALLING.md) for candidate status and requirements.
+Experimental Windows installer previews are available from [GitHub Releases](https://github.com/TedCassirer/mariosouls/releases). `MarioSouls-<version>-Setup.exe` provides Install/Update and Uninstall, with game-folder and ROM selection. It includes Python, downloads pinned build/asset tools, builds locally and exports data from your own game. No separate developer tools are required. See [installation details](docs/INSTALLING.md) for candidate status and requirements.
 
 To install from a source checkout, first follow the [build and asset preparation guide](docs/DEVELOPMENT.md).
 

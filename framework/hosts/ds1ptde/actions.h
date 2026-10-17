@@ -24,10 +24,11 @@ static bool actionPending() {
 }
 
 static void actionFlags(bool nativeMotion, bool lockMovement = false) {
-    if (!player || player != ownedActor)
+    if (!player || player != characterSession.native.actor)
         return;
     auto f1 = read<uint32_t>(player + 0x1fc), f2 = read<uint32_t>(player + 0x3c4);
-    put(player + 0x1fc, nativeMotion ? (f1 & ~0x4000u) | (savedFlags1 & 0x4000u) : f1 | 0x4000u);
+    put(player + 0x1fc,
+        nativeMotion ? (f1 & ~0x4000u) | (characterSession.native.flags1 & 0x4000u) : f1 | 0x4000u);
     bool allowAction =
         nativeMotion || actionPending() || InterlockedCompareExchange(&equipmentGuardInput, 0, 0);
     // Input filtering blocks native locomotion. Do not set NoMove: the native
@@ -35,17 +36,18 @@ static void actionFlags(bool nativeMotion, bool lockMovement = false) {
     // Menus and scripted actions still receive navigation/confirmation input,
     // but must not translate the hidden native body. Ladders retain native motion.
     // Release only locks introduced here; preserve pre-existing native locks.
-    put(player + 0x3c4,
-        actionControlLocks.update(f2, (allowAction ? 0 : 0x100u) | (lockMovement ? 0x200u : 0)));
+    put(player + 0x3c4, characterSession.native.controlLocks.update(
+                            f2, (allowAction ? 0 : 0x100u) | (lockMovement ? 0x200u : 0)));
 }
 
 static bool actionEligible(int kind) {
     if (!characterOwned() || nativeActionOwned() || nativeReaction || equipmentActionOwned ||
-        character < 0 || !hostPermits(SCHost::Operation::Interaction) || actionPending())
+        characterSession.instance.id < 0 || !hostPermits(SCHost::Operation::Interaction) ||
+        actionPending())
         return false;
     auto o = nativeInteractionState();
-    if (!o.valid || !o.grounded || !(state.flags & SC_CAN_INTERACT) || !o.idle || o.menu ||
-        o.event || o.ladder)
+    if (!o.valid || !o.grounded || !(characterSession.instance.state.flags & SC_CAN_INTERACT) ||
+        !o.idle || o.menu || o.event || o.ladder)
         return false;
     return kind != 1 || read<uint32_t>(read<uint32_t>(0x13786d0) + 0x58) != 0;
 }
@@ -59,8 +61,8 @@ static void requestAction(int kind, bool fromPad = false) {
             "Action request rejected: kind=%d owned=%d native=%d reaction=%d equipment=%d "
             "input=%d pending=%d valid=%d grounded=%d guest_flags=%x idle=%d menu=%d event=%d ladder=%d",
             kind, characterOwned(), nativeActionOwned(), bool(nativeReaction), equipmentActionOwned,
-            actionInputReady, actionPending(), o.valid, o.grounded, state.flags, o.idle, o.menu,
-            o.event, o.ladder);
+            actionInputReady, actionPending(), o.valid, o.grounded,
+            characterSession.instance.state.flags, o.idle, o.menu, o.event, o.ladder);
         return;
     }
     // Release guest gravity/motion first. Cached ramps can hold the actor a few
@@ -80,12 +82,12 @@ static void beginInteraction(int slot, bool pressAction = true) {
         requestAction(1);
         return;
     }
-    if (!characterOwned() || nativeActionOwned() || character < 0)
+    if (!characterOwned() || nativeActionOwned() || characterSession.instance.id < 0)
         return;
-    if (!characterControl.session.handoff())
+    if (!characterSession.control.session.handoff())
         return;
     worldRelease();
-    characterControl.resetSimulation();
+    characterSession.control.resetSimulation();
     actionReturnGate.clear();
     interactionPrevious = read<Vec>(playerPhysics + 0x10);
     interactionMap = currentMap();
@@ -104,9 +106,9 @@ static void beginInteraction(int slot, bool pressAction = true) {
 static void updateInteraction(double &acc, bool focus, int slot) {
     Vec host = read<Vec>(playerPhysics + 0x10);
     auto o = nativeInteractionState();
-    if (!o.valid || !player || player != ownedActor || !playerPhysics || !playerCamera ||
-        currentMap() != interactionMap || read<int>(player + 0x2d4) <= 0 || !isfinite(host.y) ||
-        dot(host - interactionPrevious, host - interactionPrevious) > 64) {
+    if (!o.valid || !player || player != characterSession.native.actor || !playerPhysics ||
+        !playerCamera || currentMap() != interactionMap || read<int>(player + 0x2d4) <= 0 ||
+        !isfinite(host.y) || dot(host - interactionPrevious, host - interactionPrevious) > 64) {
         releaseControl();
         acc = 0;
         return;
@@ -159,9 +161,9 @@ static void updateInteraction(double &acc, bool focus, int slot) {
         pose.phase = std::min(1.f, t / 2.2f);
     }
     for (int step = 0; acc >= 1. / SC_FIXED_HZ && step < 3; step++, acc -= 1. / SC_FIXED_HZ) {
-        Vec local = (host - origin) * 100;
+        Vec local = (host - characterSession.instance.origin) * 100;
         if (fabsf(local.x) > 4000 || fabsf(local.y) > 8000 || fabsf(local.z) > 4000) {
-            origin = host;
+            characterSession.instance.origin = host;
             rebuildSurfaces();
             local = {0, 0, 0};
         }
@@ -169,7 +171,8 @@ static void updateInteraction(double &acc, bool focus, int slot) {
         pose.position[1] = local.y;
         pose.position[2] = local.z;
         pose.yaw = read<float>(playerPhysics + 4) - 3.14159265f;
-        if (!guestPose(character, &pose, &state, &characterMesh.view)) {
+        if (!guestPose(characterSession.instance.id, &pose, &characterSession.instance.state,
+                       &adapter.mesh.view)) {
             releaseControl();
             acc = 0;
             return;
@@ -203,23 +206,24 @@ static void updateInteraction(double &acc, bool focus, int slot) {
     }
     // Completion follows actual action/menu state, not the native walk/idle animation.
     if (actionReturnGate.update(!o.menu && !o.event && !o.ladder && o.idle && focus, now)) {
-        Vec local = (host - origin) * 100;
-        guest->resume(character, local.x, local.y, local.z,
-                      read<float>(playerPhysics + 4) - 3.14159265f);
+        Vec local = (host - characterSession.instance.origin) * 100;
+        adapter.api->resume(characterSession.instance.id, local.x, local.y, local.z,
+                            read<float>(playerPhysics + 4) - 3.14159265f);
         if (actionPendingHurt && DWORD(now - actionHurtTime) < 700)
             pendingNativeHurt = std::max(pendingNativeHurt, uint32_t(actionPendingHurt));
         actionPendingHurt = 0;
-        state.position[0] = local.x;
-        state.position[1] = local.y;
-        state.position[2] = local.z;
-        state.faceAngle = read<float>(playerPhysics + 4) - 3.14159265f;
-        state.flags = o.grounded ? (SC_GROUNDED | SC_CAN_INTERACT) : 0;
-        state.attackId = state.interruptedAttackId = -1;
-        characterControl.session.resume();
+        characterSession.instance.state.position[0] = local.x;
+        characterSession.instance.state.position[1] = local.y;
+        characterSession.instance.state.position[2] = local.z;
+        characterSession.instance.state.faceAngle = read<float>(playerPhysics + 4) - 3.14159265f;
+        characterSession.instance.state.flags = o.grounded ? (SC_GROUNDED | SC_CAN_INTERACT) : 0;
+        characterSession.instance.state.attackId =
+            characterSession.instance.state.interruptedAttackId = -1;
+        characterSession.control.session.resume();
         actionRequestKind = 0;
         lastHP = read<int>(player + 0x2d4);
         worldActivate();
-        characterControl.resetSimulation();
+        characterSession.control.resetSimulation();
         actionFlags(false);
         InterlockedExchange(&actionRoute, LONG(ActionRoute::Character));
         acc = 0;

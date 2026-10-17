@@ -33,7 +33,7 @@ static void worldHostSurfaces() {
     SC_Surface triangles[48] = {};
     unsigned used = 0;
     if (worldMode != 1 || !worldMotionReady || !characterOwned()) {
-        guest->surfaces(nullptr, 0, 1);
+        adapter.api->surfaces(nullptr, 0, 1);
         return;
     }
     uintptr_t proxy = read<uintptr_t>(playerPhysics + 0x38), data = read<uintptr_t>(proxy + 0x10),
@@ -85,7 +85,8 @@ static void worldHostSurfaces() {
             int indices[6] = {0, 1, 2, 0, 2, 3};
             for (int t = 0; t < 2; t++)
                 for (int k = 0; k < 3; k++) {
-                    Vec local = (corners[indices[t * 3 + k]] - origin) * 100;
+                    Vec local =
+                        (corners[indices[t * 3 + k]] - characterSession.instance.origin) * 100;
                     auto &dest = triangles[used + t].vertices[k];
                     dest[0] = int(lroundf(local.x));
                     dest[1] = int(lroundf(local.y));
@@ -103,7 +104,7 @@ static void worldHostSurfaces() {
         int indices[6] = {0, 2, 1, 0, 3, 2};
         for (int t = 0; t < 2; t++)
             for (int k = 0; k < 3; k++) {
-                Vec local = (corners[indices[t * 3 + k]] - origin) * 100;
+                Vec local = (corners[indices[t * 3 + k]] - characterSession.instance.origin) * 100;
                 auto &dest = triangles[used + t].vertices[k];
                 dest[0] = int(lroundf(local.x));
                 dest[1] = int(lroundf(local.y));
@@ -111,7 +112,7 @@ static void worldHostSurfaces() {
             }
         used += 2;
     }
-    guest->surfaces(triangles, used, 1);
+    adapter.api->surfaces(triangles, used, 1);
 }
 
 static bool worldLineClear(Vec a, Vec b, uintptr_t target = 0) {
@@ -189,7 +190,7 @@ static void worldActivate() {
     AcquireSRWLockExclusive(&worldLock);
     worldMode = 1;
     worldMailbox.bind();
-    worldBinding = {player, playerPhysics, ownedMovement, loadedMap};
+    worldBinding = {player, playerPhysics, characterSession.native.movement, loadedMap};
     worldHeartbeat = GetTickCount();
     worldPaused = false;
     ReleaseSRWLockExclusive(&worldLock);
@@ -230,7 +231,11 @@ static bool worldReconcile(bool &resolvedTick) {
     if (busy)
         return true;
     Vec host = read<Vec>(playerPhysics + 0x10),
-        current = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f,
+        current =
+            characterSession.instance.origin + Vec{characterSession.instance.state.position[0],
+                                                   characterSession.instance.state.position[1],
+                                                   characterSession.instance.state.position[2]} *
+                                                   .01f,
         correction = host - current;
     if (!isfinite(dot(correction, correction)) || dot(correction, correction) > 4)
         return false;
@@ -243,7 +248,7 @@ static bool worldReconcile(bool &resolvedTick) {
     r.size = sizeof(r);
     r.generation = generation;
     r.sequence = resolved ? ticket.sequence : 0;
-    Vec local = (host - origin) * 100;
+    Vec local = (host - characterSession.instance.origin) * 100;
     r.position[0] = local.x;
     r.position[1] = local.y;
     r.position[2] = local.z;
@@ -265,8 +270,9 @@ static bool worldReconcile(bool &resolvedTick) {
             }
         }
     }
-    if (!guest->resolveMotion(character, &r, &state, &characterMesh.view) ||
-        !SC::frame(state, characterMesh.view, *profile))
+    if (!adapter.api->resolveMotion(characterSession.instance.id, &r,
+                                    &characterSession.instance.state, &adapter.mesh.view) ||
+        !SC::frame(characterSession.instance.state, adapter.mesh.view, *adapter.profile))
         return false;
     resolvedTick = resolved;
     return true;
@@ -275,7 +281,8 @@ static bool worldReconcile(bool &resolvedTick) {
 static bool worldSubmit(Vec from, Vec destination) {
     AcquireSRWLockExclusive(&worldLock);
     bool ok = worldMailbox.publish(motionPoint(from), motionPoint(destination),
-                                   state.faceAngle + 3.14159265f, GetTickCount());
+                                   characterSession.instance.state.faceAngle + 3.14159265f,
+                                   GetTickCount());
     ReleaseSRWLockExclusive(&worldLock);
     return ok;
 }

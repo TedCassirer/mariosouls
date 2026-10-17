@@ -18,9 +18,10 @@ extern "C" __attribute__((used, noinline)) void
 environmentFireBefore(uintptr_t actor, uintptr_t attacker, uintptr_t packet, unsigned preview) {
     const unsigned index = environmentFireDepth++;
     if (index < 8)
-        environmentFireStack[index] = characterOwned() && actor == player && actor == ownedActor
-                                          ? PTDEFire::before(actor, attacker, packet, preview)
-                                          : PTDEFire::Hit{};
+        environmentFireStack[index] =
+            characterOwned() && actor == player && actor == characterSession.native.actor
+                ? PTDEFire::before(actor, attacker, packet, preview)
+                : PTDEFire::Hit{};
 }
 
 extern "C" __attribute__((used, noinline)) void environmentFireAfter() {
@@ -66,7 +67,7 @@ static bool environmentConsumeFire() {
     const int map = environmentFireMap;
     environmentFirePending = {};
     ReleaseSRWLockExclusive(&environmentFireLock);
-    return hit.candidate && player == hit.actor && player == ownedActor &&
+    return hit.candidate && player == hit.actor && player == characterSession.native.actor &&
            SCNativeMemory::read<uint32_t>(player + 0x28) == hit.movement && currentMap() == map &&
            DWORD(GetTickCount() - tick) <= 5000 && SCNativeMemory::read<int>(player + 0x2d4) > 0;
 }

@@ -10,7 +10,7 @@ static wchar_t unarmedName[48]{}, unarmedNames[16][64]{}, unarmedSummary[128]{},
 
 static void unarmedEquipmentConfigure() {
     auto entry = (SC_GetUnarmedEquipmentProfile)GetProcAddress(
-        adapterModule, "SoulsCharacterGetUnarmedEquipmentProfile");
+        adapter.module, "SoulsCharacterGetUnarmedEquipmentProfile");
     auto p = entry ? entry(SC_UNARMED_EQUIPMENT_PROFILE_VERSION, sizeof(unarmedProfile)) : nullptr;
     unarmedEquipmentEnabled = SCUnarmed::valid(p);
     if (!unarmedEquipmentEnabled)

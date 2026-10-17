@@ -12,7 +12,8 @@ static bool combatUnarmedReady() {
         return true;
     auto gear = equipmentRead();
     return characterUnarmedGate.observe(unarmedEquipmentLevel(gear) >= 0,
-                                        gear.valid ? gear.right.id : -1, state.attackId);
+                                        gear.valid ? gear.right.id : -1,
+                                        characterSession.instance.state.attackId);
 }
 
 static float characterPeakY = 0;
@@ -21,7 +22,7 @@ static constexpr int characterRecoveryDelay = 500;
 static int combatNativeStamina(uintptr_t actor, int value, uintptr_t caller, uintptr_t packet) {
     if (actor != player)
         return value;
-    if (!characterOwned() || nativeActionOwned() || actor != ownedActor) {
+    if (!characterOwned() || nativeActionOwned() || actor != characterSession.native.actor) {
         return value;
     }
     int current = 0;
@@ -57,25 +58,28 @@ static float combatFloat(const char *key, float fallback, float lo, float hi) {
 
 static void combatSettings() {
     feedbackSettings();
-    snprintf(combatConfigSection, sizeof(combatConfigSection), "Combat.%s", profile->id);
-    characterBalance.base = combatFloat("BasePower", profile->basePower, 1, 1000);
-    characterBalance.upgradeStep = combatFloat("UpgradePower", profile->upgradePower, 0, 50);
-    characterBalance.dexterityWeight = profile->dexterityWeight;
+    snprintf(combatConfigSection, sizeof(combatConfigSection), "Combat.%s", adapter.profile->id);
+    characterBalance.base = combatFloat("BasePower", adapter.profile->basePower, 1, 1000);
+    characterBalance.upgradeStep =
+        combatFloat("UpgradePower", adapter.profile->upgradePower, 0, 50);
+    characterBalance.dexterityWeight = adapter.profile->dexterityWeight;
     characterBalance.fixedPower = combatFloat("FixedPower", 0, 0, 1200);
     characterBalance.upgrade =
         std::clamp<int>(GetPrivateProfileIntA(combatConfigSection, "UpgradeLevel", 0, ini), 0, 15);
     characterBalance.scaling =
         GetPrivateProfileIntA(combatConfigSection, "StatScaling", 1, ini) != 0;
 
-    for (unsigned i = 0; i < profile->attackCount; i++) {
+    for (unsigned i = 0; i < adapter.profile->attackCount; i++) {
         char key[80];
         snprintf(key, sizeof(key), "%s_multiplier", attackName(i));
-        characterBalance.multiplier[i] = combatFloat(key, profile->attacks[i].multiplier, 0, 3);
+        characterBalance.multiplier[i] =
+            combatFloat(key, adapter.profile->attacks[i].multiplier, 0, 3);
         snprintf(key, sizeof(key), "%s_cost", attackName(i));
-        characterBalance.poise[i] = profile->attacks[i].poise;
-        characterBalance.cost[i] = std::clamp<int>(
-            GetPrivateProfileIntA(combatConfigSection, key, profile->attacks[i].staminaCost, ini),
-            0, 100);
+        characterBalance.poise[i] = adapter.profile->attacks[i].poise;
+        characterBalance.cost[i] =
+            std::clamp<int>(GetPrivateProfileIntA(combatConfigSection, key,
+                                                  adapter.profile->attacks[i].staminaCost, ini),
+                            0, 100);
     }
 }
 
@@ -94,7 +98,7 @@ static void combatReset() {
 }
 
 static bool environmentKill(double &acc, const char *reason) {
-    if (!characterOwned() || nativeActionOwned() || player != ownedActor ||
+    if (!characterOwned() || nativeActionOwned() || player != characterSession.native.actor ||
         chain(gameSlots.player, {0, 4, 0}) != player)
         return false;
     int hp = read<int>(player + 0x2d4);
@@ -110,11 +114,13 @@ static bool environmentKill(double &acc, const char *reason) {
 }
 
 static bool combatEnvironment(double &acc) {
-    float y = origin.y + state.position[1] * .01f;
+    float y =
+        characterSession.instance.origin.y + characterSession.instance.state.position[1] * .01f;
     // Native support is resolved before the next guest step. In particular a
     // descending lift can transport the actor while the previous guest frame
     // still says airborne. Count actual unsupported descent, not lift travel.
-    bool grounded = bool(state.flags & SC_GROUNDED) || worldNativeSupport.supported();
+    bool grounded =
+        bool(characterSession.instance.state.flags & SC_GROUNDED) || worldNativeSupport.supported();
     if (!grounded) {
         if (!characterFalling) {
             characterPeakY = y;
@@ -134,7 +140,7 @@ static bool combatEnvironment(double &acc) {
         characterFalling = false;
         // Only while Character owns gravity. Native interactions/falling use native logic.
         if (damage > 0 && hp > 0 && maxHP > 0 && maxHP < 100000 &&
-            (read<uint32_t>(player + 0x1fc) & 0x4000) && player == ownedActor) {
+            (read<uint32_t>(player + 0x1fc) & 0x4000) && player == characterSession.native.actor) {
             int after = std::max(0, hp - damage);
             put<int>(player + 0x2d4, after);
             if (after == 0) {
@@ -197,20 +203,21 @@ static void combat() {
     }
     if (!combatEnabled || !hostPermits(SCHost::Operation::Combat))
         return;
-    bool grounded = bool(state.flags & SC_GROUNDED);
-    int interrupted = state.interruptedAttackId;
+    bool grounded = bool(characterSession.instance.state.flags & SC_GROUNDED);
+    int interrupted = characterSession.instance.state.interruptedAttackId;
     if (interrupted != SCCombat::None && interrupted != characterWindow.move &&
-        interrupted != state.attackId) {
-        if (characterWindow.observe(interrupted, false, profile->automaticAttackId))
+        interrupted != characterSession.instance.state.attackId) {
+        if (characterWindow.observe(interrupted, false, adapter.profile->automaticAttackId))
             combatPay();
     }
-    bool start = characterWindow.observe(state.attackId, grounded, profile->automaticAttackId);
+    bool start = characterWindow.observe(characterSession.instance.state.attackId, grounded,
+                                         adapter.profile->automaticAttackId);
     if (start)
         combatPay();
-    if (state.landingRecoveryTicks)
-        characterLandingRecovery = int(state.landingRecoveryTicks);
+    if (characterSession.instance.state.landingRecoveryTicks)
+        characterLandingRecovery = int(characterSession.instance.state.landingRecoveryTicks);
     if (characterWindow.move != SCCombat::None &&
-        characterWindow.move != profile->automaticAttackId && !characterWindow.exhausted &&
+        characterWindow.move != adapter.profile->automaticAttackId && !characterWindow.exhausted &&
         characterWindow.age < 24) {
         characterRecoveryUntil = GetTickCount() + characterRecoveryDelay;
         characterStaminaCeiling = std::min(characterStaminaCeiling, read<int>(player + 0x2e4));
@@ -219,9 +226,12 @@ static void combat() {
               end = read<uint32_t>(root + 8);
     if (!begin || end < begin || end - begin > 16384)
         return;
-    Vec p = origin + Vec{state.position[0], state.position[1], state.position[2]} * .01f;
+    Vec p = characterSession.instance.origin + Vec{characterSession.instance.state.position[0],
+                                                   characterSession.instance.state.position[1],
+                                                   characterSession.instance.state.position[2]} *
+                                                   .01f;
     const auto *attack = attackDefinition(characterWindow.move);
-    const auto *automatic = attackDefinition(profile->automaticAttackId);
+    const auto *automatic = attackDefinition(adapter.profile->automaticAttackId);
     for (uintptr_t at = begin; at < end; at += 4) {
         uintptr_t npc = read<uint32_t>(at);
         if (!npc || npc == player)
@@ -237,7 +247,7 @@ static void combat() {
             continue;
         Vec center = read<Vec>(np + 0x10);
         bool downward = characterWindow.move == SCCombat::None ||
-                        characterWindow.move == profile->automaticAttackId;
+                        characterWindow.move == adapter.profile->automaticAttackId;
         SCContact::Capsule capsule;
         bool shaped = targetCapsule(npc, center, capsule);
         Vec pos = shaped ? targetContact(capsule, p, downward)
@@ -250,21 +260,23 @@ static void combat() {
             continue;
         if (!lineClear(p + Vec{0, .7f, 0}, pos) || !worldLineClear(p + Vec{0, .7f, 0}, pos, npc))
             continue;
-        Vec local = (pos - origin) * 100;
-        uint32_t contact = guest->probeContact(character, local.x, local.y, local.z);
+        Vec local = (pos - characterSession.instance.origin) * 100;
+        uint32_t contact =
+            adapter.api->probeContact(characterSession.instance.id, local.x, local.y, local.z);
         // Invulnerable/knockback actions are never offensive stomp states. Require
         // feet above the enemy and tight horizontal overlap, not the old broad sphere.
         if (characterWindow.move == SCCombat::None && automatic &&
-            (contact & SC_CONTACT_AUTOMATIC) && (state.flags & SC_AUTO_ATTACK_ELIGIBLE) &&
+            (contact & SC_CONTACT_AUTOMATIC) &&
+            (characterSession.instance.state.flags & SC_AUTO_ATTACK_ELIGIBLE) &&
             automaticContact(delta, *automatic)) {
-            if (characterWindow.beginAutomatic(profile->automaticAttackId))
+            if (characterWindow.beginAutomatic(adapter.profile->automaticAttackId))
                 combatPay();
         }
         int move = characterWindow.move;
-        if (!characterWindow.active(state, *profile) ||
-            !characterWindow.canHit(int(handle), *profile))
+        if (!characterWindow.active(characterSession.instance.state, *adapter.profile) ||
+            !characterWindow.canHit(int(handle), *adapter.profile))
             continue;
-        if (move == profile->automaticAttackId) {
+        if (move == adapter.profile->automaticAttackId) {
             if (!automatic || !(contact & SC_CONTACT_AUTOMATIC) ||
                 !automaticContact(delta, *automatic))
                 continue;
@@ -315,6 +327,7 @@ static void combat() {
         // Commit the guest contact reaction once, after eligibility/stamina checks. The
         // read-only probe never bounces an exhausted Character or resets an attack window.
         if (first && characterPacketBuilt)
-            guest->commitContact(character, local.x, local.y, local.z, 160);
+            adapter.api->commitContact(characterSession.instance.id, local.x, local.y, local.z,
+                                       160);
     }
 }

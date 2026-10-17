@@ -27,7 +27,7 @@ static void launcherCameraTick() {
         return;
     }
     float y = launcherState.yaw, p = launcherState.pitch;
-    Vec at = origin +
+    Vec at = characterSession.instance.origin +
              Vec{launcherState.position[0], launcherState.position[1], launcherState.position[2]} *
                  .01f +
              Vec{0, 1.25f, 0};
@@ -35,15 +35,15 @@ static void launcherCameraTick() {
 }
 
 static void launcherCancel() {
-    if (launcherApi && character >= 0)
-        launcherApi->cancel(character);
+    if (launcherApi && characterSession.instance.id >= 0)
+        launcherApi->cancel(characterSession.instance.id);
     launcherState = {sizeof(SC_LauncherState)};
     launcherTarget = 0;
     launcherCameraRelease();
 }
 
 static void launcherConfigure() {
-    auto entry = (SC_GetLauncherAPI)GetProcAddress(adapterModule, "SoulsCharacterGetLauncherAPI");
+    auto entry = (SC_GetLauncherAPI)GetProcAddress(adapter.module, "SoulsCharacterGetLauncherAPI");
     launcherApi = entry ? entry(SC_LAUNCHER_VERSION, sizeof(SC_LauncherAPI)) : nullptr;
     if (!SCLauncher::valid(launcherApi)) {
         launcherApi = nullptr;
@@ -79,7 +79,7 @@ static void launcherObserve(bool focus) {
     launcherTarget = 0;
     launcherAvailable = false;
     if (!launcherApi || !aimCameraReady || !characterOwned() || nativeActionOwned() ||
-        characterControl.session.death()) {
+        characterSession.control.session.death()) {
         if (launcherState.phase)
             launcherCancel();
         return;
@@ -101,23 +101,24 @@ static void launcherObserve(bool focus) {
         launcherBuddy = launcherPlace + Vec{2.5f, 0, 0};
         launcherUnlocked = GetPrivateProfileIntA(launcherSection, "Unlocked", 0, ini) != 0;
         // Snap only the placement, never the player, onto verified guest ground.
-        Vec local = (launcherPlace - origin) * 100;
-        float floor = guest->floorHeight(local.x, local.y + 200, local.z);
+        Vec local = (launcherPlace - characterSession.instance.origin) * 100;
+        float floor = adapter.api->floorHeight(local.x, local.y + 200, local.z);
         if (isfinite(floor) && fabsf(floor - local.y) < 200)
-            launcherPlace.y = origin.y + floor * .01f;
+            launcherPlace.y = characterSession.instance.origin.y + floor * .01f;
         else
             launcherGrounded = false;
-        local = (launcherBuddy - origin) * 100;
-        floor = guest->floorHeight(local.x, local.y + 200, local.z);
+        local = (launcherBuddy - characterSession.instance.origin) * 100;
+        floor = adapter.api->floorHeight(local.x, local.y + 200, local.z);
         if (isfinite(floor) && fabsf(floor - local.y) < 200)
-            launcherBuddy.y = origin.y + floor * .01f;
+            launcherBuddy.y = characterSession.instance.origin.y + floor * .01f;
         else
             launcherGrounded = false;
     }
     if (!launcherGrounded)
         return;
     launcherAvailable = true;
-    if (!launcherApi->query(character, &launcherState) || !SCLauncher::valid(launcherState)) {
+    if (!launcherApi->query(characterSession.instance.id, &launcherState) ||
+        !SCLauncher::valid(launcherState)) {
         launcherCancel();
         return;
     }
@@ -131,7 +132,7 @@ static void launcherObserve(bool focus) {
         return;
     }
     if (!focus || launcherState.phase || equipmentActionOwned || nativeReaction ||
-        !(state.flags & SC_GROUNDED) || actionEligible(1))
+        !(characterSession.instance.state.flags & SC_GROUNDED) || actionEligible(1))
         return;
     Vec feet = read<Vec>(playerPhysics + 0x10);
     if (SCLauncher::withinReach(&feet.x, &launcherBuddy.x, 1.6f, 1) &&
@@ -152,11 +153,11 @@ static bool launcherInteract() {
 
         return true;
     }
-    Vec local = (launcherPlace - origin) * 100;
-    if (launcherApi->begin(character, &local.x, launcherYaw)) {
+    Vec local = (launcherPlace - characterSession.instance.origin) * 100;
+    if (launcherApi->begin(characterSession.instance.id, &local.x, launcherYaw)) {
         launcherStarted = GetTickCount();
-        launcherApi->query(character, &launcherState);
-        characterControl.input.clear();
+        launcherApi->query(characterSession.instance.id, &launcherState);
+        characterSession.control.input.clear();
         combatReset();
         equipmentReset();
     }

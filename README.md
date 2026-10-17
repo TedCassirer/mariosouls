@@ -1,8 +1,8 @@
 # MarioSouls
 
-MarioSouls is a mod for **Dark Souls: Prepare to Die Edition on Windows** that replaces the Pyromancer class with **Mario**. Explore Lordran with Super Mario 64 movement, jumps and attacks, while keeping Dark Souls progression, equipment and world interactions.
+MarioSouls is a mod for **Dark Souls: Prepare to Die Edition on Windows** that replaces the Pyromancer class with **Mario**. Play the game with Super Mario 64 movement, jumps and attacks, while keeping Dark Souls progression, equipment and world interactions.
 
-Equip Mario's Gloves for punches, kicks, dives and ground pounds. Mario can also use supported melee weapons and shields, and an equipped Pyromancy Flame becomes a Fire Flower with bouncing fireballs. A manual toggle lets you switch back to the native Dark Souls character.
+Equip Mario's Gloves for punches, kicks, dives and ground pounds.
 
 The mod has been tested in focused development sessions **with and without DSfix 2.4**. It is still experimental. Dark Souls Remastered is a future target and is **not supported yet**.
 

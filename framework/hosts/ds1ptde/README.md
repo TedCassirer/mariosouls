@@ -14,7 +14,7 @@ This host connects the framework to the supported 32-bit Dark Souls: Prepare to 
 | Damage/equipment/reactions | `combat.h`, `native_combat.h`, `equipment_native.h`, `defense.h`, `recovery_native.h` |
 | Rendering and UI order | `render_character.h`, `render_device.h`, `render_surfaces.h`, `render_composite.h`, `ui_order.h` |
 | Class/preview | `starting_class.h`, `class_preview.h`, `unarmed_equipment.h` |
-| Props/assets/setup | `equipment_props.h`, `archive.py`, `prepare_collision.py`, `prepare_equipment.py`, `setup.py`, `edition.json` |
+| Props/assets/setup | `equipment_props.h`, `archive.py`, `prepare_collision.py`, `prepare_equipment.py`, `setup.py`, `player_setup.py`, `installer.cs`, `edition.json` |
 
 The host builds as one translation unit. Feature headers are internal implementation fragments with shared state and an explicit include order; they are not public standalone modules. Keep a new feature at the correct ownership boundary rather than satisfying dependencies through arbitrary includes.
 

@@ -94,13 +94,14 @@ def invariant_new_londo_collisions(map_id, events, common, parts):
     return keep
 
 
-def prepare(game, map_id, output):
+def prepare(game, map_id, output, native_fallback=False):
     import numpy as np
     from soulstruct.containers import Binder
     from soulstruct.darksouls1ptde.maps import MSB
     from soulstruct.darksouls1ptde.events.emevd import EMEVD
     from soulstruct.utilities.maths import Matrix3
     from soulstruct.havok.fromsoft.shared.map_collision import MapCollisionModel
+    from soulstruct.havok.exceptions import TypeNotDefinedError
 
     if not re.fullmatch(r"m\d{2}_\d{2}_\d{2}_\d{2}", map_id):
         raise ValueError("Invalid map ID")
@@ -139,7 +140,23 @@ def prepare(game, map_id, output):
             if len(candidates) != 1:
                 raise ValueError("Missing collision model: " + part.name)
             name = candidates[0]
-        model = MapCollisionModel.from_bytes(entries[name].get_uncompressed_data())
+        try:
+            model = MapCollisionModel.from_bytes(entries[name].get_uncompressed_data())
+        except TypeNotDefinedError as error:
+            if not native_fallback:
+                raise
+            # Unknown Havok shapes remain in native physics. Never replace them
+            # with guessed triangles, a box, or an empty model presented as parsed.
+            native.append(
+                dict(
+                    name=part.name,
+                    entity_id=part.entity_id,
+                    reason="unsupported-havok-type",
+                    detail=str(error),
+                )
+            )
+            print(f"Native-only collision {part.name}: {error}", flush=True)
+            continue
         rot = np.array(Matrix3.from_euler_angles_deg(part.rotate).data)
         offset = np.array(list(part.translate))
         for mesh in model.meshes:
@@ -183,5 +200,10 @@ if __name__ == "__main__":
     p.add_argument("--game", required=True)
     p.add_argument("--map", required=True)
     p.add_argument("--output", required=True)
+    p.add_argument(
+        "--native-fallback",
+        action="store_true",
+        help="Record unsupported Havok shapes as native-only instead of guessing geometry",
+    )
     a = p.parse_args()
-    prepare(a.game, a.map, a.output)
+    prepare(a.game, a.map, a.output, native_fallback=a.native_fallback)

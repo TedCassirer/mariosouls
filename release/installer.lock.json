@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "python": {
+    "filename": "python-3.13.16-embed-amd64.zip",
+    "url": "https://www.python.org/ftp/python/3.13.16/python-3.13.16-embed-amd64.zip",
+    "sha256": "97dae5274cc54867065e8d5a3226e48c35017ed332a0fdb0e27d5b5821961297",
+    "size": 11439094
+  },
+  "git": {
+    "filename": "MinGit-2.56.0.2-64-bit.zip",
+    "url": "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.2/MinGit-2.56.0.2-64-bit.zip",
+    "sha256": "da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be",
+    "size": 39806486
+  },
+  "soulstruct": {
+    "path": "work/soulstruct-source",
+    "url": "https://github.com/Grimrukh/soulstruct.git",
+    "commit": "12b69189a2ccebbc623a1b6565be89a18d6c9958"
+  },
+  "wheels": [
+    {
+      "name": "annotated-doc",
+      "version": "0.0.5",
+      "filename": "annotated_doc-0.0.5-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl",
+      "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+      "size": 5302
+    },
+    {
+      "name": "colorama",
+      "version": "0.4.6",
+      "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
+      "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+      "size": 25335
+    },
+    {
+      "name": "constrata",
+      "version": "1.3.3",
+      "filename": "constrata-1.3.3-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/54/55/00c8635ab91b8ff51a16a5bc781b4eb6ac961e25c5e9cdb34525e1ad3f51/constrata-1.3.3-py3-none-any.whl",
+      "sha256": "ec74c82091006157cb225a7dc99a0816bbb4aabe1eb31a1b10fcc66c5fd6c8ca",
+      "size": 37162
+    },
+    {
+      "name": "frozendict",
+      "version": "2.4.7",
+      "filename": "frozendict-2.4.7-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/38/74/f94141b38a51a553efef7f510fc213894161ae49b88bffd037f8d2a7cb2f/frozendict-2.4.7-py3-none-any.whl",
+      "sha256": "972af65924ea25cf5b4d9326d549e69a9a4918d8a76a9d3a7cd174d98b237550",
+      "size": 16264
+    },
+    {
+      "name": "markdown-it-py",
+      "version": "4.2.0",
+      "filename": "markdown_it_py-4.2.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl",
+      "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
+      "size": 91687
+    },
+    {
+      "name": "mdurl",
+      "version": "0.1.2",
+      "filename": "mdurl-0.1.2-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl",
+      "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
+      "size": 9979
+    },
+    {
+      "name": "numpy",
+      "version": "2.2.6",
+      "filename": "numpy-2.2.6-cp313-cp313-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/cb/3b/d58c12eafcb298d4e6d0d40216866ab15f59e55d148a5658bb3132311fcf/numpy-2.2.6-cp313-cp313-win_amd64.whl",
+      "sha256": "b0544343a702fa80c95ad5d3d608ea3599dd54d4632df855e4c8d24eb6ecfa1c",
+      "size": 12610885
+    },
+    {
+      "name": "pillow",
+      "version": "12.3.0",
+      "filename": "pillow-12.3.0-cp313-cp313-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/a6/9b/7a58e61d62be561da3a356fe2384d4059a6345fc130e23ef1c36a5b81d24/pillow-12.3.0-cp313-cp313-win_amd64.whl",
+      "sha256": "1cca606cd25738df4ed873d5ad46bbdb3d83b5cbca291f6b4ff13a4df6b0bbe8",
+      "size": 7239691
+    },
+    {
+      "name": "pip",
+      "version": "26.2.1",
+      "filename": "pip-26.2.1-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl",
+      "sha256": "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e",
+      "size": 1816632
+    },
+    {
+      "name": "Pygments",
+      "version": "2.21.0",
+      "filename": "pygments-2.21.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+      "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+      "size": 1250147
+    },
+    {
+      "name": "rich",
+      "version": "15.0.0",
+      "filename": "rich-15.0.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl",
+      "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
+      "size": 310654
+    },
+    {
+      "name": "scipy",
+      "version": "1.16.3",
+      "filename": "scipy-1.16.3-cp313-cp313-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/cd/01/1204382461fcbfeb05b6161b594f4007e78b6eba9b375382f79153172b4d/scipy-1.16.3-cp313-cp313-win_amd64.whl",
+      "sha256": "062246acacbe9f8210de8e751b16fc37458213f124bef161a5a02c7a39284304",
+      "size": 38529877
+    },
+    {
+      "name": "shellingham",
+      "version": "1.5.4",
+      "filename": "shellingham-1.5.4-py2.py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl",
+      "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
+      "size": 9755
+    },
+    {
+      "name": "soulstruct",
+      "version": "2.6.0",
+      "filename": "soulstruct-2.6.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/d8/bf/0bca0fef45663cb76a1d5a06c614800f7b13da76cb02fabb2de1ea913d78/soulstruct-2.6.0-py3-none-any.whl",
+      "sha256": "d00198a6e8a56b766b40cc05c3b73911bd66927c13655880c07df3e68a429f28",
+      "size": 8671243
+    },
+    {
+      "name": "soulstruct-havok",
+      "version": "1.2.2",
+      "filename": "soulstruct_havok-1.2.2-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/1d/af/e7421916693406ff7f3f4c048144ad4c0bd452cf803a9b67b986f0ccb211/soulstruct_havok-1.2.2-py3-none-any.whl",
+      "sha256": "a469f0314f2abdec248a3ff1e726ecec9d0ec16e64ec49f79844b60785dd0e78",
+      "size": 4531154
+    },
+    {
+      "name": "typer",
+      "version": "0.27.3",
+      "filename": "typer-0.27.3-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl",
+      "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
+      "size": 123312
+    },
+    {
+      "name": "zstandard",
+      "version": "0.25.0",
+      "filename": "zstandard-0.25.0-cp313-cp313-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/d9/82/b9c06c870f3bd8767c201f1edbdf9e8dc34be5b0fbc5682c4f80fe948475/zstandard-0.25.0-cp313-cp313-win_amd64.whl",
+      "sha256": "1f830a0dac88719af0ae43b8b2d6aef487d437036468ef3c2ea59c51f9d55fd5",
+      "size": 506232
+    }
+  ]
+}

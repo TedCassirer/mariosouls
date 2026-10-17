@@ -19,6 +19,7 @@
 !/framework/**/
 !/framework/**/*.h
 !/framework/**/*.cpp
+!/framework/**/*.cs
 !/framework/**/*.c
 !/framework/**/*.def
 !/framework/**/*.py

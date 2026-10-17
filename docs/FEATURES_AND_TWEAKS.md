@@ -155,6 +155,16 @@ Sources: [render_character.h](../framework/hosts/ds1ptde/render_character.h), [r
 
 ## Framework, build and installation
 
+The source-based Windows installer candidate adds Install/Update and Uninstall buttons plus game-folder/ROM selection. It embeds tracked source and official Python 3.13.16 for Windows x64; downloads pinned Git, compiler and asset dependencies; builds the x86 mod locally; and exports 17 map caches and native held props from the selected PTDE installation. Native gameplay, DSfix settings and physics are not retuned by packaging. Existing source-install commands remain available.
+
+The candidate has no embedded ROM, game exports, compiled Mario geometry or prebuilt guest runtime. First install needs internet, several GB of free disk and local build time. Cache/last setup log live under `%LOCALAPPDATA%/MarioSouls/setup/<source-commit>/`; keep the cache and selected ROM while installed. Uninstall uses the shared backend without downloads and retains private data. The executable is unsigned and does not elevate itself.
+
+Installer asset preparation explicitly records unsupported Havok shape types as native-only rather than inventing geometry. The source collision CLI stays strict unless `--native-fallback` is chosen. Some Ash Lake convex shapes need this fallback; their guest movement/support remains unverified. This export policy does not change existing installed caches or native physics.
+
+Sources: [installer.cs](../framework/hosts/ds1ptde/installer.cs), [player_setup.py](../framework/hosts/ds1ptde/player_setup.py), [build_installer.py](../tools/build_installer.py), [installer.lock.json](../release/installer.lock.json). See [release preparation](RELEASING.md) for actual candidate checks and outstanding install/removal/game coverage. No public release is implied.
+
+Candidate evidence: compilation/payload inspection, isolated source build and 17-map/82-prop preparation passed. Direct/DSfix install, repeated update and removal were checked through the shared backend on minimal disposable directories; exact DSfix restoration passed. GUI, second-machine and live-game checks remain pending.
+
 The host/core/SDK/adapter split, host capabilities, renderer interface and portable types are retained for future characters and Remastered. Only PTDE/D3D9 and Mario are implemented. The host still has a single translation unit with internal feature headers; adapters use the C SDK.
 
 Pinned dependencies/compiler hashes, local asset preparation, build version/revision/file hashes, licenses and production validation remain. CI is compilation only. A single `MarioSouls.ps1 install` / `uninstall` entry point owns reversible PTDE file operations, recognizes the supported DSfix chain and preserves existing settings/assets/saves.

@@ -50,7 +50,9 @@ Use `python tools/framework.py doctor`, `build`, `build --with-runtime`, `build 
 
 Automated verification is compilation only. Do not recreate behavioral suites, test labs, command bridges, replay systems, cheats, save editors, special development copies or background game control without an explicit request. Optional pose-authoring tools are asset tools, not regression suites.
 
-Local installation has one public entry point: `MarioSouls.ps1 install` / `uninstall`. Keep edition-specific rules in the PTDE host's `setup.py`. Do not introduce wrapper chains of scripts or install commands in the build CLI. Builds alone never install, launch or control the game. Do not install a prepared change unless the current task authorizes deployment.
+Source installation uses `MarioSouls.ps1 install` / `uninstall`. PTDE's `installer.cs` player front end and `player_setup.py` source-build/asset bootstrap reuse the same `setup.py` for game changes and recovery. Do not duplicate that implementation or add installation to the shared build CLI. Builds alone never install, launch or control the game. Do not install a prepared change unless the current task authorizes deployment.
+
+Build player candidates with `python tools/build_installer.py` from committed source. Review `release/installer.lock.json`, keep outputs private, and follow [release preparation](docs/RELEASING.md). Do not bundle a ROM, extracted game data or prebuilt guest geometry/runtime in this source-based installer. Verify actual installation/removal separately from compilation and keep publication a separate human decision.
 
 ## Required documentation updates
 

@@ -4,6 +4,14 @@ Meaningful changes are recorded here by development version. The detailed, maint
 
 ## 0.9.0-dev.1 - unreleased
 
+### Player installer candidate
+
+- Add a locally built Windows setup executable with game/ROM selection and install/update/uninstall. It shares the existing PTDE setup backend, DSfix handling and recovery rules.
+- Embed tracked source and official Python; download hash-pinned tools/packages, build the mod and export maps/equipment on the recipient's computer. Do not bundle ROMs, game exports, prebuilt guest runtime or compiled Mario geometry.
+- Preserve source revision/hash provenance in builds from the packaged snapshot. Add a matching source archive, manifest, checksums and draft-release guidance; GitHub Actions is not required.
+- Pin Windows Git line endings and use atomic dependency staging/short cache paths. In player asset preparation, record unsupported Havok types as native-only; retain strict source exports by default and flag Ash Lake traversal as unverified.
+- The candidate is experimental and unsigned. Installer preparation and compilation do not establish GUI, install/removal or full-game compatibility; publication remains pending review.
+
 ### Control fixes
 
 - Remove the legacy Y world-interaction shortcut in Mario mode. A remains contextual jump/interact, Q remains keyboard interaction, and Y still cancels an active cannon sequence.

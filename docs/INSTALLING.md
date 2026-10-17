@@ -1,6 +1,23 @@
 # Installation
 
-MarioSouls currently installs from a prepared source checkout. It is not a standalone download-and-play package. You need Windows PTDE, your own US big-endian SM64 ROM, Python 3.11+ and prepared build dependencies/collision/equipment data. Follow [development](DEVELOPMENT.md) for that first preparation.
+MarioSouls has a Windows installer candidate and a source-checkout workflow. Both use the same PTDE backend for executable validation, DSfix handling, backups and removal. Remastered is not supported.
+
+## Windows installer candidate
+
+`MarioSouls-<version>-Setup.exe` is an experimental candidate, not yet a published or fully verified player release. Once approved, download it only from this project's GitHub Releases.
+
+1. Close Dark Souls. Open the installer on Windows 10/11 x64 with .NET Framework 4.8.
+2. Choose PTDE's `DATA` folder and your own US SM64 8 MiB big-endian `.z64` ROM.
+3. Click **Install / Update**. The first run downloads pinned Git, Zig and Python packages, builds the mod, and exports maps/equipment from your game. Internet, several GB of free space and several minutes are required; no preinstalled Python, Git or compiler is needed.
+4. Launch normally through Steam. The same executable's **Uninstall** button removes the managed setup without needing the ROM, compiler or network.
+
+The installer does not download a ROM or Dark Souls, elevate itself, or change Windows policy. For a protected game folder, run it as administrator. It is unsigned; Windows may show an unknown-publisher warning. Compare the published SHA-256 before running it.
+
+Source, tools, exports and the last `setup.log` stay under `%LOCALAPPDATA%/MarioSouls/setup/<source-commit>/`. Keep this cache while installed: configuration points to its exported data. Keep the selected ROM at its chosen path. Uninstall retains this private cache and all saves.
+
+See [release preparation](RELEASING.md) for verification limits. The optional legacy Asylum arena-floor file remains on existing installations; it is not bundled with the candidate. The source-checkout workflow below requires Python 3.11+ and prepared dependencies/assets as described in [development](DEVELOPMENT.md).
+
+Unsupported Havok collision shapes, including some Ash Lake shapes, remain native-only and are recorded in the export manifest. Their Mario movement/support has not been verified in game. The candidate is not a claim of full-game traversal compatibility.
 
 ## Install, update or uninstall
 
@@ -18,7 +35,7 @@ To remove the setup managed by this installer:
 .\MarioSouls.ps1 uninstall
 ```
 
-These are the only public installation commands. The PowerShell entry point delegates to the PTDE host's `setup.py`; there is no separate setup executable or sequence of install wrappers.
+These are the source-checkout commands. The PowerShell entry point and Windows front end share the PTDE host's `setup.py` implementation of game-file modifications.
 
 ## Game and ROM locations
 

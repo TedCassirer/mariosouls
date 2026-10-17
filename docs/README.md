@@ -20,6 +20,7 @@ Read [CONTRIBUTING.md](../CONTRIBUTING.md) and [AGENTS.md](../AGENTS.md).
 
 - [Development](DEVELOPMENT.md): build dependencies, local assets, outputs and tools.
 - [Verification](TESTING.md): compile-only checks and manual game coverage.
+- [Release preparation](RELEASING.md): source-based Windows installer and draft-release checks.
 - [Framework architecture](../framework/README.md): host, core, SDK and character responsibilities.
 - [SDK contract](../framework/docs/CONTRACT.md) and [adapter guide](../framework/docs/ADDING_A_CHARACTER.md).
 - [Remastered/host preparation](../framework/docs/HOST_PORTING.md) and [PTDE integration inventory](../framework/hosts/ds1ptde/PORT_CHECKLIST.md).

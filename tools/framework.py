@@ -86,6 +86,15 @@ def build_identity(sources):
             dirty = status.returncode == 0 and bool(status.stdout.strip())
         except OSError:
             pass
+    elif (ROOT / "release/source.json").is_file():
+        packaged = json.loads((ROOT / "release/source.json").read_text(encoding="utf-8"))
+        if not re.fullmatch("[0-9a-f]{40,64}", packaged.get("commit", "")):
+            raise ValueError("Invalid packaged source revision")
+        for name, expected in packaged["files"].items():
+            path = (ROOT / name).resolve()
+            if not path.is_relative_to(ROOT) or not path.is_file() or sha(path) != expected:
+                raise ValueError("Packaged source changed: " + name)
+        commit = packaged["commit"]
     return commit, dirty, fingerprint
 
 

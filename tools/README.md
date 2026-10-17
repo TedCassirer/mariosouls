@@ -17,6 +17,6 @@
 
 `dependencies.py` prepares/checks pinned sources and the compiler. `profiles.py` validates manifests and emits SDK descriptors. `host_editions.py` allows only the implemented PTDE host. `framework_portability.py` performs compilation, not gameplay simulation.
 
-Install/update/uninstall has one separate public entry point, root `MarioSouls.ps1`. Its native executable/loader/config/file-ownership rules belong to `framework/hosts/ds1ptde/setup.py`, not shared build wrappers.
+Source install/update/uninstall uses root `MarioSouls.ps1`. The Windows front end reuses `framework/hosts/ds1ptde/setup.py`. `python tools/build_installer.py` packages committed source and official Python locally, without upload/publication. See [release preparation](../docs/RELEASING.md).
 
-There are no test-lab, replay, game-control, release or developer-session commands. Keep owned assets, dependency checkouts, build outputs and previews private. See [development](../docs/DEVELOPMENT.md), [installation](../docs/INSTALLING.md), [verification](../docs/TESTING.md) and [contribution/documentation rules](../AGENTS.md).
+There are no test-lab, replay, game-control or developer-session commands. Keep owned assets, dependency checkouts, build outputs and previews private. See [development](../docs/DEVELOPMENT.md), [installation](../docs/INSTALLING.md), [verification](../docs/TESTING.md) and [contribution/documentation rules](../AGENTS.md).

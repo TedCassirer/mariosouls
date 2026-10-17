@@ -1,0 +1,244 @@
+"""Apply narrow body-query edits to a generated copy of the pinned dependency.
+
+Original dependency/checkpoints remain untouched. No extracted source is tracked.
+"""
+
+from pathlib import Path
+
+
+def prepare(repo):
+    def edit(name, replacements):
+        path = repo / "src/decomp/game" / name
+        source = path.read_text()
+        source = "extern float scMarioWallRadius, scMarioBodyHeight;\n" + source
+        for before, after, count in replacements:
+            if source.count(before) != count:
+                raise RuntimeError("Pinned runtime body anchor changed: " + name + " " + before)
+            source = source.replace(before, after)
+        path.write_text(source)
+
+    edit(
+        "mario.c",
+        [
+            (
+                "f32 offset, f32 radius) {",
+                "f32 offset, f32 radius) {\n    offset *= scMarioBodyHeight / 160.0f;\n    radius *= scMarioWallRadius / 50.0f;",
+                1,
+            ),
+            (
+                "&m->pos[2], 60.0f, 50.0f);",
+                "&m->pos[2], 60.0f * scMarioBodyHeight / 160.0f, scMarioWallRadius);",
+                1,
+            ),
+            ("ceilToFloorDist <= 150.0f", "ceilToFloorDist <= scMarioBodyHeight - 10.0f", 1),
+            (
+                "m->marioObj->hitboxHeight = 160.0f;",
+                "m->marioObj->hitboxHeight = scMarioBodyHeight;",
+                1,
+            ),
+            (
+                "m->marioObj->hitboxHeight = 100.0f;",
+                "m->marioObj->hitboxHeight = scMarioBodyHeight * .625f;",
+                1,
+            ),
+        ],
+    )
+    edit(
+        "mario_step.c",
+        [
+            (
+                "resolve_and_return_wall_collisions(nextPos, 30.0f, 24.0f)",
+                # The wrapper scales body-relative offsets. Preserve SM64's
+                # 30cm ground step probe when reducing the character height;
+                # otherwise a 25cm stair is interpreted as a blocking wall.
+                "resolve_and_return_wall_collisions(nextPos, 30.0f * 160.0f / scMarioBodyHeight, 24.0f)",
+                1,
+            ),
+            (
+                "nextPos[1] + 160.0f >= ceilHeight",
+                "nextPos[1] + scMarioBodyHeight >= ceilHeight",
+                1,
+            ),
+            (
+                "floorHeight + 160.0f >= ceilHeight",
+                "floorHeight + scMarioBodyHeight >= ceilHeight",
+                1,
+            ),
+            (
+                "ceilHeight - floorHeight > 160.0f",
+                "ceilHeight - floorHeight > scMarioBodyHeight",
+                1,
+            ),
+            ("nextPos[1] + 160.0f > ceilHeight", "nextPos[1] + scMarioBodyHeight > ceilHeight", 1),
+        ],
+    )
+
+    def staged(name, replacements):
+        path = repo / "src" / name
+        source = path.read_text()
+        for before, after, count in replacements:
+            if source.count(before) != count:
+                raise RuntimeError(
+                    "Pinned runtime equipment anchor changed: " + name + " " + before
+                )
+            source = source.replace(before, after)
+        path.write_text(source)
+
+    (repo / "src/sc_grip.h").write_bytes(Path(__file__).with_name("runtime_grip.h").read_bytes())
+    staged(
+        "decomp/game/mario.c",
+        [
+            ('#include "mario.h"', '#include "mario.h"\n#include "../../sc_grip.h"', 1),
+            (
+                "u32 mario_floor_is_slippery(struct MarioState *m) {",
+                "u32 mario_floor_is_slippery(struct MarioState *m) {\n    if (sc_mario_grip_floor(m)) return FALSE;",
+                1,
+            ),
+            (
+                "s32 mario_floor_is_slope(struct MarioState *m) {",
+                "s32 mario_floor_is_slope(struct MarioState *m) {\n    if (sc_mario_grip_floor(m)) return FALSE;",
+                1,
+            ),
+            (
+                "s32 mario_floor_is_steep(struct MarioState *m) {",
+                "s32 mario_floor_is_steep(struct MarioState *m) {\n    if (sc_mario_grip_floor(m)) return FALSE;",
+                1,
+            ),
+        ],
+    )
+    (repo / "src/sc_open_world.h").write_bytes(
+        Path(__file__).with_name("runtime_open_world.h").read_bytes()
+    )
+    staged(
+        "decomp/engine/surface_collision.c",
+        [
+            (
+                '#include "surface_collision.h"',
+                '#include "surface_collision.h"\n#include "../../sc_open_world.h"',
+                1,
+            ),
+            (
+                "*pfloor = find_floor_from_list( xPos, yPos, zPos, &height );",
+                "*pfloor = find_floor_from_list( xPos, yPos, zPos, &height );\n    if (!*pfloor && scMarioOpenWorld) *pfloor = sc_mario_open_floor();",
+                1,
+            ),
+        ],
+    )
+    (repo / "src/sc_equipment_keys.h").write_bytes(
+        Path(__file__).with_name("equipment_keys.h").read_bytes()
+    )
+    (repo / "src/sc_flower_keys.h").write_bytes(
+        Path(__file__).with_name("flower_keys.h").read_bytes()
+    )
+    (repo / "src/sc_equipment.h").write_bytes(
+        Path(__file__).with_name("runtime_equipment.h").read_bytes()
+    )
+    staged(
+        "libsm64.c",
+        [
+            (
+                "s16 lastPose[63],blendFrom[63];u16 poseIndices[126];",
+                "s16 lastPose[63],blendFrom[63];u16 poseIndices[126];\n    uint32_t equipmentRight,equipmentLeft,equipmentSwing,equipmentValid;\n    float equipmentPhase,equipmentGuard,equipmentRightHand[16],equipmentLeftHand[16];",
+                1,
+            ),
+            (
+                '#include "host_pose.h"',
+                '#include "decomp/include/mario_geo_switch_case_ids.h"\n#include "sc_equipment.h"\n#include "host_pose.h"',
+                1,
+            ),
+            (
+                "    update_button( inputs->buttonA, A_BUTTON );",
+                "    sc_equipment_before_tick((struct MarioInstance *)s_mario_instance_pool.objects[marioId]);\n    update_button( inputs->buttonA, A_BUTTON );",
+                1,
+            ),
+        ],
+    )
+    staged(
+        "host_pose.h",
+        [
+            (
+                "else {frame++;if(frame>=a->loopEnd)frame=a->loopStart;}",
+                "else {frame++;if(frame>=a->loopEnd)frame=(style&8)?a->loopEnd-1:a->loopStart;}",
+                1,
+            ),
+            (
+                "    host_render(instance,buffers,1+animation+(style<<9),target);",
+                "    if(style&8){\n        m->marioBodyState->eyeState=MARIO_EYES_DEAD;\n        if(instance->poseKey!=1+animation+(style<<9))play_sound(SOUND_MARIO_DYING,m->marioObj->header.gfx.cameraToObject);\n    }\n    host_render(instance,buffers,1+animation+(style<<9),target);",
+                1,
+            ),
+            (
+                "struct AnimInfo *info=&gMarioState->marioObj->header.gfx.animInfo;",
+                "sc_equipment_begin(instance);\n    struct AnimInfo *info=&gMarioState->marioObj->header.gfx.animInfo;",
+                1,
+            ),
+            (
+                "geo_process_root_hack_single_node(s_mario_graph_node);",
+                "geo_process_root_hack_single_node(s_mario_graph_node);sc_equipment_end();",
+                2,
+            ),
+        ],
+    )
+    staged(
+        "decomp/game/rendering_graph_node.c",
+        [
+            (
+                "float sm64_host_right_hand[4][4];",
+                "extern void sc_mario_equipment_rotation(int attributeOffset,s16 *rotation);\nextern void sc_mario_equipment_hand(int attributeOffset,const float *matrix);\nfloat sm64_host_right_hand[4][4];",
+                1,
+            ),
+            (
+                "    mtxf_rotate_xyz_and_translate(matrix, translation, rotation);",
+                "    if(hostAnimAttributes)sc_mario_equipment_rotation((int)(gCurrAnimAttribute-hostAnimAttributes),rotation);\n    mtxf_rotate_xyz_and_translate(matrix, translation, rotation);",
+                1,
+            ),
+            (
+                "    if(hostAnimAttributes && gCurrAnimAttribute-hostAnimAttributes==78)memcpy(sm64_host_right_hand,gMatStack[gMatStackIndex],sizeof(sm64_host_right_hand));",
+                "    if(hostAnimAttributes)sc_mario_equipment_hand((int)(gCurrAnimAttribute-hostAnimAttributes),&gMatStack[gMatStackIndex][0][0]);\n    if(hostAnimAttributes && gCurrAnimAttribute-hostAnimAttributes==78)memcpy(sm64_host_right_hand,gMatStack[gMatStackIndex],sizeof(sm64_host_right_hand));",
+                1,
+            ),
+        ],
+    )
+
+    # Import only the original cannon opening actions. Their object helpers are
+    # supplied by runtime_cannon.h; the rest of SM64's object scheduler is absent.
+    import re
+
+    original = (
+        Path(__file__).resolve().parents[3]
+        / "work/cannon-research/sm64/src/game/behaviors/cannon.inc.c"
+    ).read_text()
+    actions = []
+    for number in [4, 6, 5]:
+        match = re.search(
+            r"void opened_cannon_act_" + str(number) + r"\(void\) \{.*?^\}", original, re.M | re.S
+        )
+        if not match:
+            raise RuntimeError("Pinned cannon action not found")
+        actions.append(match.group(0))
+    (repo / "src/sc_cannon_actions.h").write_text("\n".join(actions))
+    (repo / "src/sc_cannon.h").write_bytes(
+        Path(__file__).with_name("runtime_cannon.h").read_bytes()
+    )
+    (repo / "src/sc_environment.h").write_bytes(
+        Path(__file__).with_name("runtime_environment.h").read_bytes()
+    )
+    staged(
+        "libsm64.c",
+        [
+            (
+                "struct GlobalState *globalState;",
+                "struct GlobalState *globalState;\n    struct Object cannon;uint32_t cannonActive,cannonTicks,cannonRelease;",
+                1,
+            ),
+            (
+                '#include "host_pose.h"',
+                '#include "sc_cannon.h"\n#include "sc_environment.h"\n#include "host_pose.h"',
+                1,
+            ),
+            (
+                "    update_button( inputs->buttonA, A_BUTTON );",
+                "    struct MarioInstance *ci=s_mario_instance_pool.objects[marioId];\n    sc_cannon_before_tick(ci);\n    bool fire=inputs->buttonA;\n    if(ci->cannonActive && gMarioState->action==ACT_IN_CANNON){\n        if(gMarioState->actionState!=2)ci->cannonRelease=0;\n        else if(!fire)ci->cannonRelease=1;\n        if(!ci->cannonRelease)fire=false;\n    }\n    update_button( fire, A_BUTTON );",
+                1,
+            ),
+        ],
+    )

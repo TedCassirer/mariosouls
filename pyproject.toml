@@ -1,0 +1,20 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+include = ["framework/**/*.py", "tools/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+# These entry points load optional tools from the private dependency directory
+# before importing them. Keep those imports after the explicit path setup.
+[tool.ruff.lint.per-file-ignores]
+"framework/hosts/*/preview_equipment.py" = ["E402"]
+"framework/characters/*/prepare*.py" = ["E402"]
+"framework/characters/mario64/author_equipment.py" = ["E402"]
+"framework/hosts/*/prepare*.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

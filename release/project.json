@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "name": "MarioSouls",
+  "version": "0.9.0-dev.1",
+  "channel": "development",
+  "license": "GPL-3.0-only",
+  "character": "mario64",
+  "host": "ds1ptde",
+  "abi": 4,
+  "public_release": false
+}

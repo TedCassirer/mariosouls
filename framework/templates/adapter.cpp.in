@@ -1,0 +1,170 @@
+// Compilable procedural SDK scaffold. This is NOT a port of any game character.
+#include "character_api.h"
+#include "profile.generated.h"
+#include <cmath>
+#include <cstring>
+static bool ready = false, alive = false;
+static SC_State state{};
+static float ground = 0;
+
+static const SC_Descriptor *describe() {
+    return &characterProfile;
+}
+
+static uint32_t initialize(const SC_Init *i, SC_Texture *t) {
+    if (ready || !i || i->size != sizeof(*i) || !t || t->capacityBytes < 4)
+        return 0;
+    memset(t->rgba, 255, 4);
+    ready = true;
+    return 1;
+}
+
+static void shutdown() {
+    ready = alive = false;
+}
+
+static int32_t create(float x, float y, float z, float yaw) {
+    if (!ready || alive)
+        return -1;
+    alive = true;
+    state = {};
+    state.position[0] = x;
+    state.position[1] = y;
+    state.position[2] = z;
+    state.faceAngle = yaw;
+    state.attackId = state.interruptedAttackId = -1;
+    return 0;
+}
+
+static void destroy(int32_t id) {
+    if (id == 0)
+        alive = false;
+}
+
+static uint32_t mesh(SC_State *s, SC_Mesh *m) {
+    if (!s || !m || m->capacityTriangles < 1 || !m->position || !m->normal || !m->color || !m->uv)
+        return 0;
+    // A visible test triangle; replace with your guest's skinned geometry.
+    const float vertices[9] = {-20, 0, 0, 20, 0, 0, 0, 60, 0};
+    for (int i = 0; i < 9; i++) {
+        m->position[i] = vertices[i] + state.position[i % 3];
+        m->normal[i] = i % 3 == 2 ? 1 : 0;
+        m->color[i] = i % 3 == 1 ? 1 : .2f;
+    }
+    for (int i = 0; i < 6; i++)
+        m->uv[i] = 0;
+    m->numTrianglesUsed = 1;
+    *s = state;
+    return 1;
+}
+
+static uint32_t step(int32_t id, const SC_Input *i, SC_State *s, SC_Mesh *m) {
+    if (id != 0 || !alive || !i)
+        return 0;
+    state.position[0] += i->moveX * 4;
+    state.position[2] += i->moveY * 4;
+    if ((state.flags & SC_GROUNDED) && i->jump)
+        state.velocity[1] = 300;
+    state.velocity[1] -= 980.f / SC_FIXED_HZ;
+    state.position[1] += state.velocity[1] / SC_FIXED_HZ;
+    state.flags = SC_CAN_INTERACT;
+    if (state.position[1] <= ground) {
+        state.position[1] = ground;
+        state.velocity[1] = 0;
+        state.flags |= SC_GROUNDED;
+    }
+    state.floorHeight = ground;
+    return mesh(s, m);
+}
+
+static uint32_t pose(int32_t id, const SC_Pose *p, SC_State *s, SC_Mesh *m) {
+    if (id != 0 || !alive || !p)
+        return 0;
+    memcpy(state.position, p->position, sizeof(state.position));
+    state.faceAngle = p->yaw;
+    return mesh(s, m);
+}
+
+static void position(int32_t id, float x, float y, float z) {
+    if (id == 0 && alive) {
+        state.position[0] = x;
+        state.position[1] = y;
+        state.position[2] = z;
+    }
+}
+
+static void resume(int32_t id, float x, float y, float z, float yaw) {
+    position(id, x, y, z);
+    state.faceAngle = yaw;
+    state.velocity[1] = 0;
+}
+
+static void command(int32_t id, uint32_t c) {
+    if (id == 0 && c == SC_COMMAND_FALL)
+        state.flags = 0;
+}
+
+static void damage(int32_t, uint32_t) {} // React visually; never subtract host HP.
+
+static void surfaces(const SC_Surface *s, uint32_t count, uint32_t dynamic) {
+    if (!dynamic && s && count)
+        ground = float(s[0].vertices[0][1]);
+} // Replace with real collision import.
+
+static float floorHeight(float, float, float) {
+    return ground;
+}
+
+static uint32_t probe(int32_t, float, float, float) {
+    return 0;
+}
+
+static void contact(int32_t, float, float, float, float) {}
+
+static uint32_t audio(uint32_t, uint32_t, int16_t *, uint32_t) {
+    return 0;
+}
+
+static uint32_t resolveMotion(int32_t id, const SC_MotionResolution *r, SC_State *s, SC_Mesh *m) {
+    if (id != 0 || !alive || !r || r->size != sizeof(*r) || r->normalCount > 4)
+        return 0;
+    for (int axis = 0; axis < 3; axis++) {
+        if (!std::isfinite(r->position[axis]))
+            return 0;
+        state.position[axis] = r->position[axis];
+    }
+    for (unsigned j = 0; j < r->normalCount; j++) {
+        float into = 0;
+        for (int k = 0; k < 3; k++)
+            into += state.velocity[k] * r->normals[j][k];
+        if (into < 0)
+            for (int k = 0; k < 3; k++)
+                state.velocity[k] -= into * r->normals[j][k];
+    }
+    return mesh(s, m);
+}
+
+static SC_CharacterAPI api = {sizeof(SC_CharacterAPI),
+                              SC_ABI_VERSION,
+                              describe,
+                              initialize,
+                              shutdown,
+                              create,
+                              destroy,
+                              step,
+                              pose,
+                              resume,
+                              position,
+                              command,
+                              damage,
+                              surfaces,
+                              floorHeight,
+                              probe,
+                              contact,
+                              audio,
+                              resolveMotion};
+
+extern "C" __declspec(dllexport) const SC_CharacterAPI *SoulsCharacterGetAPI(uint32_t abi,
+                                                                             uint32_t size) {
+    return abi == SC_ABI_VERSION && size == sizeof(api) ? &api : nullptr;
+}

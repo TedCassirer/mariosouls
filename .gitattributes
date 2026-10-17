@@ -1,0 +1,8 @@
+# Keep active source and documentation consistent across Windows checkouts.
+* text=auto eol=lf
+# Dependency preparation verifies these files byte-for-byte against lock hashes.
+/patches/** -text
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.zip binary

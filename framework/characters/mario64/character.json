@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "id": "mario64",
+  "display_name": "Mario 64",
+  "camera": {"distance_scale": 1.5},
+  "status": "implemented",
+  "source": "adapter.cpp",
+  "max_triangles": 1536,
+  "texture": [
+    704,
+    64
+  ],
+  "audio_rate": 32000,
+  "capabilities": [
+    "audio",
+    "item_prop",
+    "equipment",
+    "death_pose",
+    "melee_families",
+    "native_combat",
+    "pyromancy",
+    "native_walls"
+  ],
+  "automatic_attack": "stomp",
+  "base_power": 100,
+  "upgrade_power": 10,
+  "dexterity_weight": 0.5,
+  "body": {
+    "model_scale": 0.9,
+    "radius_cm": 22,
+    "height_cm": 105,
+    "hurt_radius_cm": 24,
+    "hurt_height_cm": 110,
+    "fall_damage_scale": 0.05,
+    "fall_damage_max_hp_fraction": 0.05,
+    "nonlethal_falls": true
+  },
+  "assets": {
+    "required": true,
+    "description": "User-owned US Super Mario 64 ROM in big-endian .z64 format",
+    "runtime": "sm64.dll"
+  },
+  "attacks": [
+    {
+      "name": "punch1",
+      "multiplier": 0.65,
+      "stamina_cost": 8,
+      "poise": 5,
+      "active_ticks": 18,
+      "max_targets": 8,
+      "range_cm": 125,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": []
+    },
+    {
+      "name": "punch2",
+      "multiplier": 0.65,
+      "stamina_cost": 8,
+      "poise": 5,
+      "active_ticks": 18,
+      "max_targets": 8,
+      "range_cm": 125,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": []
+    },
+    {
+      "name": "combo_kick",
+      "multiplier": 1.1,
+      "stamina_cost": 16,
+      "poise": 30,
+      "active_ticks": 14,
+      "max_targets": 8,
+      "range_cm": 125,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": [],
+      "knockback_cm": 140
+    },
+    {
+      "name": "jump_kick",
+      "multiplier": 0.95,
+      "stamina_cost": 18,
+      "poise": 25,
+      "active_ticks": 18,
+      "max_targets": 8,
+      "range_cm": 125,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": [],
+      "knockback_cm": 115
+    },
+    {
+      "name": "dive",
+      "multiplier": 1.15,
+      "stamina_cost": 24,
+      "poise": 10,
+      "active_ticks": 24,
+      "max_targets": 8,
+      "range_cm": 125,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": []
+    },
+    {
+      "name": "slide_kick",
+      "multiplier": 1.0,
+      "stamina_cost": 20,
+      "poise": 35,
+      "active_ticks": 24,
+      "max_targets": 8,
+      "range_cm": 125,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": [],
+      "knockback_cm": 160
+    },
+    {
+      "name": "stomp",
+      "multiplier": 0.9,
+      "stamina_cost": 16,
+      "poise": 5,
+      "active_ticks": 0,
+      "max_targets": 8,
+      "range_cm": 125,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": [
+        "automatic",
+        "no_objects"
+      ],
+      "automatic_radius_cm": 55,
+      "automatic_min_height_cm": -170,
+      "automatic_max_height_cm": -35
+    },
+    {
+      "name": "ground_pound",
+      "multiplier": 1.65,
+      "stamina_cost": 30,
+      "poise": 15,
+      "active_ticks": 0,
+      "max_targets": 3,
+      "range_cm": 165,
+      "min_height_cm": -200,
+      "max_height_cm": 140,
+      "flags": [
+        "radial"
+      ]
+    }
+  ]
+}

@@ -8,8 +8,11 @@ PTDE on Windows/x86 is the only implemented host. Mario is the only implemented 
 
 Dark Souls Remastered is an architectural target, not a functioning port. Preserve the renderer boundary, explicit host capabilities, fixed-step timing, portable types and x86/x64 compilation checks. There are no Remastered addresses, hooks or DX11 renderer to extend yet. Link, DK and other characters need their own adapter, engine integration and user-supplied assets; a mesh or scaffold is not a character implementation.
 
+The first Remastered milestone is presentation only: separately loaded x64 host, validated actor/camera, correct depth/before-HUD Mario rendering, with native movement retained. Port later integrations by responsibility and verify against an owned installation. See [HOST_PORTING.md](framework/docs/HOST_PORTING.md); no invented hooks or behavioral test platform are authorized by architectural preparation.
+
 ## Read first
 
+- [Intended architecture and dependency rules](framework/docs/ARCHITECTURE.md): required before changing framework code, contracts, dependencies or edition dispatch. It defines the target boundaries and explicitly lists current implementation debt.
 - [Development](docs/DEVELOPMENT.md): commands, dependencies and local assets.
 - [Framework architecture](framework/README.md): responsibilities and current limits.
 - [SDK contract](framework/docs/CONTRACT.md): lifecycle, units and ownership.
@@ -21,13 +24,30 @@ Dark Souls Remastered is an architectural target, not a functioning port. Preser
 
 | Location | Owns |
 | --- | --- |
-| `framework/hosts/ds1ptde/` | Native addresses, structures, hooks, animation/equipment IDs, maps, collision, input, menus, health, stamina, damage, D3D9 and PTDE installation/assets |
+| `framework/hosts/<edition>/` | That edition's native addresses, structures, hooks, animation/equipment IDs, maps, collision, input, menus, health, stamina, damage, graphics backend and build/install/asset rules; only PTDE currently exists |
 | `framework/core/` | Character-independent lifecycle, movement/combat policies, timing, validation and host capability requirements |
 | `framework/sdk/` | Neutral, versioned contracts between host and adapters; internal renderer interface |
 | `framework/characters/<id>/` | Guest APIs, action/animation IDs, movement rules, asset decoding, meshes, props and character-specific fitting |
 | `tools/` | Shared build, pinned dependency checks, profile generation and asset recipe dispatch |
 
 All new gameplay integration belongs to `framework/`. Share capabilities through the SDK instead of adding character-name switches to the host. A Mario-only fix belongs in Mario's adapter unless the underlying responsibility is native or shared.
+
+All character/equipment/cannon/feedback/debug drawing must use the internal renderer. Keep neutral CPU geometry in reusable core helpers, guest-specific geometry in the adapter and native observations in the edition; D3D state/resources stay in its backend. Derive host operation availability from verified hooks and current observations, retaining local guards. Build/link recipes belong in the edition too; selecting a new host must not silently compile PTDE or reuse its output/install paths.
+
+## Architecture rules for every change
+
+These are implementation rules, not suggestions. The detailed design, examples and known exceptions are in [ARCHITECTURE.md](framework/docs/ARCHITECTURE.md).
+
+1. **Name the authority before editing.** Separate native observation/action, neutral policy/contract and guest presentation. Fix the owning responsibility rather than adding a parallel path in a caller. Refactoring does not authorize gameplay tuning.
+2. **Follow dependencies inward.** Host and adapter may use core/SDK; core may use SDK; SDK must not depend on core/hosts/characters. Core/SDK cannot call Windows/graphics/native APIs. Core must not interpret opaque identities or raw guest IDs.
+3. **Keep host and adapter separate.** Hosts use validated SDK exports, not adapter headers/libsm64 or character-name gameplay switches. Adapters may load their own runtime/assets using OS facilities, but cannot scan/hook/read/write Dark Souls. Do not include another host's private implementation or another adapter's guest internals.
+4. **Preserve two distinct interfaces.** The adapter uses a versioned C ABI with `SC_CALL`, fixed-width fields, explicit sizes and borrowed buffers; no STL/exceptions/allocator ownership/native game pointers cross it. The renderer is an internal C++ interface, not an adapter DLL API. Update versions/layout checks when a real contract change requires it.
+5. **Keep intent, presentation and locomotion independent.** Current actor/generation and temporary native ownership govern mutations/restoration. Movement proposals/acknowledgements, pose/correction and rendering are separate operations. Menus, paired actions, death and unsupported features cannot acquire accidental guest control or damage.
+6. **Use capabilities plus local validation.** Guest opt-ins, verified host facilities and per-operation eligibility are different. Use common operation requirements, but preserve native signatures, readiness evidence, identity, bounds and menu/death/config guards. Missing support must have the documented native/disabled fallback; never force a readiness flag to make a port progress.
+7. **Keep drawing free of gameplay.** Backend-owned graphics state/resources consume neutral snapshots/materials; no simulation tick, damage, input consumption or simulation-clock advancement in drawing. Preserve fixed-step/backpressure/interpolation semantics. PTDE still schedules updates from graphics callbacks; do not describe that as a fully independent native scheduler or copy it uncritically into a port.
+8. **Keep edition build/install boundaries.** Shared tools dispatch validated implemented recipes and target-matched guest outputs; native compile/link details remain in the edition. Another host needs separate outputs, fingerprints/assets/config and reversible setup. Do not weaken PTDE's installer/version guards or label a stub/metadata entry as support.
+9. **Abstract a concrete need only.** Reuse neutral semantics/profiles first. A required extension must describe inputs/outputs, units, lifetime, validation, opt-in and missing behavior. Do not introduce hypothetical service layers, fake hooks, another character's behavior under Mario's ID or a new test platform as port preparation.
+10. **Review boundaries and maintain the design.** Inspect changed dependencies, authority, identity/lifetime, timing/render/ABI and fallback behavior. State unresolved debt and evidence. Update architecture/contract/porting documents when their rules change; do not silently normalize an existing shortcut as the intended pattern. Include the architecture explanation in the PR/handoff.
 
 `work/` contains private dependencies, generated data, build outputs and preserved prototype/investigation history. Do not implement new gameplay there. Keep existing checkpoint tags and local archives immutable. Do not clean ignored files indiscriminately.
 
@@ -64,6 +84,7 @@ Treat documentation as part of the change, not a follow-up task.
 4. Update `framework/docs/CONTRACT.md` and the adapter guide when SDK semantics, layouts or capabilities change. Preserve explicit version/size/calling-convention checks.
 5. Update host-porting documents and the PTDE integration inventory when a native boundary changes. Record its purpose, inputs, outputs and verification method for a future Remastered implementation.
 6. Distinguish implemented behavior, historical gameplay evidence, current compilation checks and unverified/proposed behavior. Never claim a stub or a successful compile proves a playable port or a working game interaction.
+7. Keep `framework/docs/ARCHITECTURE.md`, this file, the contributor guide and architecture section of the PR template aligned when responsibilities/dependencies change. Document current limitations separately from intended rules. Existing `doctor` patterns and compile checks do not fully enforce the architecture; manual code review remains required.
 
 ## Manual verification and private data
 

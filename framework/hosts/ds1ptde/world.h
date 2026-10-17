@@ -235,7 +235,8 @@ static bool worldReconcile(bool &resolvedTick) {
     if (!isfinite(dot(correction, correction)) || dot(correction, correction) > 4)
         return false;
     SCMotion::GroundContact ground;
-    bool nativeGround = worldSupportReady && PTDESupport::read(playerPhysics, ground);
+    bool nativeGround =
+        hostPermits(SCHost::Operation::Platform) && PTDESupport::read(playerPhysics, ground);
     worldNativeSupport.observe(resolved ? &ticket : nullptr, motionPoint(host),
                                nativeGround ? &ground : nullptr);
     SC_MotionResolution r = {};

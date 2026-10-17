@@ -70,9 +70,7 @@ static UILayout uiBoundary(IDirect3DDevice9 *d, UINT stride) {
 }
 
 static void uiComposite(IDirect3DDevice9 *d, UILayout layout) {
-    SCHost::Capabilities capabilities{
-        (sceneDepth ? uint32_t(SCHost::SceneDepth) : 0u) |
-        (layout != UILayout::Other ? uint32_t(SCHost::BeforeHUD) : 0u)};
+    auto capabilities = hostCapabilities(layout != UILayout::Other);
     if (uiComposited || uiInside || layout == UILayout::Other ||
         !SCHost::permits(capabilities, SCHost::Operation::WorldDraw))
         return;

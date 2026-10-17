@@ -41,7 +41,7 @@ static void actionFlags(bool nativeMotion, bool lockMovement = false) {
 
 static bool actionEligible(int kind) {
     if (!characterOwned() || nativeActionOwned() || nativeReaction || equipmentActionOwned ||
-        character < 0 || !actionInputReady || actionPending())
+        character < 0 || !hostPermits(SCHost::Operation::Interaction) || actionPending())
         return false;
     auto o = nativeInteractionState();
     if (!o.valid || !o.grounded || !(state.flags & SC_CAN_INTERACT) || !o.idle || o.menu ||

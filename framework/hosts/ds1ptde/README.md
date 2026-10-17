@@ -2,6 +2,8 @@
 
 This host connects the framework to the supported 32-bit Dark Souls: Prepare to Die Edition executable. It owns native state, hooks, D3D9, input, collision, menus, damage, equipment, class integration and edition-specific asset/setup rules. Mario is reached only through neutral SDK capabilities.
 
+Follow the [architecture rules](../../docs/ARCHITECTURE.md) when extending this host. Shared policies must not read native memory; adapter headers/guest IDs must not leak here. Native readiness/observation is mapped in `capabilities.h`; common operation requirements supplement rather than replace signatures, ownership and local validation. D3D resources/pipeline drawing belong in `render_device.h`, while presentation modules submit neutral geometry/materials.
+
 ## Source entry points
 
 | Responsibility | Files |
@@ -17,6 +19,8 @@ This host connects the framework to the supported 32-bit Dark Souls: Prepare to 
 | Props/assets/setup | `equipment_props.h`, `archive.py`, `prepare_collision.py`, `prepare_equipment.py`, `setup.py`, `player_setup.py`, `installer.cs`, `edition.json` |
 
 The host builds as one translation unit. Feature headers are internal implementation fragments with shared state and an explicit include order; they are not public standalone modules. Keep a new feature at the correct ownership boundary rather than satisfying dependencies through arbitrary includes.
+
+The separate update routine currently runs from `endScene` once per Present. Fixed-step/backpressure and draw submission are separated, but the native scheduling integration is still tied to graphics opportunities. Do not claim otherwise or move simulation into a drawing helper. See the architecture's current-debt section before reusing this arrangement in another host.
 
 ## Update and ownership flow
 

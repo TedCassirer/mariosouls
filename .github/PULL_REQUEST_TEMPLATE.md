@@ -2,6 +2,12 @@
 
 Describe the concrete problem, reproduction and what this change makes the player or developer observe. Link the related issue if available.
 
+## Architecture and ownership
+
+For framework changes, identify the owning host/core/SDK/adapter/tool responsibility and authoritative state. Describe changed dependencies, inputs/outputs, units/lifetimes/actor identity, capabilities/local eligibility and unavailable-feature behavior. Mention timing/render and ABI implications, or state that the boundary is unchanged.
+
+Check the [architecture rules](../framework/docs/ARCHITECTURE.md): no native/graphics dependencies in core/SDK, no guest internals/character-name gameplay branches in hosts, no native game access in adapters and no gameplay work in drawing. Distinguish intended design from remaining implementation debt; explain any affected bounded exception instead of silently expanding it.
+
 ## Validation
 
 List compilation actually run and its result. Record manual game checks separately, including build/settings/area, and identify unverified behavior. A build or scaffold is not gameplay/port evidence.
@@ -11,6 +17,7 @@ List compilation actually run and its result. Record manual game checks separate
 - Update `docs/FEATURES_AND_TWEAKS.md` for behavior, tuning, default or configuration changes.
 - Add meaningful changes to the current unreleased `CHANGELOG.md` entry.
 - Update player instructions, SDK/adapter contract or host-porting inventory where affected.
+- Update `framework/docs/ARCHITECTURE.md` and AGENTS/contributor guidance when responsibilities, dependency rules or the known-debt list change.
 
 ## Compatibility and delivery
 

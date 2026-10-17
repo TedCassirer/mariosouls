@@ -148,6 +148,11 @@ static bool combatEnvironment(double &acc) {
 }
 
 static void combatInput(SC_Input &in) {
+    if (!hostPermits(SCHost::Operation::Combat)) {
+        in.attack = 0;
+        characterWindow.reset();
+        return;
+    }
     int stamina = read<int>(player + 0x2e4);
     if (SCCombat::pending(characterRecoveryUntil, GetTickCount())) {
         characterStaminaCeiling = std::min(characterStaminaCeiling, stamina);
@@ -190,7 +195,7 @@ static void combat() {
         characterLandingRecovery = 0;
         return;
     }
-    if (!combatEnabled || !nativeDamage || !characterDamageReady)
+    if (!combatEnabled || !hostPermits(SCHost::Operation::Combat))
         return;
     bool grounded = bool(state.flags & SC_GROUNDED);
     int interrupted = state.interruptedAttackId;

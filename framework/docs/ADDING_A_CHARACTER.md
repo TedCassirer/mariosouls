@@ -2,6 +2,8 @@
 
 The framework is intended to make another character easier to integrate without repeating Dark Souls hooks. Mario is the only working adapter today. Link, DK or any other guest needs its own engine/behavior/assets implementation; libsm64 does not run those games.
 
+Follow [ARCHITECTURE.md](ARCHITECTURE.md) and its placement/dependency rules. A new character is an independent guest axis, not a host branch or another native memory reader. OS-based loading of its own runtime/assets is allowed; native game observation/actions remain the edition host's responsibility.
+
 ## Start at the boundary
 
 Use [character_api.h](../sdk/character_api.h) and the [SDK contract](CONTRACT.md) as the authority. Keep guest APIs, IDs, movement, animation, mesh/prop generation and asset decoding under `characters/<id>/`. Keep native addresses/IDs and state in the host, and reusable policies in core.
@@ -15,7 +17,7 @@ The generated triangle is an explicitly nonfunctional scaffold. Keep that status
 
 ## Implementation sequence
 
-1. Choose a guest runtime or implement its movement/animation rules and local asset loader. A model swap alone is insufficient. Add optional asset recipes where useful; a separately built guest runtime supplies `build_runtime.py --output <directory>`.
+1. Choose a guest runtime or implement its movement/animation rules and local asset loader. A model swap alone is insufficient. Add optional asset recipes where useful; a separately built guest runtime supplies `build_runtime.py --target <compiler-target> --output <directory>` and must honor the selected host architecture.
 2. Export `SoulsCharacterGetAPI` with C linkage and `SC_CALL`. Reject unsupported version/size requests; return only stable descriptors and bounded caller-owned output.
 3. Translate neutral input, local centimetres, cm/s and radians. Keep opaque guest action IDs diagnostic-only to the host.
 4. Implement safe initialize/shutdown and create/destroy lifetimes, including failed initialization and a later recreate. Mario currently permits one live guest instance; do not assume its runtime is a general multi-instance engine.
@@ -29,6 +31,8 @@ The generated triangle is an explicitly nonfunctional scaffold. Keep that status
 Return stable triangle ordering/material layout when possible so visual interpolation can blend snapshots. Positions/normals/colors/UVs and same-frame attachment matrices must stay within host capacities. Rendering cannot tick the guest.
 
 Character-specific skeletal fitting and prop meshes belong in the adapter. Native equipment selection, damage, guard and action ownership belong in the host. Mario's authored upper-body clips provide one example; they are not a universal rig-retargeting system.
+
+Host presentation submits equipment, cannon, feedback, diagnostic lines and screen geometry through the internal renderer, with explicit material/depth/phase values. Reuse `core/render_geometry.h` for CPU prop/cannon/quad generation; do not add graphics API calls to an adapter. Shared host capabilities gate operations independently: a future presentation-only host may keep native movement while posing the guest. An adapter opt-in never makes an unverified native facility available.
 
 Body scale is distinct from speed and jump distance. `SC_CAP_NATIVE_WALLS` requires verified host motion/collision; it cannot be used to bypass a native wall with guest-only movement. Environment callbacks may request presentation/movement reactions but never write native HP, stamina, inventory or immunity.
 

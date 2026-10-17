@@ -4,6 +4,14 @@ Meaningful changes are recorded here by development version. The detailed, maint
 
 ## 0.9.0-dev.1 - unreleased
 
+### Host-port preparation
+
+- Define the intended dependency/authority/phase/renderer/ABI/build boundaries in a dedicated architecture specification. Make the design and explicit current-debt list required in AGENTS, contributor guidance and PR review, with links from host/adapter/SDK/porting guides. This documentation change adds no enforcement suite or gameplay behavior.
+- Route equipment, cannon, impact flashes and F8 line/text/reticle presentation through the character's graphics-neutral renderer. Share CPU prop/cannon/quad generation; keep texture upload, D3D9 pipeline/resource/reset handling in the PTDE backend.
+- Dispatch build/link and asset recipes by implemented host edition, select matching guest architecture, isolate non-PTDE outputs, and inspect DLL machine types before writing the build manifest. PTDE defaults/output paths and installation/version guards remain unchanged; Remastered is still unimplemented.
+- Derive PTDE operation capabilities centrally from validated observations and hook readiness; gate movement, presentation, combat, interactions, platform observations and before-HUD composition while preserving native fallback and detailed guards.
+- Document presentation under native locomotion as the first Remastered milestone, with later collision/interaction/combat porting by responsibility. No new behavior tests, gameplay tuning, installation or Remastered verification is implied; fresh PTDE game checks remain pending.
+
 ### Player installer candidate
 
 - Add a locally built Windows setup executable with game/ROM selection and install/update/uninstall. It shares the existing PTDE setup backend, DSfix handling and recovery rules.

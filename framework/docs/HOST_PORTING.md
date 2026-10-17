@@ -1,53 +1,90 @@
-# Preparing a Remastered or other host port
+# Preparing another host edition
 
-Remastered was considered when separating the framework, but **only PTDE is implemented**. There are no verified Remastered hooks, native layouts, DX11 renderer or installer. Actual work requires an owned installation and fresh native evidence.
+**PTDE is the only implemented host. Remastered has no native bindings, DX11 backend or installer in this repository.** An owned installation and fresh native evidence are required. x64 guest compilation is preparation, not a functioning port.
 
-## Reusable foundations
+Start from the responsibilities in the [PTDE integration inventory](../hosts/ds1ptde/PORT_CHECKLIST.md). Do not translate its addresses, IDs, layouts, formats or register hooks mechanically.
 
-| Foundation | What exists | What still requires a new host |
-| --- | --- | --- |
-| Character SDK | C linkage, explicit `SC_CALL`, version/size gates, fixed-width values and borrowed buffers | Correct target ABI and loading/lifetime integration |
-| Shared core | Lifecycle, motion/contact policies, timing and capability requirements | Native observation, ownership and safe control handoffs |
-| Rendering | Mesh/texture/camera/depth/phase interface | DX11 resource/device/reset/composition implementation |
-| Timing | 30-Hz accumulator, bounded backlog, native readiness/backpressure, visual interpolation | Appropriate native update/acknowledgement hooks and frame-rate verification |
-| Assets/config/install | PTDE-owned recipes and reversible setup behind one public command | Edition-specific formats, executable validation, paths and loader arrangement |
-| Portability | x86/x64 header/ABI and x64 guest compilation | A running 64-bit native host and gameplay evidence |
+Follow [ARCHITECTURE.md](ARCHITECTURE.md) for dependency direction, authority, phase/lifetime rules and explicitly bounded current exceptions. This guide supplies the port sequence/evidence obligations; it does not authorize bypassing those boundaries or adding a new abstract host system before an actual implementation needs it.
 
-Portable currently means the checked Windows x86/x64 components. It is not demonstrated Linux/macOS support. On-disk 32-bit fields remain format values rather than pointers to widen blindly.
+## First Remastered milestone: presentation with native movement
 
-## Native isolation
+Keep native locomotion, collision, input, HP/stamina, inventory and combat in control. The first deliverable is a separately loaded x64 host displaying Mario at the validated native actor using the correct camera, depth and before-HUD boundary. No guest movement takeover or attack hooks are required for this milestone.
 
-Keep addresses, structures, calling conventions, animation/equipment IDs, map logic, native health/stamina/damage and extraction in the host edition. Core/SDK use neutral semantics and opaque identities; guest engine IDs and ROM/model formats stay in adapters.
+1. Record the owned executable's hash/build, PE architecture, loader arrangement and renderer. Establish reversible edition-specific loading and a refusal path before native writes.
+2. Validate player identity/lifetime, root position/facing and camera matrices against the running installation. Invalid observations retain the human and native controls; rendering must not dereference stale actors.
+3. Load the x64 adapter and guest runtime using existing ABI/size/calling-convention checks. Produce presentation poses without stepping locomotion or submitting contacts. Preserve single-instance guest ownership.
+4. Implement the graphics backend and resource lifetime. Discover actual scene depth and the composition point before native HUD/text. Do not guess projection/composition or use Present as a simulation clock.
+5. Hide only the identified native player draw after a usable replacement exists. Restore native visibility on failure, replacement, disabled intent or teardown. Do not hide NPCs or a global character category.
+6. Manually observe native walking/turning, wall occlusion, prompts/subtitles/menus, loading/actor replacement, resolutions and graphics reset/recreation. Record exact game/mod builds and gaps.
 
-The [PTDE integration inventory](../hosts/ds1ptde/PORT_CHECKLIST.md) records each boundary's purpose, inputs, outputs and verification method. Treat its addresses as PTDE evidence, never as offsets to mechanically adjust for Remastered. Recheck registers, stack cleanup, x87/SSE/MXCSR state, pointer ownership and hook failure paths.
+This is a milestone definition, not verified Remastered behavior. A presentation-only bootstrap does not establish movement, interaction or combat support.
 
-## Rendering and timing obligations
+## Rendering boundary
 
-`sdk/render_api.h` is an internal C++ interface, not the adapter DLL ABI. It carries row-major world/view/projection matrices, borrowed vertices/RGBA textures, depth availability and submission phase. A new renderer must explicitly translate its API conventions and discover the real scene/UI boundary. Missing depth/before-HUD support suppresses normal world composition rather than drawing Mario over text.
+[render_api.h](../sdk/render_api.h) is an internal C++ interface, not the character DLL ABI. It describes existing presentation needs:
 
-Do not couple simulation to Present calls. Preserve native observation/update, fixed guest steps and visual interpolation as separate operations. The current PTDE implementation permits one guest tick per update, caps backlog and clears paused/invalid ownership intent. A future change to catch-up policy needs explicit gameplay review and corresponding documentation, not an incidental FPS adjustment.
-
-## Host capability requirements
-
-| Operation | Required verified facilities |
+| Submission | Inputs / meaning |
 | --- | --- |
-| Movement | Motion + health |
-| Combat | Health + stamina + native damage |
-| Interaction | Native interaction routing |
-| Platforms | Motion + dynamic support |
-| World drawing | Scene depth + before-HUD composition |
+| Camera | Row-major world/view/projection; host-supplied conventions |
+| Triangle mesh | Metre-space vertices, packed AARRGGBB color/shade and UV; borrowed unindexed triangle list |
+| Material/texture | Immutable RGBA8, vertex/modulate/texture-alpha color, optional shade, point/linear sampling, depth test/write, alpha cutoff and alpha blending |
+| Lines | Metre-space colored segments; depth-test or through-walls mode |
+| Screen triangles | Target-pixel position, reciprocal homogeneous W, color and UV; backend translates raster/clip conventions |
+| Context | Scene, before-HUD or preview phase, and actual depth availability |
+| Viewport | Target-pixel rectangle for screen-layout scaling |
 
-These are host facilities, distinct from guest `SC_CAP_*` flags. An unavailable facility must leave a predictable native fallback or disable the operation. It must not grant free attacks, fabricate a floor, alter quests or assume protection from an animation.
+CPU prop/cannon transforms, screen quads and fitting live in [core/render_geometry.h](../core/render_geometry.h); diagnostic shapes live in [core/debug_geometry.h](../core/debug_geometry.h). Edition code selects native equipment/sockets, supplies camera/actor observations and assembles text. Equipment props, cannon, hit flashes and F8 diagnostics use the same renderer as Mario. Their presentation code contains no D3D9 drawing/resource calls.
 
-## Port checklist
+PTDE's [render_device.h](../hosts/ds1ptde/render_device.h) owns FVF, pipeline state, RGBA upload and cached managed textures. CPU images remain immutable/alive for the host session; Reset clears backend textures for lazy re-upload. [font_atlas.h](../hosts/ds1ptde/font_atlas.h) rasterizes a Windows font to RGBA without a graphics device. GDI is not a portable renderer requirement.
 
-1. Obtain/fingerprint the executable and identify renderer, loaders, archives and save/config boundaries.
-2. Create a separate edition host; rediscover each required native integration using the PTDE inventory as a list of responsibilities.
-3. Compile and inspect layouts/calling conventions; establish hook/pointer/signature validation before enabling writes.
-4. Implement native motion/support, authoritative HP/stamina/damage, interactions and actor/map lifecycle.
-5. Implement the graphics backend, camera/depth, scene/UI recognition and device/resource lifetime.
-6. Prepare edition-specific assets/configuration and reversible installation. PTDE exports do not establish another edition's compatibility.
-7. Use disposable characters to verify loading, death/respawn, streaming, replacement, platforms, native control, combat and rendering at varying rates.
-8. Record exact build/game evidence and only then revise support claims in README/compatibility and the feature inventory.
+Camera extraction, D3D9 matrix preparation, state capture/restoration, scene/depth surfaces, DSfix sizing, preview targets, cinematic recognition and final composition remain PTDE-owned. This is not a generic render graph. A DX11 implementation must translate conventions/resources and rediscover its scene/UI boundary. Before-HUD submissions refuse missing depth; diagnostic through-walls drawing disables depth testing only within a valid composition.
 
-Never test on the owner's level-65 character. No stub host, simulated success or x64 compile should be described as a working Remastered port.
+## Selecting and building a host
+
+The shared CLI resolves the selected edition's build recipe instead of linking PTDE unconditionally:
+
+~~~powershell
+python tools/framework.py doctor --host ds1ptde
+python tools/framework.py build --host ds1ptde --check-portability
+~~~
+
+The default remains PTDE. An absent/unimplemented edition fails before compilation. There is no Remastered switch secretly building PTDE and no generated host scaffold.
+
+A real new implementation belongs in its own directory under **framework/hosts/**. Its **edition.json** declares matching ID, implemented status, compiler target, executable fingerprint, executable/config/default paths, asset recipes, build_recipe and build_output. The recipe exports **build(api, output, target)** and owns native sources, hook-library objects, exports, link libraries and target checks. Use the supplied output parent for generated headers/objects and explicitly pass the selected compiler target. Declaring metadata alone never establishes support; native validation and milestone evidence must exist.
+
+**tools/host_editions.py** validates identifiers, implementation status, target, contained recipe paths and the executable fingerprint declaration. PTDE's recipe refuses non-x86 targets. The shared builder targets adapter/runtime to the selected edition and inspects DLL machine types before recording its manifest. Portability compilation checks x86/x64 C/C++ declarations and x64 guests without executing check programs.
+
+PTDE keeps its existing **work/framework-build/** output paths. Other editions use **work/framework-build/hosts/<id>/**, including separate adapter/runtime/manifest files, so x64 work cannot replace PTDE outputs. Manifests record the selected host/target, revision and hashes.
+
+Asset commands dispatch the selected edition's collision/equipment recipe and default game path; **--game** overrides that path. Formats and validation remain edition-owned. The player installer and PowerShell setup stay PTDE-only and retain their host/architecture/executable guards. Build selection is not installation support: implement separately validated, reversible setup for another edition only when it can actually be installed.
+
+## Capability activation and native fallback
+
+Host facilities differ from guest SC_CAP_* flags. [core/host_capabilities.h](../core/host_capabilities.h) defines requirements; PTDE [capabilities.h](../hosts/ds1ptde/capabilities.h) translates verified hooks and current readable observations into one snapshot. Local readiness flags remain underlying evidence/diagnostics, not parallel support declarations.
+
+| Operation | Required facilities | Unavailable behavior |
+| --- | --- | --- |
+| Presentation | Validated actor pose/camera | No replacement from invalid observations |
+| Native replacement | Actor pose/camera + scoped visibility | Retain human visibility |
+| Movement | Motion + authoritative health + input routing | Refuse/release guest locomotion; native control remains; presentation is independent |
+| Combat | Health + stamina + native damage | No outgoing guest damage/stamina charge or unpaid attack window |
+| Interaction | Native interaction routing | No unverified input pulse; native menus/ownership remain authoritative |
+| Platforms | Motion + dynamic support | No unverified platform contact or invented floor |
+| World drawing | Scene depth + identified before-HUD phase | No world replacement over native UI |
+
+PTDE uses common checks at movement activation/continuation, presentation, action eligibility, combat/equipment/object contacts, native platform observation and before-HUD composition. Its native damage transaction also installs the stamina filter, so their readiness evidence is currently coupled. Actor health/stamina/pose availability uses current validated reads. Before-HUD availability is scoped to the identified draw boundary, not a permanent startup flag.
+
+Capabilities are prerequisites, not permission by themselves. Ownership/generations, menus/paired/death state, individual signatures, configuration, target handles, asset bounds and guest opt-ins still have to pass at each operation. Preserve low-level refusal guards; never mark a missing hook ready to progress.
+
+## Later integration sequence
+
+After presentation-only work, port and verify each responsibility against the owned installation:
+
+1. Native cadence, movement request/acknowledgement, collision/contact/support, actor/map replacement and moving platforms. Native resolved motion remains authoritative.
+2. Input and interaction ownership: prompts, menus, Estus, ladders and doors; resume guest poses at the native result.
+3. Authoritative health/stamina/status/death, attack packets/defenses/target identity, equipment and spells. No direct guest HP damage or jump invulnerability.
+4. Class intent/creation preview, cinematics, environment/fire/projectiles, feedback and optional cannon integration.
+
+Keep native observation/update, fixed guest simulation and rendering separate. PTDE consumes at most one 30-Hz guest tick per update with bounded backlog/native acknowledgement. Preserve pause/ownership clearing and visual interpolation; a different catch-up policy is a gameplay change.
+
+Record purpose, exact inputs/outputs, native evidence, ownership/failure path and manual verification for each integration. Update contract/inventory when boundaries change. This preparation introduces no behavioral suite, simulated-host runner or gameplay automation. Use disposable characters and the [manual checklist](../../docs/TESTING.md); never test on the owner's level-65 character.

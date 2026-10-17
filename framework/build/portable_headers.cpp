@@ -10,6 +10,7 @@
 #include "../core/contact.h"
 #include "../core/context_action.h"
 #include "../core/debug_geometry.h"
+#include "../core/render_geometry.h"
 #include "../core/environment.h"
 #include "../core/equipment.h"
 #include "../core/feedback.h"
@@ -73,6 +74,20 @@ static_assert(offsetof(SC_State, rawAction) == 52, "State diagnostic offset");
 static_assert(offsetof(SC_Descriptor, attacks) == 160, "Descriptor attacks offset");
 static_assert(offsetof(SC_Descriptor, body) == 2720, "Descriptor body offset");
 static_assert(std::is_same<SC_Log, void(__cdecl *)(const char *)>::value, "cdecl callback");
+static_assert(offsetof(SCRenderAPI::Vertex, color) == 12 &&
+                  offsetof(SCRenderAPI::Vertex, shade) == 16 &&
+                  offsetof(SCRenderAPI::Vertex, u) == 20,
+              "Mesh color/shade/UV offsets");
+static_assert(offsetof(SCRenderAPI::ScreenVertex, rhw) == 12 &&
+                  offsetof(SCRenderAPI::ScreenVertex, color) == 16 &&
+                  offsetof(SCRenderAPI::ScreenVertex, u) == 20,
+              "Screen vertex offsets");
+// Instantiate CPU prop assembly for both targets without an executable/check runner.
+using PropSample = float (*)(const float *, int, bool);
+template void SCGeometry::propMesh<PropSample>(const std::vector<SCGeometry::PropVertex> &,
+                                               const std::vector<uint32_t> &, PropSample,
+                                               const float *, const float *, float,
+                                               std::vector<SCRenderAPI::Vertex> &);
 #if defined(__i386__)
 static_assert(!std::is_same<SC_Log, void(__stdcall *)(const char *)>::value,
               "x86 conventions differ");

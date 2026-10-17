@@ -48,7 +48,7 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false,
     bool drawCharacter =
         (cinematic || preview || (!cutsceneFrame.active && characterPresented())) &&
         mesh.view.numTrianglesUsed;
-    PTDERenderer renderer(d, tex);
+    PTDERenderer renderer(d);
     if (!renderer.texture(
             {characterMesh.atlasPixels.data(), profile->textureWidth, profile->textureHeight}))
         return false;
@@ -163,58 +163,23 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false,
         p.u = mesh.uvs[i * 2];
         p.v = mesh.uvs[i * 2 + 1];
     }
-    d->SetVertexShader(NULL);
-    d->SetPixelShader(NULL);
-    d->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX1);
     SCRenderAPI::Camera renderCamera{};
     memcpy(renderCamera.world, &world, sizeof(world));
     memcpy(renderCamera.view, &view, sizeof(view));
     memcpy(renderCamera.projection, &proj, sizeof(proj));
     renderer.camera(renderCamera);
-    d->SetRenderState(D3DRS_LIGHTING, FALSE);
-    d->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-    d->SetRenderState(D3DRS_ZENABLE, (preview || depthTest) ? TRUE : FALSE);
-    d->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
-    d->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-    d->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-    d->SetRenderState(D3DRS_ALPHATESTENABLE,
-                      (profile->capabilities & SC_CAP_ALPHA_TEST) ? TRUE : FALSE);
-    d->SetRenderState(D3DRS_ALPHAREF, 127);
-    d->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
-    d->SetRenderState(D3DRS_FOGENABLE, FALSE);
-    d->SetRenderState(D3DRS_STENCILENABLE, FALSE);
-    d->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-    d->SetRenderState(D3DRS_COLORWRITEENABLE, 15);
-    d->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
-    d->SetRenderState(D3DRS_CLIPPLANEENABLE, 0);
-    d->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
-    d->SetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
-    d->SetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
-    d->SetTexture(0, tex);
-    d->SetTextureStageState(0, D3DTSS_COLOROP,
-                            (profile->capabilities & SC_CAP_TEXTURE_MODULATE)
-                                ? D3DTOP_MODULATE
-                                : D3DTOP_BLENDTEXTUREALPHA);
-    d->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    d->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-    d->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-    d->SetTextureStageState(0, D3DTSS_ALPHAARG1,
-                            (profile->capabilities & SC_CAP_ALPHA_TEST) ? D3DTA_TEXTURE
-                                                                        : D3DTA_DIFFUSE);
-    d->SetRenderState(D3DRS_SPECULARENABLE, FALSE);
-    d->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
-    d->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
-    d->SetTextureStageState(1, D3DTSS_COLORARG2, D3DTA_SPECULAR);
-    d->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-    d->SetTextureStageState(1, D3DTSS_ALPHAARG1, D3DTA_CURRENT);
-    d->SetTextureStageState(2, D3DTSS_COLOROP, D3DTOP_DISABLE);
-    d->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
-    d->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-    d->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-    d->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+    SCRenderAPI::Material style{};
+    style.image = {characterMesh.atlasPixels.data(), profile->textureWidth, profile->textureHeight};
+    style.color = (profile->capabilities & SC_CAP_TEXTURE_MODULATE)
+                      ? SCRenderAPI::ColorMode::Modulate
+                      : SCRenderAPI::ColorMode::TextureAlpha;
+    style.shade = true;
+    style.depthTest = preview || depthTest;
+    style.alphaCutoff = (profile->capabilities & SC_CAP_ALPHA_TEST) ? 127 : 0;
     auto renderPhase = preview ? SCRenderAPI::Phase::Preview : phase;
+    SCRenderAPI::Context context{renderPhase, sceneDepth != nullptr};
     HRESULT hr = renderer.mesh({verts.data(), drawCharacter ? mesh.view.numTrianglesUsed : 0},
-                               {renderPhase, sceneDepth != nullptr})
+                               style, context)
                      ? S_OK
                      : E_FAIL;
     static bool logged = false;
@@ -227,11 +192,11 @@ static bool draw(IDirect3DDevice9 *d, bool preview = false,
         cutsceneRendered = SUCCEEDED(hr);
     if (!preview && !cinematic) {
         if (drawCharacter) {
-            equipmentDraw(d, renderOrigin);
-            feedbackDraw(d);
+            equipmentDraw(renderer, renderOrigin, context);
+            feedbackDraw(renderer, context);
         }
-        debugDraw(d);
-        launcherDraw(d);
+        debugDraw(renderer, context);
+        launcherDraw(renderer, context);
     }
     saved->Apply();
     saved->Release();

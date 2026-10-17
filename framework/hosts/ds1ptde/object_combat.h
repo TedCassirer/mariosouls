@@ -8,8 +8,8 @@ static int worldDamageObject(int behavior, uintptr_t owner, uintptr_t target, co
 static void combatObjects() {
     if (!combatUnarmedReady())
         return;
-    if (!characterOwned() || !worldObjectDamageReady || !combatEnabled || !characterDamageReady ||
-        !characterWindow.active(state, *profile))
+    if (!characterOwned() || !worldObjectDamageReady || !combatEnabled ||
+        !hostPermits(SCHost::Operation::Combat) || !characterWindow.active(state, *profile))
         return;
     int move = characterWindow.move;
     if (move < 0 || (profile->attacks[move].flags & SC_ATTACK_NO_OBJECTS))

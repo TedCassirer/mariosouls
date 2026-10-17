@@ -18,6 +18,7 @@ Start with the [project README](../README.md), then use:
 
 Read [CONTRIBUTING.md](../CONTRIBUTING.md) and [AGENTS.md](../AGENTS.md).
 
+- [Intended architecture and dependency rules](../framework/docs/ARCHITECTURE.md): required contributor/AI-agent design reference, including ownership, failure behavior, change-placement examples and current implementation debt.
 - [Development](DEVELOPMENT.md): build dependencies, local assets, outputs and tools.
 - [Verification](TESTING.md): compile-only checks and manual game coverage.
 - [Release preparation](RELEASING.md): source-based Windows installer and draft-release checks.

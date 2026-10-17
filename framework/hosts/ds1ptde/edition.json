@@ -1,6 +1,8 @@
 {
   "id": "ds1ptde",
   "target": "x86-windows-gnu",
+  "build_recipe": "build.py",
+  "build_output": "dinput8.dll",
   "executable": "DARKSOULS.exe",
   "default_game_directory": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Dark Souls Prepare to Die Edition\\DATA",
   "configuration": "mariosouls.ini",

@@ -33,6 +33,8 @@ Use disposable characters and separate save backups. Never test on the owner's l
 
 This is a checklist, not a statement that every case already passes. Scope each check to the changed behavior rather than claiming broad compatibility from a small sample.
 
+After renderer/capability refactoring, repeat the relevant rows in stock PTDE and DSfix: character and held-prop textures/lighting, impact flashes, cannon/reticle/prompt, all F8 layers/depth modes, native UI ordering, resolution change and device reset. Include loading/movement, interaction/Estus, combat, death/respawn and a moving area transition. Compilation does not establish visual or fallback parity; no such live check was performed for this architectural change. No Remastered game check is possible from the PTDE build.
+
 ## Record useful evidence
 
 Record the commit/build, game fingerprint, DSfix/FPS/resolution settings, input device, disposable character, area, steps, observed native HP/stamina/animation behavior and remaining gaps. A screenshot of an animation is not proof of damage/protection; a successful API call is not proof of audible sound or physical rumble.

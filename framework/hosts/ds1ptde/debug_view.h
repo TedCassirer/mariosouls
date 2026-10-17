@@ -13,7 +13,6 @@ static int debugMap = -1, debugTerrainMap = -1, debugTriangles = 0, debugActors 
 static size_t debugTerrainSize = 0;
 static bool debugTerrainCapped = false;
 static char debugAttackName[40] = "NONE";
-static IDirect3DTexture9 *debugFont = nullptr;
 
 struct DebugContact {
     Vec point;
@@ -264,89 +263,14 @@ static void debugGather() {
     debugTerrainGather(feet, now);
 }
 
-static bool debugFontCreate(IDirect3DDevice9 *d) {
-    if (debugFont)
-        return true;
-    BITMAPINFO info = {};
-    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    info.bmiHeader.biWidth = 256;
-    info.bmiHeader.biHeight = -128;
-    info.bmiHeader.biPlanes = 1;
-    info.bmiHeader.biBitCount = 32;
-    info.bmiHeader.biCompression = BI_RGB;
-    HDC dc = CreateCompatibleDC(nullptr);
-    if (!dc)
-        return false;
-    void *pixels = nullptr;
-    HBITMAP bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
-    HFONT font =
-        CreateFontA(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS,
-                    CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, FIXED_PITCH, "Consolas");
-    if (!bitmap || !font) {
-        if (bitmap)
-            DeleteObject(bitmap);
-        if (font)
-            DeleteObject(font);
-        DeleteDC(dc);
-        return false;
-    }
-    auto oldBitmap = SelectObject(dc, bitmap), oldFont = SelectObject(dc, font);
-    memset(pixels, 0, 256 * 128 * 4);
-    SetTextColor(dc, RGB(255, 255, 255));
-    SetBkColor(dc, RGB(0, 0, 0));
-    for (int c = 32; c < 127; c++) {
-        char s = char(c);
-        TextOutA(dc, (c % 16) * 16, (c / 16) * 16, &s, 1);
-    }
-    GdiFlush();
-    bool ok = SUCCEEDED(
-        d->CreateTexture(256, 128, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &debugFont, nullptr));
-    if (ok) {
-        D3DLOCKED_RECT lr;
-        ok = SUCCEEDED(debugFont->LockRect(0, &lr, nullptr, 0));
-        if (ok) {
-            for (int y = 0; y < 128; y++)
-                for (int x = 0; x < 256; x++) {
-                    DWORD v = ((DWORD *)pixels)[y * 256 + x];
-                    ((DWORD *)((BYTE *)lr.pBits + y * lr.Pitch))[x] = ((v & 255) << 24) | 0xffffff;
-                }
-            debugFont->UnlockRect(0);
-        } else {
-            debugFont->Release();
-            debugFont = nullptr;
-        }
-    }
-    SelectObject(dc, oldFont);
-    SelectObject(dc, oldBitmap);
-    DeleteObject(font);
-    DeleteObject(bitmap);
-    DeleteDC(dc);
-    return ok;
-}
-
-static void debugDraw(IDirect3DDevice9 *d) {
+static void debugDraw(SCRenderAPI::Renderer &renderer, SCRenderAPI::Context context) {
     if (!debugVisible())
         return;
     if (debugEnabled)
         debugGather();
-    d->SetVertexShader(nullptr);
-    d->SetPixelShader(nullptr);
-    d->SetTexture(0, nullptr);
-    d->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    d->SetRenderState(D3DRS_ZENABLE, debugXray ? FALSE : TRUE);
-    d->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    d->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-    d->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
-    d->SetRenderState(D3DRS_LIGHTING, FALSE);
-    d->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-    d->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
-    d->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-    d->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
-    d->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
     auto drawLines = [&](const SCDebug::Lines &lines) {
-        if (!lines.vertices.empty())
-            d->DrawPrimitiveUP(D3DPT_LINELIST, UINT(lines.vertices.size() / 2),
-                               lines.vertices.data(), sizeof(SCDebug::Vertex));
+        renderer.lines({lines.vertices.data(), uint32_t(lines.vertices.size() / 2)}, !debugXray,
+                       context);
     };
     if (debugEnabled && debugHas(1))
         drawLines(debugTerrain);
@@ -354,24 +278,13 @@ static void debugDraw(IDirect3DDevice9 *d) {
         drawLines(debugLines);
     if (debugEnabled && debugHas(0))
         drawLines(debugAttack);
-    // Fixed-size atlas in the existing pre-HUD composite. Managed resources survive
-    // D3D9 Reset; no new default-pool resources or native UI hooks are required.
-    if (!debugFontCreate(d))
+    // Fixed-size CPU atlas; upload/resource lifetime belongs to the backend.
+    if (!presentationFontCreate())
         return;
 
-    struct V {
-        float x, y, z, w;
-        DWORD color;
-        float u, v;
-    };
-
-    std::vector<V> text;
-    auto quad = [&](float x, float y, float w, float h, DWORD color, float u, float v, float du,
-                    float dv) {
-        V a = {x, y, 0, 1, color, u, v}, b = {x + w, y, 0, 1, color, u + du, v},
-          c = {x, y + h, 0, 1, color, u, v + dv}, e = {x + w, y + h, 0, 1, color, u + du, v + dv};
-        text.insert(text.end(), {a, b, c, b, e, c});
-    };
+    std::vector<SCRenderAPI::ScreenVertex> text;
+    auto quad = [&](float x, float y, float w, float h, uint32_t color, float u, float v, float du,
+                    float dv) { SCGeometry::quad(text, x, y, w, h, color, u, v, du, dv); };
     auto line = [&](float y, DWORD color, const char *s) {
         float x = 590;
         for (; *s && x < 1000; s++, x += 7) {
@@ -381,10 +294,8 @@ static void debugDraw(IDirect3DDevice9 *d) {
             quad(x, y, 16, 16, color, (c % 16) / 16.f, (c / 16) / 8.f, 1 / 16.f, 1 / 8.f);
         }
     };
-    d->SetRenderState(D3DRS_ZENABLE, FALSE);
-    d->SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1);
     quad(581, 17, 431, 258, 0xff101b24, 0, 0, 0, 0);
-    d->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, text.data(), sizeof(V));
+    renderer.screen({text.data(), 2}, {}, context);
     text.clear();
     const char *layers[] = {"COMBAT", "TERRAIN", "OBJECTS", "ALL"};
     char s[160];
@@ -418,15 +329,9 @@ static void debugDraw(IDirect3DDevice9 *d) {
     line(251, 0xffb8c5cf, s);
     line(219, 0xffffd38c, "BODY CAPSULES ARE NOT PER-BONE HURTBOXES.");
     line(235, 0xffb8c5cf, "ENEMY WEAPON BOXES / OBJECT BOUNDS NOT MAPPED.");
-    d->SetTexture(0, debugFont);
-    d->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-    d->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    d->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-    d->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-    d->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
-    d->SetRenderState(D3DRS_ALPHAREF, 100);
-    d->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
-    d->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
-    d->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-    d->DrawPrimitiveUP(D3DPT_TRIANGLELIST, UINT(text.size() / 3), text.data(), sizeof(V));
+    SCRenderAPI::Material style{};
+    style.image = presentationFont();
+    style.color = SCRenderAPI::ColorMode::Modulate;
+    style.alphaCutoff = 100;
+    renderer.screen({text.data(), uint32_t(text.size() / 3)}, style, context);
 }

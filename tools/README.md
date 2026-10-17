@@ -15,7 +15,9 @@
 | `preview-equipment` | Manually render private Mario equipment pose sheets |
 | `format [--check]` | Optional local source formatting/checking; not a CI requirement |
 
-`dependencies.py` prepares/checks pinned sources and the compiler. `profiles.py` validates manifests and emits SDK descriptors. `host_editions.py` allows only the implemented PTDE host. `framework_portability.py` performs compilation, not gameplay simulation.
+`dependencies.py` prepares/checks pinned sources and the compiler. `profiles.py` validates manifests and emits SDK descriptors. `host_editions.py` validates implemented edition declarations and dispatches contained host-owned build/asset recipes. Only PTDE has such an implementation today; selecting Remastered fails. `framework_portability.py` performs compilation, not gameplay simulation.
+
+Build/doctor and collision/equipment preparation accept `--host <id>` (default `ds1ptde`). The chosen edition supplies architecture, build/link recipe, asset recipes and default game path. Asset commands accept `--game <path>`. PTDE keeps existing build paths; other hosts use `work/framework-build/hosts/<id>/`. DLL machine types are inspected before recording the selected host/target manifest. This does not generalize the PTDE installer to other editions; see [host porting](../framework/docs/HOST_PORTING.md).
 
 Source install/update/uninstall uses root `MarioSouls.ps1`. The Windows front end reuses `framework/hosts/ds1ptde/setup.py`. `python tools/build_installer.py` packages committed source and official Python locally, without upload/publication. See [release preparation](../docs/RELEASING.md).
 

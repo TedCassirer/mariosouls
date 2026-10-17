@@ -2,9 +2,13 @@
 
 MarioSouls is a PTDE character mod built on a reusable host/core/adapter framework. Mario is implemented; Remastered and other guest characters are future work. Start with [development](docs/DEVELOPMENT.md), [architecture](framework/README.md) and [AGENTS.md](AGENTS.md).
 
+Read the detailed [architecture rules](framework/docs/ARCHITECTURE.md) before changing framework code or contracts. They distinguish intended boundaries from current PTDE debt. These rules apply equally to human contributors and AI-generated changes; compilation alone does not establish that they were followed.
+
 ## Make a focused change
 
 Keep Dark Souls integration in the edition host, neutral policies in core/SDK and guest-engine behavior in the character adapter. Prefer an improvement at the correct framework boundary over a Mario-specific branch in host code. Preserve native health, stamina, inventory and rewards, as well as the existing DSfix integration.
+
+Explain the owning layer/authority and any changed dependency, data lifetime, identity, capability/failure path, timing/render behavior or ABI in your PR. Hosts must not include adapter internals; core/SDK must not acquire native/graphics dependencies; drawing must not advance gameplay. New editions use their own verified implementation/build/install boundaries. Update the architecture/debt record when a boundary actually changes rather than describing the new design as already verified.
 
 Build with:
 

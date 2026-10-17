@@ -4,6 +4,8 @@ This document describes the current **ABI 4** and independently versioned extens
 
 PTDE/Mario is the implemented integration. The same boundaries are intended for other characters and a future Remastered host, but neither a compiled scaffold nor x64 guest compilation establishes a working port.
 
+The intended placement/dependency/authority rules are in [ARCHITECTURE.md](ARCHITECTURE.md). This contract defines the exact data and callback boundary; neither document makes another edition or guest engine implemented. Keep adapter C ABI, internal renderer C++ interface and native hook conventions separate when extending them.
+
 ## Binary boundary
 
 Export `SoulsCharacterGetAPI` with C linkage and `SC_CALL`. Return null unless the requested ABI version and `SC_CharacterAPI` size match. ABI 1..3 adapters are not accepted by this host. Optional exports also require an exact independent version/size handshake.
@@ -160,7 +162,9 @@ Environment observations use semantic burning-floor/enemy-fire kinds plus contac
 
 [render_api.h](../sdk/render_api.h) is an internal C++ boundary, not a cross-DLL character ABI. It takes borrowed RGBA textures and vertices, **row-major** world/view/projection matrices, explicit scene/before-HUD/preview phase and depth availability. No D3D handles cross it. Another renderer must translate conventions/resources explicitly.
 
-Host facilities in `core/host_capabilities.h` are separate from adapter flags. Movement requires verified motion/health; combat health/stamina/native damage; interaction native routing; platform support native motion/support; world drawing scene depth/before-HUD. Missing facilities disable that operation or retain native behavior, without invented collision or damage.
+The same interface submits character/equipment/cannon triangles, colored diagnostic lines, impact flashes and screen text/reticles. `Material` makes color/texture mode, filtering, shade, depth test/write, alpha cutoff and blending explicit. Screen coordinates are target pixels with reciprocal homogeneous W; colors are AARRGGBB. CPU images are immutable and must outlive the backend cache (PTDE retains them for the host session); submitted vertices are borrowed only for the call. Renderer resources/state remain backend-owned. `core/render_geometry.h` provides CPU prop/cannon/quad helpers, without native or graphics calls. This internal interface change does not change ABI4.
+
+Host facilities in `core/host_capabilities.h` are separate from adapter flags. Presentation requires current actor pose/camera; replacement also requires scoped native visibility. Movement requires verified motion/health/input routing; combat health/stamina/native damage; interaction native routing; platform support native motion/support; world drawing scene depth/before-HUD. PTDE translates its hook flags/current validated reads in `capabilities.h` and uses these operation checks at activation and feature entry points. Capabilities do not replace identity/menu/death/signature checks. Missing facilities disable the operation or retain native behavior, without invented collision/damage; presentation remains independent of guest movement readiness. Details: [host porting](HOST_PORTING.md).
 
 PTDE's D3D9/DSfix backend is implemented. A Remastered/DX11 backend and native bindings are future work; x64 header/guest compilation does not implement them.
 

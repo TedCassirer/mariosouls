@@ -11,7 +11,10 @@ enum Capability : uint32_t {
     Interactions = 1u << 4,
     DynamicSupport = 1u << 5,
     SceneDepth = 1u << 6,
-    BeforeHUD = 1u << 7
+    BeforeHUD = 1u << 7,
+    ActorPose = 1u << 8,
+    Visibility = 1u << 9,
+    InputRouting = 1u << 10
 };
 
 struct Capabilities {
@@ -20,15 +23,34 @@ struct Capabilities {
     bool has(uint32_t required) const {
         return (available & required) == required;
     }
+
+    void set(Capability capability, bool verified) {
+        if (verified)
+            available |= capability;
+        else
+            available &= ~uint32_t(capability);
+    }
 };
-enum class Operation { Movement, Combat, Interaction, Platform, WorldDraw };
+enum class Operation {
+    Presentation,
+    Replacement,
+    Movement,
+    Combat,
+    Interaction,
+    Platform,
+    WorldDraw
+};
 
 // Missing capabilities fail closed: no simulated damage, collision substitute,
 // interaction emulation or drawing on top of the HUD. Native play remains available.
 inline uint32_t required(Operation op) {
     switch (op) {
+    case Operation::Presentation:
+        return ActorPose;
+    case Operation::Replacement:
+        return ActorPose | Visibility;
     case Operation::Movement:
-        return Motion | Health;
+        return Motion | Health | InputRouting;
     case Operation::Combat:
         return Health | Stamina | NativeDamage;
     case Operation::Interaction:

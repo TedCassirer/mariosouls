@@ -152,16 +152,11 @@ static void feedbackPoll() {
                           feedbackFlashes.end());
 }
 
-static void feedbackDraw(IDirect3DDevice9 *d) {
+static void feedbackDraw(SCRenderAPI::Renderer &renderer, SCRenderAPI::Context context) {
     if (feedbackFlashes.empty())
         return;
 
-    struct V {
-        float x, y, z;
-        DWORD color;
-    };
-
-    std::vector<V> vertices;
+    std::vector<SCRenderAPI::Vertex> vertices;
     Vec forward = unit(cameraForward()), right = unit(cross({0, 1, 0}, forward)),
         up = cross(forward, right);
     DWORD now = GetTickCount();
@@ -172,7 +167,9 @@ static void feedbackDraw(IDirect3DDevice9 *d) {
         float radius = (.38f + .18f * f.envelope.strength) * (1 + 1.7f * t);
         DWORD alpha = DWORD(255 * (1 - t));
         Vec center = f.at - forward * .25f;
-        auto vertex = [&](Vec p, DWORD color) { vertices.push_back({p.x, p.y, p.z, color}); };
+        auto vertex = [&](Vec p, DWORD color) {
+            vertices.push_back({p.x, p.y, p.z, color, 0xffffffff, 0, 0});
+        };
         for (int i = 0; i < 8; i++) {
             float a = i * .78539816f + f.serial * .31f;
             Vec dir = right * cosf(a) + up * sinf(a), side = right * (-sinf(a)) + up * cosf(a);
@@ -183,30 +180,13 @@ static void feedbackDraw(IDirect3DDevice9 *d) {
     }
     if (vertices.empty())
         return;
-    d->SetTexture(0, nullptr);
-    d->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-    d->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-    d->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_DIFFUSE);
-    d->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-    d->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_DIFFUSE);
-    d->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-    d->SetRenderState(D3DRS_ZENABLE, TRUE);
-    d->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
-    d->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    d->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
-    d->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-    d->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-    // Keep correct alpha in the intermediate character layer; later composite is
-    // below native UI. Depth tests retain wall/enemy occlusion.
-    d->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
-    d->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_ONE);
-    d->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_INVSRCALPHA);
-    d->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD);
-    auto result =
-        d->DrawPrimitiveUP(D3DPT_TRIANGLELIST, vertices.size() / 3, vertices.data(), sizeof(V));
+    SCRenderAPI::Material style{};
+    style.depthWrite = false;
+    style.alphaBlend = true;
+    auto result = renderer.mesh({vertices.data(), uint32_t(vertices.size() / 3)}, style, context);
     static bool logged = false;
     if (!logged) {
-        logMessage("Impact draw result=%08lx", result);
+        logMessage("Impact draw result=%d", result);
         logged = true;
     }
 }

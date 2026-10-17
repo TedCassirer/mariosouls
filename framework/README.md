@@ -2,6 +2,8 @@
 
 MarioSouls is a working PTDE/Mario integration organized so future native hosts and guest characters can reuse its boundaries. **PTDE/D3D9 and Mario/libsm64 are implemented. Remastered/DX11 and other characters are not.**
 
+This page is an overview. [ARCHITECTURE.md](docs/ARCHITECTURE.md) is the required detailed design for developers/AI agents: dependency rules, authority, runtime phases, failure behavior, extension decisions and current debt. Read it with [AGENTS.md](../AGENTS.md) before changing a boundary; use [CONTRACT.md](docs/CONTRACT.md) for exact ABI semantics.
+
 ```mermaid
 flowchart LR
     Game[Dark Souls PTDE] <-->|Native integration| Host[PTDE host]
@@ -35,6 +37,8 @@ The PTDE host remains one translation unit. Its feature headers share internal s
 
 The internal [renderer interface](sdk/render_api.h) accepts borrowed meshes/textures, camera matrices, depth availability and scene/before-HUD/preview phases. PTDE implements it with D3D9, including DSfix scene/UI/depth handling. No DX11 backend exists.
 
+Character, equipment, cannon, impact flashes, diagnostic lines and screen text/reticles use that boundary. CPU geometry helpers stay in core; D3D9 resources/pipeline state stay in PTDE's backend. Native camera extraction, scene/UI recognition and composition remain edition-specific.
+
 Guest simulation targets 30 Hz independently of render cadence. The current PTDE caller consumes at most one tick per update and waits for native motion acknowledgement; low update rates can still slow simulation. Render-only interpolation smooths validated mesh/attachment and native-anchor snapshots without advancing simulation or changing hit detection.
 
 ## Host and guest capabilities
@@ -48,6 +52,8 @@ Adapters opt into implemented abilities and independently versioned profiles. Fu
 The code retains portable scalar/pointer types, explicit calling conventions/layout checks, edition-owned assets/configuration and a graphics boundary. `build --check-portability` compiles x86/x64 SDK/core declarations and x64 guest components; PTDE remains x86. These checks prepare a future owned-installation port, not compatibility certification.
 
 Use the [host-porting guide](docs/HOST_PORTING.md) and [PTDE integration inventory](hosts/ds1ptde/PORT_CHECKLIST.md) when rediscovering native behavior for another edition.
+
+`build --host <id>` selects an actually implemented edition's own build/link recipe and target; unknown/unimplemented hosts are refused. PTDE paths remain unchanged; other editions have separate output trees and manifests. Installation remains PTDE-only. The first Remastered milestone is explicitly presentation with native locomotion, not a full gameplay takeover.
 
 ## Work and documentation
 

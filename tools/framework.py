@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import sys
 
-from host_editions import edition
+from host_editions import edition, recipe, build_host
 from profiles import load_profile as read_profile
 from profiles import profile_header as profile_header
 
@@ -19,8 +19,6 @@ ROOT = Path(__file__).resolve().parents[1]
 FRAMEWORK = ROOT / "framework"
 BUILD = ROOT / "work/framework-build"
 ZIG = ROOT / "work/tools/zig-windows-x86_64-0.13.0/zig.exe"
-PTDE = edition("ds1ptde")
-GAME = Path(os.environ.get("MARIOSOULS_GAME_DIR", PTDE["default_game_directory"]))
 
 
 def run(args, **kw):
@@ -30,6 +28,21 @@ def run(args, **kw):
 def sha(path):
     with path.open("rb") as f:
         return hashlib.file_digest(f, "sha256").hexdigest()
+
+
+def validate_binary_target(path, target):
+    """Inspect build output architecture; never load or run the resulting DLL."""
+    data = path.read_bytes()
+    offset = int.from_bytes(data[60:64], "little") if len(data) >= 64 else 0
+    machine = {"x86-windows-gnu": 0x14C, "x86_64-windows-gnu": 0x8664}[target]
+    if (
+        data[:2] != b"MZ"
+        or offset < 64
+        or offset + 6 > len(data)
+        or data[offset : offset + 4] != b"PE\0\0"
+        or int.from_bytes(data[offset + 4 : offset + 6], "little") != machine
+    ):
+        raise ValueError("Build output does not match " + target + ": " + str(path))
 
 
 def load_profile(character):
@@ -112,17 +125,23 @@ def source_hashes():
     return {path.relative_to(ROOT).as_posix(): sha(path) for path in source_paths}
 
 
-def build(character, adapter_only=False, with_runtime=False, check_portability=False):
+def build(
+    character, adapter_only=False, with_runtime=False, check_portability=False, host="ds1ptde"
+):
+    host_info = edition(host)
+    target = host_info["target"]
+    # Preserve PTDE's public build/install paths. Other editions cannot overwrite them.
+    host_build = BUILD if host == "ds1ptde" else BUILD / "hosts" / host
     if check_portability and adapter_only:
-        raise ValueError("--check-portability requires a full PTDE build")
+        raise ValueError("--check-portability requires a full host build")
     folder, p = load_profile(character)
-    out = BUILD / "characters" / character
+    out = host_build / "characters" / character
     out.mkdir(parents=True, exist_ok=True)
     (out / "build.json").unlink(missing_ok=True)
     sources = source_hashes()
     version = json.loads((ROOT / "release/project.json").read_text(encoding="utf-8"))["version"]
     commit, dirty, fingerprint = build_identity(sources)
-    (BUILD / "build.generated.h").write_text(
+    (host_build / "build.generated.h").write_text(
         "\n".join(
             [
                 "#pragma once",
@@ -138,32 +157,13 @@ def build(character, adapter_only=False, with_runtime=False, check_portability=F
         script = folder / "build_runtime.py"
         if not script.is_file():
             raise ValueError("This adapter has no runtime build script")
-        run([sys.executable, script, "--output", out])
+        run([sys.executable, script, "--target", target, "--output", out])
     profile_header(p, out / "profile.generated.h")
-    compile_cpp(folder / p["source"], out / "character.dll", [out], ["-shared"])
+    compile_cpp(folder / p["source"], out / "character.dll", [out], ["-shared"], target=target)
+    validate_binary_target(out / "character.dll", target)
     if not adapter_only:
-        objects = []
-        for name in ["buffer", "hook", "trampoline", "hde/hde32"]:
-            source = ROOT / "work/minhook/src" / f"{name}.c"
-            obj = BUILD / (source.stem + ".o")
-            run([ZIG, "cc", "-target", "x86-windows-gnu", "-O2", "-c", source, "-o", obj])
-            objects.append(obj)
-        compile_cpp(
-            FRAMEWORK / "hosts/ds1ptde/runtime.cpp",
-            BUILD / "dinput8.dll",
-            [BUILD],
-            extra=[
-                "-shared",
-                FRAMEWORK / "hosts/ds1ptde/proxy.def",
-                *objects,
-                "-ld3d9",
-                "-ldxguid",
-                "-luser32",
-                "-lwinmm",
-                "-lgdi32",
-                "-lshell32",
-            ],
-        )
+        build_host(host_info, sys.modules[__name__], host_build / host_info["build_output"])
+        validate_binary_target(host_build / host_info["build_output"], target)
     if check_portability:
         from framework_portability import check
 
@@ -173,8 +173,8 @@ def build(character, adapter_only=False, with_runtime=False, check_portability=F
             (ROOT / "release/project.json").read_text(encoding="utf-8")
         )["version"],
         "abi": 4,
-        "host": "ds1ptde",
-        "target": PTDE["target"],
+        "host": host,
+        "target": target,
         "character": character,
         "profile": p,
         "built_at": datetime.datetime.now().astimezone().isoformat(),
@@ -185,10 +185,11 @@ def build(character, adapter_only=False, with_runtime=False, check_portability=F
         "source_fingerprint": fingerprint,
     }
     if (out / "sm64.dll").is_file():
+        validate_binary_target(out / "sm64.dll", target)
         receipt["runtime_sha256"] = sha(out / "sm64.dll")
     receipt["portability_compiled"] = check_portability
     if not adapter_only:
-        receipt["host_sha256"] = sha(BUILD / "dinput8.dll")
+        receipt["host_sha256"] = sha(host_build / host_info["build_output"])
     (out / "build.json").write_text(json.dumps(receipt, indent=2))
     print(
         "Built framework host + " + character if not adapter_only else "Built adapter " + character
@@ -274,12 +275,14 @@ def architecture_check():
     print("Architecture boundaries verified")
 
 
-def doctor(character):
+def doctor(character, host="ds1ptde"):
+    host_info = edition(host)
     architecture_check()
     folder, p = load_profile(character)
     run([sys.executable, ROOT / "tools/dependencies.py"])
     if not ZIG.is_file():
         raise RuntimeError("Zig toolchain missing")
+    print("Implemented host: " + host + " / " + host_info["target"])
     asset_lock = folder / "asset_dependencies.json"
     if asset_lock.is_file():
         for name, dep in json.loads(asset_lock.read_text(encoding="utf-8")).items():
@@ -383,11 +386,12 @@ def main():
         p.add_argument("--output", required=True)
     p = commands.add_parser("prepare-collision")
     p.add_argument("--host", default="ds1ptde")
+    p.add_argument("--game")
     p.add_argument("--map", required=True)
     p.add_argument("--output", required=True)
     p = commands.add_parser("prepare-equipment")
     p.add_argument("--host", default="ds1ptde")
-    p.add_argument("--game", default=str(GAME))
+    p.add_argument("--game")
     p.add_argument("--output", required=True)
     p = commands.add_parser("preview-equipment")
     p.add_argument("--actions", choices=["melee", "casting"], default="melee")
@@ -398,7 +402,7 @@ def main():
     p.add_argument("--output", required=True)
     args = parser.parse_args()
     if hasattr(args, "host"):
-        edition(args.host)
+        host_info = edition(args.host)
     if args.command == "format":
         format_sources(args.check)
     elif args.command == "new-character":
@@ -407,9 +411,10 @@ def main():
         run(
             [
                 sys.executable,
-                FRAMEWORK / "hosts/ds1ptde/prepare_collision.py",
+                recipe(host_info, "collision_recipe"),
                 "--game",
-                GAME,
+                args.game
+                or os.environ.get("MARIOSOULS_GAME_DIR", host_info["default_game_directory"]),
                 "--map",
                 args.map,
                 "--output",
@@ -420,9 +425,10 @@ def main():
         run(
             [
                 sys.executable,
-                FRAMEWORK / "hosts/ds1ptde/prepare_equipment.py",
+                recipe(host_info, "equipment_recipe"),
                 "--game",
-                args.game,
+                args.game
+                or os.environ.get("MARIOSOULS_GAME_DIR", host_info["default_game_directory"]),
                 "--output",
                 args.output,
             ]
@@ -469,9 +475,11 @@ def main():
     elif args.command in ("prepare-assets", "preview-assets"):
         asset_recipe(args.command, args.character, args.input, args.output)
     elif args.command == "build":
-        build(args.character, args.adapter_only, args.with_runtime, args.check_portability)
+        build(
+            args.character, args.adapter_only, args.with_runtime, args.check_portability, args.host
+        )
     elif args.command == "doctor":
-        doctor(args.character)
+        doctor(args.character, args.host)
 
 
 if __name__ == "__main__":

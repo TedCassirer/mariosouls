@@ -20,6 +20,9 @@
 #include "../../core/validation.h"
 #include "../../core/terrain_policy.h"
 #include "../../core/mesh_interpolation.h"
+#include "../../core/render_geometry.h"
+#include "../../core/host_capabilities.h"
+#include "font_atlas.h"
 #include "../../../work/minhook/include/MinHook.h"
 #include "memory.h"
 #include "render_device.h"
@@ -43,6 +46,8 @@ static void launcherConfigure();
 static void launcherCancel();
 static bool launcherVisible();
 static bool launcherBusy();
+static SCHost::Capabilities hostCapabilities(bool beforeHUD = false);
+static bool hostPermits(SCHost::Operation operation);
 static void equipmentReset();
 static void feedbackReset();
 static void feedbackSettings();
@@ -193,7 +198,6 @@ static void visualCapture(int id, uint32_t mode, const SC_State &s, const SC_Mes
 }
 
 static std::vector<Vec> mapVertices;
-static IDirect3DTexture9 *tex = nullptr;
 #include "render_surfaces.h"
 static HWAVEOUT audioOut = nullptr;
 static WAVEHDR audioHeaders[4] = {};
@@ -276,6 +280,7 @@ static int currentMap() {
 #include "terrain.h"
 
 #include "loader.h"
+#include "capabilities.h"
 static void nativeRecoveryReset();
 
 static void releaseControl(bool preserveRequest = true) {
@@ -332,8 +337,9 @@ static bool activate() {
     if (!player || !playerPhysics || !playerCamera || read<int>(player + 0x2d4) <= 0 || !ready ||
         !loadMap())
         return false;
-    if (!actionInputReady) {
-        logMessage("Character refused: native action input filter unavailable");
+    if (!hostPermits(SCHost::Operation::Movement)) {
+        logMessage("Character refused: movement/health/input facilities unavailable (mask=%x)",
+                   hostCapabilities().available);
         return false;
     }
     if (GetPrivateProfileIntA("World", "NativeMotion", 1, ini) != 1 || !worldMotionReady) {
@@ -363,7 +369,7 @@ static bool activate() {
     savedMapFlags = read<uint32_t>(ownedMovement + 0xc4);
     hideNative =
         classSelection.required() || GetPrivateProfileIntA("MarioSouls", "HideNative", 0, ini) != 0;
-    if (hideNative && !characterVisibilityReady) {
+    if (hideNative && !hostPermits(SCHost::Operation::Replacement)) {
         logMessage("Character refused: mesh-only visibility hook unavailable");
         guest->destroy(character);
         character = -1;
@@ -500,6 +506,7 @@ static HRESULT WINAPI reset(IDirect3DDevice9 *d, D3DPRESENT_PARAMETERS *p) {
     uiComposited = false;
     classPreviewReset();
     renderSurfacesReset();
+    PTDEGraphics::resetTextures();
     return originalReset(d, p);
 }
 

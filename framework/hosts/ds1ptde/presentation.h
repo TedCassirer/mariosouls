@@ -31,7 +31,8 @@ static void presentationTick() {
     SCSession::Identity next = {player, playerPhysics, read<uint32_t>(player + 0x28), currentMap()};
     Vec host{};
     float yaw = 0;
-    bool valid = ready && characterControl.session.requested() && next.valid() && playerCamera &&
+    bool valid = ready && hostPermits(SCHost::Operation::Presentation) &&
+                 characterControl.session.requested() && next.valid() && playerCamera &&
                  get(playerPhysics + 0x10, host) && isfinite(dot(host, host)) &&
                  get(playerPhysics + 4, yaw) && isfinite(yaw);
     if (!valid) {
@@ -60,7 +61,7 @@ static void presentationTick() {
         ownedActor = player;
         hideNative = classSelection.required() ||
                      GetPrivateProfileIntA("MarioSouls", "HideNative", 0, ini) != 0;
-        if (hideNative && !characterVisibilityReady) {
+        if (hideNative && !hostPermits(SCHost::Operation::Replacement)) {
             guest->destroy(character);
             character = -1;
             presentationRetry = now + 1000;

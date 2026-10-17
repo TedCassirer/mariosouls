@@ -146,6 +146,7 @@ Sources: [launcher.h](../framework/hosts/ds1ptde/launcher.h), [runtime_cannon.h]
 ## Rendering, audio and diagnostics
 
 - The PTDE host observes the real D3D9 device rather than creating a dummy device. Stock and DSfix scene/depth paths support distinct scene/UI sizes; Mario and diagnostics draw before prompts, subtitles and menus.
+- Mario, held equipment, cannon props, impact flashes, diagnostic lines and screen text/reticles now submit through the same internal renderer with explicit material/filter/depth/blend values. CPU prop/cannon/quad geometry is reusable; D3D9 upload, pipeline state and texture-cache Reset handling stay in the PTDE backend. No graphics API handles cross the interface. This structural refactor has compilation evidence only; visual parity/reset/HUD checks remain pending.
 - Simulation stays at 30 Hz. Render-only mesh/attachment and native-anchor interpolation smooths higher frame rates, with about one tick of visual delay. Lifecycle changes, teleports and incompatible topology reset interpolation.
 - Native enemy/boss audio remains a host responsibility; libsm64 supplies Mario audio through a separate bounded channel. Audio parity still needs area-specific listening checks.
 - F6 toggles Mario/native. F8 toggles an initially hidden overlay; F9 cycles views; F10 toggles through-walls drawing. The overlay shows capsules, attack bounds, contact/HP confirmation, cached terrain and object origins, not a full native collision editor.
@@ -166,6 +167,12 @@ Sources: [installer.cs](../framework/hosts/ds1ptde/installer.cs), [player_setup.
 Candidate evidence: compilation/payload inspection, isolated source build and 17-map/82-prop preparation passed. Direct/DSfix install, repeated update and removal were checked through the shared backend on minimal disposable directories; exact DSfix restoration passed. GUI, second-machine and live-game checks remain pending.
 
 The host/core/SDK/adapter split, host capabilities, renderer interface and portable types are retained for future characters and Remastered. Only PTDE/D3D9 and Mario are implemented. The host still has a single translation unit with internal feature headers; adapters use the C SDK.
+
+Host selection now dispatches a declared, implemented edition's own build/link and asset recipes and matching guest target. PTDE defaults and output paths stay unchanged; other editions use separate output trees/manifests. DLL machine types are inspected without execution. PTDE setup still enforces its edition/executable/architecture guards; no Remastered host or installer was added.
+
+PTDE's capability snapshot maps hook readiness and current validated actor health/stamina/pose to shared operation requirements. Movement requires native motion/health/input routing; combat health/stamina/native damage; interactions native routing; platform observations motion/support; before-HUD drawing depth/phase. Presentation/replacement are separately gated so native locomotion need not block guest appearance. Existing identity/menu/death/signature/config guards remain. Missing facilities hand back or disable the affected operation without invented damage/floors. These guards are compile-checked, not a new in-game fallback certification. The first planned Remastered milestone is presentation with native movement; follow [host porting](../framework/docs/HOST_PORTING.md).
+
+Sources: [capabilities.h](../framework/hosts/ds1ptde/capabilities.h), [render_api.h](../framework/sdk/render_api.h), [render_geometry.h](../framework/core/render_geometry.h), [render_device.h](../framework/hosts/ds1ptde/render_device.h), [host build recipe](../framework/hosts/ds1ptde/build.py), [host_editions.py](../tools/host_editions.py).
 
 Pinned dependencies/compiler hashes, local asset preparation, build version/revision/file hashes, licenses and production validation remain. CI is compilation only. A single `MarioSouls.ps1 install` / `uninstall` entry point owns reversible PTDE file operations, recognizes the supported DSfix chain and preserves existing settings/assets/saves.
 

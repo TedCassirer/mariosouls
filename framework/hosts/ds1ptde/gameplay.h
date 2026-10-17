@@ -201,6 +201,13 @@ static bool prepareCharacterSimulation(const GameplayFrame &frame, double &acc) 
         acc = 0;
         return false;
     }
+    if (!hostPermits(SCHost::Operation::Movement)) {
+        logMessage("Movement facilities lost; native controls restored (mask=%x)",
+                   hostCapabilities().available);
+        releaseControl(true);
+        acc = 0;
+        return false;
+    }
     if (arenaRefresh())
         rebuildSurfaces();
 

@@ -71,7 +71,7 @@ static void equipmentInput(SC_Input &input) {
                     !characterLandingRecovery;
     bool eligible = melee && grounded &&
                     (equipmentSwing.running() || (!input.jump && !input.crouch)) && combatEnabled &&
-                    characterDamageReady;
+                    hostPermits(SCHost::Operation::Combat);
     bool intent = equipmentSwing.tick(input.attack, eligible, equipmentCurrent.right.id);
     if (intent) {
         int combo = equipmentSwing.intendedCombo(),
@@ -157,7 +157,7 @@ static void equipmentContact() {
     equipmentOldBladeA = equipmentBladeA;
     equipmentOldBladeB = equipmentBladeB;
     equipmentPreviousBlade = true;
-    if (!equipmentSwing.active() || !combatEnabled || !characterDamageReady)
+    if (!equipmentSwing.active() || !combatEnabled || !hostPermits(SCHost::Operation::Combat))
         return;
     uintptr_t r = read<uint32_t>(gameSlots.player), begin = read<uint32_t>(r + 4),
               end = read<uint32_t>(r + 8);
@@ -244,13 +244,14 @@ static void equipmentContact() {
         }
 }
 
-static void equipmentDraw(IDirect3DDevice9 *d, Vec renderOrigin) {
+static void equipmentDraw(SCRenderAPI::Renderer &renderer, Vec renderOrigin,
+                          SCRenderAPI::Context context) {
     if (nativeActionOwned() || nativeReaction || equipmentBroken || !equipmentGetHands())
         return;
     if (equipmentMelee() && (equipmentHands.valid & 1))
-        equipmentDrawProp(d, *equipmentProp(equipmentCurrent.right.model), equipmentHands.right,
-                          renderOrigin, 0);
+        equipmentDrawProp(renderer, *equipmentProp(equipmentCurrent.right.model),
+                          equipmentHands.right, renderOrigin, 0, context);
     if (equipmentShield() && (equipmentHands.valid & 2))
-        equipmentDrawProp(d, *equipmentProp(equipmentCurrent.left.model), equipmentHands.left,
-                          renderOrigin, 1);
+        equipmentDrawProp(renderer, *equipmentProp(equipmentCurrent.left.model),
+                          equipmentHands.left, renderOrigin, 1, context);
 }

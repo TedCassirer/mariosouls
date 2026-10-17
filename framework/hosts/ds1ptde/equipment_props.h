@@ -1,8 +1,6 @@
 #pragma once
 
-struct EquipmentVertex {
-    float position[3], normal[3], uv[2];
-};
+using EquipmentVertex = SCGeometry::PropVertex;
 
 struct EquipmentProp {
     bool valid = false;
@@ -11,7 +9,6 @@ struct EquipmentProp {
     std::vector<EquipmentVertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<uint8_t> rgba;
-    IDirect3DTexture9 *texture = nullptr;
 };
 
 static std::unordered_map<int, EquipmentProp> equipmentProps;
@@ -103,73 +100,23 @@ static Vec equipmentPoint(const float *m, Vec local, Vec renderOrigin) {
            rotation * characterBody.modelScale;
 }
 
-static void equipmentDrawProp(IDirect3DDevice9 *d, EquipmentProp &p, const float *m,
-                              Vec renderOrigin, unsigned hand) {
+static void equipmentDrawProp(SCRenderAPI::Renderer &renderer, EquipmentProp &p, const float *m,
+                              Vec renderOrigin, unsigned hand, SCRenderAPI::Context context) {
     if (!p.valid || !equipmentSocketValid(m))
         return;
-    if (!p.texture) {
-        if (FAILED(d->CreateTexture(p.width, p.height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED,
-                                    &p.texture, nullptr)))
-            return;
-        D3DLOCKED_RECT lr;
-        if (FAILED(p.texture->LockRect(0, &lr, nullptr, 0))) {
-            p.texture->Release();
-            p.texture = nullptr;
-            return;
-        }
-        for (uint32_t y = 0; y < p.height; y++) {
-            auto row = (uint32_t *)((BYTE *)lr.pBits + y * lr.Pitch);
-            for (uint32_t x = 0; x < p.width; x++) {
-                auto pixel = &p.rgba[(y * p.width + x) * 4];
-                row[x] = (pixel[3] << 24) | (pixel[0] << 16) | (pixel[1] << 8) | pixel[2];
-            }
-        }
-        p.texture->UnlockRect(0);
-    }
-
-    struct V {
-        Vec p;
-        DWORD color;
-        float u, v;
+    std::vector<SCRenderAPI::Vertex> verts;
+    auto sample = [&](const float *local, int axis, bool direction) {
+        float cm[3] = {local[0] * (direction ? 1.f : 100.f), local[1] * (direction ? 1.f : 100.f),
+                       local[2] * (direction ? 1.f : 100.f)};
+        return visualMesh.socket(hand, m, state.position, cm, axis, visualAlpha, direction);
     };
-
-    std::vector<V> verts;
-    verts.reserve(p.indices.size());
-    Vec light = unit({-.3f, .8f, -.5f});
-    for (uint32_t index : p.indices) {
-        const auto &v = p.vertices[index];
-        auto component = [&](const float *local, int axis, bool direction) {
-            float cm[3] = {local[0] * (direction ? 1.f : 100.f),
-                           local[1] * (direction ? 1.f : 100.f),
-                           local[2] * (direction ? 1.f : 100.f)};
-            return visualMesh.socket(hand, m, state.position, cm, axis, visualAlpha, direction);
-        };
-        Vec normal = unit({component(v.normal, 0, true), component(v.normal, 1, true),
-                           component(v.normal, 2, true)});
-        Vec relative = {component(v.position, 0, false), component(v.position, 1, false),
-                        component(v.position, 2, false)};
-        Vec at = renderOrigin +
-                 Vec{state.position[0], state.position[1], state.position[2]} * .01f +
-                 relative * (characterBody.modelScale * .01f);
-        int shade = int(255 * (.48f + .52f * std::max(0.f, dot(normal, light))));
-        verts.push_back(
-            {at, DWORD(0xff000000 | (shade << 16) | (shade << 8) | shade), v.uv[0], v.uv[1]});
-    }
-    d->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1);
-    d->SetTexture(0, p.texture);
-    d->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-    d->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-    d->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
-    d->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-    d->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
-    d->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-    d->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
-    d->SetRenderState(D3DRS_ALPHAREF, 127);
-    d->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
-    d->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-    d->SetRenderState(D3DRS_ZENABLE, TRUE);
-    d->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
-    d->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-    d->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-    d->DrawPrimitiveUP(D3DPT_TRIANGLELIST, verts.size() / 3, verts.data(), sizeof(V));
+    float offset[3] = {renderOrigin.x, renderOrigin.y, renderOrigin.z};
+    SCGeometry::propMesh(p.vertices, p.indices, sample, state.position, offset,
+                         characterBody.modelScale, verts);
+    SCRenderAPI::Material style{};
+    style.image = {p.rgba.data(), p.width, p.height};
+    style.color = SCRenderAPI::ColorMode::Modulate;
+    style.filter = SCRenderAPI::Filter::Linear;
+    style.alphaCutoff = 127;
+    renderer.mesh({verts.data(), uint32_t(verts.size() / 3)}, style, context);
 }

@@ -2,6 +2,8 @@
 
 The framework has two goals: maintain the playable PTDE Mario integration, and keep edition/character boundaries usable for future work. Remastered preparation is structural; no Remastered host exists. Read [architecture](../framework/README.md) and [AGENTS.md](../AGENTS.md) before changing integration code.
 
+The detailed [architecture specification](../framework/docs/ARCHITECTURE.md) defines intended dependencies/authority and known implementation debt. For every framework change, identify its owning layer, input/output/lifetime, capability/eligibility and failure path before implementing it. Use the placement examples and include that boundary explanation in review. An existing shortcut is not permission to spread it; no new architecture-test platform is implied.
+
 ## Build from source
 
 Use Windows, Git and Python 3.12. The pinned Zig 0.13.0 toolchain and upstream revisions are recorded in [dependencies.lock.json](../dependencies.lock.json).
@@ -35,6 +37,8 @@ work/framework-build/portability/...
 ```
 
 The manifest records version, source revision/dirty state, source fingerprints and binary hashes. Never install x64 portability outputs into PTDE. Builds alone do not install, launch or control a game. [Installation](INSTALLING.md) is a separate one-command operation.
+
+`--host <id>` selects the edition's actual build/link recipe and architecture. Only `ds1ptde` is implemented; unknown/unimplemented hosts are refused before building. PTDE paths above remain unchanged. Future hosts build under `work/framework-build/hosts/<id>/`, with their own adapter/runtime and manifest; the builder inspects DLL machine types. Asset commands also dispatch edition-owned recipes/default game paths and accept `--game`. PTDE installation/executable guards are unchanged. Follow [host porting](../framework/docs/HOST_PORTING.md) for the presentation-only first milestone and separate later gameplay integration.
 
 ## Owned assets
 

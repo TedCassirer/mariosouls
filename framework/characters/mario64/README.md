@@ -4,6 +4,8 @@ This adapter runs the pinned libsm64 guest runtime inside the character framewor
 
 Mario is the only implemented character. The adapter demonstrates reusable SDK capabilities; it is not an engine for OoT, Wind Waker or DK64 characters.
 
+Follow [ARCHITECTURE.md](../../docs/ARCHITECTURE.md): this adapter may depend on neutral core/SDK and its own guest runtime/assets, but never native Dark Souls memory/hooks/IDs or graphics drawing. Keep host observations semantic at the SDK boundary and guest action/animation IDs here. Loading this adapter's own runtime DLL with Windows APIs does not grant permission to inspect the game process.
+
 ## Resource and instance lifetime
 
 `adapter.cpp` separates three lifetimes:

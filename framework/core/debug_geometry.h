@@ -1,5 +1,6 @@
 #pragma once
 #include "contact.h"
+#include "../sdk/render_api.h"
 #include <cstdint>
 #include <vector>
 
@@ -7,10 +8,7 @@
 namespace SCDebug {
 using Point = SCContact::Point;
 
-struct Vertex {
-    float x, y, z;
-    uint32_t color;
-};
+using Vertex = SCRenderAPI::LineVertex;
 
 struct Lines {
     std::vector<Vertex> vertices;

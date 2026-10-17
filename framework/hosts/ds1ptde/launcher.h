@@ -11,7 +11,6 @@ static DWORD launcherMessageUntil = 0, launcherStarted = 0;
 static std::vector<float> launcherPositions, launcherNormals, launcherColors, launcherUV;
 static std::vector<uint8_t> launcherPixels;
 static SC_Mesh launcherMesh{};
-static IDirect3DTexture9 *launcherTexture = nullptr;
 static char launcherSection[96] = {};
 
 static bool launcherBusy() {

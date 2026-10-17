@@ -101,7 +101,8 @@ static bool equipmentActionsInput(SC_Input &input, bool leftAttack, bool parry, 
         !equipmentCapable() || equipmentBroken || equipmentSwing.running() || pendingNativeHurt ||
         actionPending() || characterLandingRecovery || !(state.flags & SC_GROUNDED) ||
         !(state.flags & SC_CAN_EQUIP_ACTION) || state.attackId >= 0 || input.jump || input.crouch ||
-        !combatEnabled || read<int>(player + 0x2e4) <= 0)
+        !combatEnabled || !hostPermits(SCHost::Operation::Combat) ||
+        !hostPermits(SCHost::Operation::Interaction) || read<int>(player + 0x2e4) <= 0)
         return false;
     auto gear = equipmentRead();
     auto o = nativeInteractionState();

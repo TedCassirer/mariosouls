@@ -2,6 +2,8 @@
 
 This is a source-level handoff, not a Remastered implementation. PTDE/x86 and Mario/libsm64 are the only implemented host/character. No Remastered installation, addresses, loader, DX11 code, assets or gameplay evidence is supplied. Begin with [ARCHITECTURE.md](ARCHITECTURE.md), [HOST_PORTING.md](HOST_PORTING.md) and the [PTDE integration inventory](../hosts/ds1ptde/PORT_CHECKLIST.md).
 
+This document describes the initial presentation milestone. For later work, the [PTDE behavior and source checklist](REMASTERED_PARITY.md) identifies the tweaks and native integration fixes in the reference source. It leaves implementation order and verification strategy to the port author and does not require restarting this milestone.
+
 ## Deliverable and evidence to obtain
 
 Load a separately built x64 host into an owned Remastered installation, validate the native player and camera, and render Mario with correct world occlusion **before** HUD/prompts/text. Native movement, collision, input, HP/stamina, equipment, interaction scripts and combat remain authoritative and active. Native appearance is hidden only for the validated player after a usable guest replacement is available. Invalid observations/draw failures retain or restore that appearance.

@@ -4,6 +4,8 @@ This is the maintained inventory of MarioSouls behavior and deliberate differenc
 
 Update an existing entry whenever its behavior, tuning or default changes. Add a new entry for a new feature, with important values/units, configuration, source locations and verification limits. The complete update rule is in [AGENTS.md](../AGENTS.md).
 
+The [PTDE behavior and source checklist for Remastered](../framework/docs/REMASTERED_PARITY.md) collects the changes and source symbols at a pinned PTDE revision. It leaves verification strategy to the port author and does not establish an external Remastered implementation's status.
+
 ## Status and evidence
 
 | Area | Current status |

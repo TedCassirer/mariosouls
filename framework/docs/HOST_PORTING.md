@@ -87,6 +87,8 @@ After presentation-only work, port and verify each responsibility against the ow
 3. Authoritative health/stamina/status/death, attack packets/defenses/target identity, equipment and spells. No direct guest HP damage or jump invulnerability.
 4. Class intent/creation preview, cinematics, environment/fire/projectiles, feedback and optional cannon integration.
 
+For an already moving/playable port, [REMASTERED_PARITY.md](REMASTERED_PARITY.md) describes 24 areas of PTDE behavior with source files/symbols and values, including traction, 30-Hz/render interpolation, stairs/lifts, streaming, interactions and recovery. The port author chooses implementation order and verification strategy; the checklist does not assess an external port or assume recording/automation tools.
+
 Keep native observation/update, fixed guest simulation and rendering separate. PTDE consumes at most one 30-Hz guest tick per update with bounded backlog/native acknowledgement. Preserve pause/ownership clearing and visual interpolation; a different catch-up policy is a gameplay change.
 
 Record purpose, exact inputs/outputs, native evidence, ownership/failure path and manual verification for each integration. Update contract/inventory when boundaries change. This preparation introduces no behavioral suite, simulated-host runner or gameplay automation. Use disposable characters and the [manual checklist](../../docs/TESTING.md); never test on the owner's level-65 character.

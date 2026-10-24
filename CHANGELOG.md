@@ -2,6 +2,12 @@
 
 Meaningful changes are recorded here by development version. The detailed, maintained inventory of current behavior and tuning is [Features and tweaks](docs/FEATURES_AND_TWEAKS.md). Git retains earlier implementation history; no public release date is implied by this development log.
 
+## Unreleased
+
+### Documentation
+
+- Add a source-pinned PTDE behavior checklist for a Remastered port, covering 24 areas with source files/symbols, resulting behavior and tuning values. Separate reusable runtime/core code, edition-specific integration, known candidates and removed experiments; leave implementation order and verification strategy to the port author. Link it from the feature inventory and port handoff. No gameplay or installation is changed.
+
 ## 0.9.0-dev.2 - experimental preview
 
 ### Fire Flower cast handoff
